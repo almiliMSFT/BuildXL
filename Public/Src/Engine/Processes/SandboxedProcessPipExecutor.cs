@@ -234,6 +234,7 @@ namespace BuildXL.Processes
             m_sandboxConfig = sandBoxConfig;
             m_rootMappings = rootMappings;
             m_workingDirectory = pip.WorkingDirectory.ToString(m_pathTable);
+            
             m_fileAccessManifest =
                 new FileAccessManifest(m_pathTable, directoryTranslator)
                 {
@@ -666,6 +667,14 @@ namespace BuildXL.Processes
 
                         using (StreamReader standardInputReader = standardInputStream == null ? null : new StreamReader(standardInputStream, CharUtilities.Utf8NoBomNoThrow))
                         {
+                            if (sandboxedKextConnection?.IsInTestMode == true)
+                            {
+                                bool isNativeInDebug = ProcessUtilities.IsNativeInDebugConfiguration();
+                                m_fileAccessManifest.ForceConfigurationMode(isNativeInDebug 
+                                    ? FileAccessManifest.ConfigurationMode.Debug
+                                    : FileAccessManifest.ConfigurationMode.Release);
+                            }
+
                             var info =
                                 new SandboxedProcessInfo(
                                     m_pathTable,

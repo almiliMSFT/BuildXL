@@ -3,10 +3,8 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics.ContractsLight;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -115,17 +113,20 @@ namespace BuildXL.Processes
             }
 
             // check and set if the sandbox is running in debug configuration
-            bool isDebug = false;
-            Sandbox.CheckForDebugMode(ref isDebug, m_kextConnectionInfo);
-            ProcessUtilities.SetNativeConfiguration(isDebug);
+            bool isKextInDebugMode = false;
+            Sandbox.CheckForDebugMode(ref isKextInDebugMode, m_kextConnectionInfo);
+            ProcessUtilities.SetNativeConfiguration(isKextInDebugMode);
 
 #if DEBUG
-            if (!ProcessUtilities.IsNativeInDebugConfiguration())
+            if (!isKextInDebugMode)
 #else
-            if (ProcessUtilities.IsNativeInDebugConfiguration())
+            if (isKextInDebugMode)
 #endif
             {
-                throw new BuildXLException($"Sandbox kernel extension build flavor missmatch - the extension must match the engine build flavor, Debug != Release. {KextInstallHelper}");
+                if (!IsInTestMode)
+                {
+                    throw new BuildXLException($"Sandbox kernel extension build flavor missmatch - the extension must match the engine build flavor, Debug != Release. {KextInstallHelper}");
+                }
             }
 
             // check if the sandbox version matches

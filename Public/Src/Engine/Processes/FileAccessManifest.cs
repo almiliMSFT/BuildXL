@@ -30,11 +30,40 @@ namespace BuildXL.Processes
         private readonly Node m_rootNode;
 
         /// <summary>
+        /// Configuration modes.
+        /// </summary>
+        public enum ConfigurationMode { Debug, Release };
+
+        private const ConfigurationMode MyConfiguration =
+#if DEBUG
+            ConfigurationMode.Debug;
+#else
+            ConfigurationMode.Release;
+#endif
+
+        /// <summary>
+        /// Configuration mode in which to run.  In debug mode, serialized FileAccessManifest contains additional information.
+        /// </summary>
+        public ConfigurationMode ConfigurationModeInUse { get; private set; }
+
+        /// <summary>
+        /// Force a configuration mode (<seealso cref="ConfigurationModeInUse"/>).
+        /// </summary>
+        public void ForceConfigurationMode(ConfigurationMode mode)
+        {
+            ConfigurationModeInUse = mode;
+        }
+
+        private bool IsInDebugMode => ConfigurationModeInUse == ConfigurationMode.Debug;
+
+        /// <summary>
         /// Creates an empty instance.
         /// </summary>
         public FileAccessManifest(PathTable pathTable, DirectoryTranslator translateDirectories = null)
         {
             Contract.Requires(pathTable != null);
+
+            ConfigurationModeInUse = MyConfiguration;
 
             m_pathTable = pathTable;
             m_rootNode = Node.CreateRootNode();
@@ -287,21 +316,24 @@ namespace BuildXL.Processes
         }
 
         [SuppressMessage("Microsoft.Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "Architecture strings are USASCII")]
-        private static void WriteErrorDumpLocation(
+        private void WriteErrorDumpLocation(
             BinaryWriter writer, string internalDetoursErrorNotificationFile)
         {
-#if DEBUG
-            writer.Write((uint)0xABCDEF03); // "ABCDEF03"
-#endif
+            if (IsInDebugMode)
+            {
+                writer.Write((uint)0xABCDEF03); // "ABCDEF03"
+            }
+
             WriteChars(writer, internalDetoursErrorNotificationFile);
         }
 
         [SuppressMessage("Microsoft.Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "Architecture strings are USASCII")]
-        private static void WriteTranslationPathStrings(BinaryWriter writer, DirectoryTranslator translatePaths)
+        private void WriteTranslationPathStrings(BinaryWriter writer, DirectoryTranslator translatePaths)
         {
-#if DEBUG
-            writer.Write(0xABCDEF02); // "ABCDEF02"
-#endif
+            if (IsInDebugMode)
+            {
+                writer.Write(0xABCDEF02); // "ABCDEF02"
+            }
 
             // Write the number of translation paths.
             uint translatePathLen = (uint)(translatePaths?.Count ?? 0);
@@ -320,33 +352,37 @@ namespace BuildXL.Processes
         }
 
         [SuppressMessage("Microsoft.Naming", "CA2204:LiteralsShouldBeSpelledCorrectly")]
-        private static void WriteDebugFlagBlock(BinaryWriter writer, ref bool debugFlagsMatch)
+        private void WriteDebugFlagBlock(BinaryWriter writer, ref bool debugFlagsMatch)
         {
             debugFlagsMatch = true;
-#if DEBUG
-            // "debug 1 (on)"
-            writer.Write((uint)0xDB600001);
-            if (!ProcessUtilities.IsNativeInDebugConfiguration())
+            if (IsInDebugMode)
             {
-                BuildXL.Processes.Tracing.Logger.Log.PipInvalidDetoursDebugFlag1(BuildXL.Utilities.Tracing.Events.StaticContext);
-                debugFlagsMatch = false;
+                // "debug 1 (on)"
+                writer.Write((uint)0xDB600001);
+                if (!ProcessUtilities.IsNativeInDebugConfiguration())
+                {
+                    BuildXL.Processes.Tracing.Logger.Log.PipInvalidDetoursDebugFlag1(BuildXL.Utilities.Tracing.Events.StaticContext);
+                    debugFlagsMatch = false;
+                }
             }
-#else
-            // "debug 0 (off)"
-            writer.Write((uint)0xDB600000);
-            if (ProcessUtilities.IsNativeInDebugConfiguration())
+            else
             {
-                BuildXL.Processes.Tracing.Logger.Log.PipInvalidDetoursDebugFlag2(BuildXL.Utilities.Tracing.Events.StaticContext);
-                debugFlagsMatch = false;
+                // "debug 0 (off)"
+                writer.Write((uint)0xDB600000);
+                if (ProcessUtilities.IsNativeInDebugConfiguration())
+                {
+                    BuildXL.Processes.Tracing.Logger.Log.PipInvalidDetoursDebugFlag2(BuildXL.Utilities.Tracing.Events.StaticContext);
+                    debugFlagsMatch = false;
+                }
             }
-#endif
         }
 
         private void WriteFlagsBlock(BinaryWriter writer)
         {
-#if DEBUG
-            writer.Write((uint)0xF1A6B10C); // "flag block"
-#endif
+            if (IsInDebugMode)
+            {
+                writer.Write((uint)0xF1A6B10C); // "flag block"
+            }
 
             FileAccessManifestFlag flags =
                 (FailUnexpectedFileAccesses ? FileAccessManifestFlag.FailUnexpectedFileAccesses : 0)
@@ -382,29 +418,33 @@ namespace BuildXL.Processes
         }
 
         // Allow for future expansions with 64 more flags (in case they become needed))
-        private static void WriteExtraFlagsBlock(BinaryWriter writer, FileAccessManifestExtraFlag extraFlags)
+        private void WriteExtraFlagsBlock(BinaryWriter writer, FileAccessManifestExtraFlag extraFlags)
         {
-#if DEBUG
-            writer.Write((uint)0xF1A6B10D); // "extra flags block"
-#endif
+            if (IsInDebugMode)
+            {
+                writer.Write((uint)0xF1A6B10D); // "extra flags block"
+            }
             writer.Write((uint)extraFlags);
         }
 
-        private static void WritePipId(BinaryWriter writer, long pipId)
+        private void WritePipId(BinaryWriter writer, long pipId)
         {
-#if DEBUG
-            writer.Write((uint)0xF1A6B10E); // "extra flags block"
-            writer.Write(0); // Padding. Needed to keep the data properly aligned for the C/C++ compiler.
-#endif
+            if (IsInDebugMode)
+            {
+                writer.Write((uint)0xF1A6B10E); // "extra flags block"
+                writer.Write(0); // Padding. Needed to keep the data properly aligned for the C/C++ compiler.
+            }
             // The PipId is needed for reporting purposes on non Windows OSs. Write it here.
             writer.Write(pipId);
         }
 
-        private static void WriteReportBlock(BinaryWriter writer, FileAccessSetup setup)
+        private void WriteReportBlock(BinaryWriter writer, FileAccessSetup setup)
         {
-#if DEBUG
-            writer.Write((uint)0xFEEDF00D); // "feed food"
-#endif
+            if (IsInDebugMode)
+            {
+                writer.Write((uint)0xFEEDF00D); // "feed food"
+            }
+
             // since the number of bytes in this block is always going to be even, use the bottom bit
             // to indicate whether it is a handle number (1) or a path (0)
             if (!string.IsNullOrEmpty(setup.ReportPath))
@@ -446,11 +486,12 @@ namespace BuildXL.Processes
             }
         }
 
-        private static void WriteDllBlock(BinaryWriter writer, FileAccessSetup setup)
+        private void WriteDllBlock(BinaryWriter writer, FileAccessSetup setup)
         {
-#if DEBUG
-            writer.Write((uint)0xD11B10CC); // "dll block"
-#endif
+            if (IsInDebugMode)
+            {
+                writer.Write((uint)0xD11B10CC); // "dll block"
+            }
 
             // order has to match order in DetoursServices.cpp / ParseFileAccessManifest.
             // $Note(bxl-team): These dll strings MUST be ASCII because IMAGE_EXPORT_DIRECTORY used by Detours only supports ASCII.
@@ -485,7 +526,7 @@ namespace BuildXL.Processes
 
         private void WriteManifestTreeBlock(BinaryWriter writer)
         {
-            m_rootNode.InternalSerialize(default(NormalizedPathString), writer);
+            m_rootNode.InternalSerialize(default, writer, IsInDebugMode);
         }
 
         /// <summary>
@@ -530,7 +571,7 @@ namespace BuildXL.Processes
             {
                 using (var writer = new BinaryWriter(stream, Encoding.Unicode, true))
                 {
-                    m_rootNode.Serialize(writer);
+                    m_rootNode.Serialize(writer, IsInDebugMode);
                     var bytes = stream.ToArray();
                     return bytes;
                 }
@@ -543,7 +584,7 @@ namespace BuildXL.Processes
         /// <returns>The line-by-line string representation of the manifest (formatted as a pre-order tree).</returns>
         public IEnumerable<string> Describe()
         {
-            return m_rootNode.Describe();
+            return m_rootNode.Describe(IsInDebugMode);
         }
 
         // Keep this in sync with the C++ version declared in DataTypes.h
@@ -984,7 +1025,7 @@ namespace BuildXL.Processes
                 ExpectedUsn = expectedUsn;
             }
 
-            public void InternalSerialize(NormalizedPathString normalizedFragment, BinaryWriter writer)
+            internal void InternalSerialize(NormalizedPathString normalizedFragment, BinaryWriter writer, bool isInDebugMode)
             {
                 // always finalize when serializing -- note that this prevents adding additional scopes as before
                 if (!IsPolicyFinalized)
@@ -995,9 +1036,10 @@ namespace BuildXL.Processes
                 unchecked
                 {
                     long start = writer.BaseStream.Position;
-#if DEBUG
-                    writer.Write((uint)0xF00DCAFE); // "food cafe"
-#endif
+                    if (isInDebugMode)
+                    {
+                        writer.Write((uint)0xF00DCAFE); // "food cafe"
+                    }
                     writer.Write((uint)normalizedFragment.HashCode);
                     writer.Write((uint)ConePolicy);
                     writer.Write((uint)NodePolicy);
@@ -1060,7 +1102,7 @@ namespace BuildXL.Processes
                             var offset = checked((uint)(writer.BaseStream.Position - start));
                             Contract.Assume((offset & (uint)FileAccessBucketOffsetFlag.ChainMask) == 0);
                             offsets[index] = offset;
-                            child.Value.InternalSerialize(child.Key, writer);
+                            child.Value.InternalSerialize(child.Key, writer, isInDebugMode);
                         }
 
                         long endPosition = writer.BaseStream.Position;
@@ -1075,7 +1117,7 @@ namespace BuildXL.Processes
                 }
             }
 
-            public void Serialize(BinaryWriter writer)
+            internal void Serialize(BinaryWriter writer, bool isInDebugMode)
             {
                 // always finalize when serializing -- note that this prevents adding additional scopes as before
                 if (!IsPolicyFinalized)
@@ -1083,7 +1125,7 @@ namespace BuildXL.Processes
                     FinalizePolicies();
                 }
 
-                InternalSerialize(default(NormalizedPathString), writer);
+                InternalSerialize(default, writer, isInDebugMode);
             }
 
             private static string ReadUnicodeString(BinaryReader reader, List<byte> buffer)
@@ -1118,7 +1160,7 @@ namespace BuildXL.Processes
             /// as that faithfully represents the information that is actually used by the monitored process.
             /// </remarks>
             [SuppressMessage("Microsoft.Usage", "CA2202:Do not dispose objects multiple times")]
-            public IEnumerable<string> Describe()
+            internal IEnumerable<string> Describe(bool isInDebugMode)
             {
                 // start with 4 KB of memory (one page), which will expand as necessary
                 // stream will be disposed by the BinaryWriter when it goes out of scope
@@ -1126,7 +1168,7 @@ namespace BuildXL.Processes
                 {
                     using (var writer = new BinaryWriter(stream, Encoding.Unicode, true))
                     {
-                        Serialize(writer);
+                        Serialize(writer, isInDebugMode);
                     }
 
                     using (var reader = new BinaryReader(stream, Encoding.Unicode, true))
@@ -1147,10 +1189,11 @@ namespace BuildXL.Processes
                                     str.Append("  ");
                                 }
 
-#if DEBUG
-                                var tag = unchecked((uint)reader.ReadInt32());
-                                Contract.Assume(tag == 0xF00DCAFE);
-#endif
+                                if (isInDebugMode)
+                                {
+                                    var tag = unchecked((uint)reader.ReadInt32());
+                                    Contract.Assume(tag == 0xF00DCAFE);
+                                }
 
                                 var hash = reader.ReadUInt32();
                                 var conePolicy = (short)reader.ReadUInt32();
