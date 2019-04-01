@@ -1118,10 +1118,11 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
 					"DEBUG=1",
 					"_DEBUG=1",
 					"MACH_ASSERT=1",
+                    "BXL_BUNDLE_IDENTIFIER=$(BXL_BUNDLE_IDENTIFIER)",
+                    "BXL_CLASS_PREFIX=$(BXL_CLASS_PREFIX)",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -1179,6 +1180,8 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"RELEASE=1",
 					"NDEBUG=1",
+                    "BXL_BUNDLE_IDENTIFIER=$(BXL_BUNDLE_IDENTIFIER)",
+                    "BXL_CLASS_PREFIX=$(BXL_CLASS_PREFIX)",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -1236,7 +1239,6 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
 					"$(inherited)",
 					"MAC_OS_LIBRARY=1",
 				);
@@ -1256,8 +1258,7 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"RELEASE=1",
-					"NDEBUG=1",
+                    "$(inherited)",
 					"MAC_OS_LIBRARY=1",
 				);
 				HEADER_SEARCH_PATHS = "$(SOURCE_ROOT)/../Interop/Sandbox";
@@ -1269,106 +1270,6 @@
 			};
 			name = release;
 		};
-		F598839022528B2600A7A2D9 /* debugTest */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = F598838C22527E7400A7A2D9 /* BundleInfoTest.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "-";
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					"DEBUG=1",
-					"_DEBUG=1",
-					"MACH_ASSERT=1",
-				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = "";
-				MTL_ENABLE_DEBUG_INFO = YES;
-				ONLY_ACTIVE_ARCH = YES;
-				USER_HEADER_SEARCH_PATHS = "../../Public/Src/Sandbox/Windows/DetoursServices/**";
-			};
-			name = debugTest;
-		};
-		F598839122528B2600A7A2D9 /* debugTest */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1.0.0d1;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					"MAC_OS_SANDBOX=1",
-				);
-				INFOPLIST_FILE = Src/Resources/Info.plist;
-				MODULE_NAME = com.microsoft.buildxl.sandbox;
-				MODULE_VERSION = 1.0.0d1;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				USER_HEADER_SEARCH_PATHS = "../../Windows/DetoursServices/**";
-				WRAPPER_EXTENSION = kext;
-			};
-			name = debugTest;
-		};
-		F598839222528B2600A7A2D9 /* debugTest */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CODE_SIGN_STYLE = Automatic;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-					"MAC_OS_LIBRARY=1",
-				);
-				HEADER_SEARCH_PATHS = "$(SOURCE_ROOT)/../Interop/Sandbox";
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				MTL_FAST_MATH = YES;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../Windows/DetoursServices";
-			};
-			name = debugTest;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1376,7 +1277,6 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3CCA66CD20D15BBD0051F984 /* debug */,
-				F598839022528B2600A7A2D9 /* debugTest */,
 				3CCA66CE20D15BBD0051F984 /* release */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -1386,7 +1286,6 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3CCA66D020D15BBD0051F984 /* debug */,
-				F598839122528B2600A7A2D9 /* debugTest */,
 				3CCA66D120D15BBD0051F984 /* release */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -1396,7 +1295,6 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F51A2BFE2190C67500880752 /* debug */,
-				F598839222528B2600A7A2D9 /* debugTest */,
 				F51A2BFF2190C67500880752 /* release */,
 			);
 			defaultConfigurationIsVisible = 0;

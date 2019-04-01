@@ -6,8 +6,6 @@ namespace Sandbox {
         configuration: "debug" | "release"
     };
 
-    //type XcodeConfig = "debug" | "release" | "debugTest";
-
     interface Args {
         project: StaticDirectory,
         scheme: string,
@@ -57,6 +55,9 @@ namespace Sandbox {
         };
     }
 
+    const bundleInfoMainFile = f`BundleInfo.xcconfig`;
+    const bundleInfoTestFile = f`BundleInfoTest.xcconfig`;
+
     const isMacOs = Context.getCurrentHost().os === "macOS";
     const interopXcodeproj = Transformer.sealDirectory(d`Interop/Interop.xcodeproj`, globR(d`Interop/Interop.xcodeproj`, "*"));
     const sandboxXcodeproj = Transformer.sealDirectory(d`Sandbox/Sandbox.xcodeproj`, globR(d`Sandbox/Sandbox.xcodeproj`, "*"));
@@ -85,22 +86,22 @@ namespace Sandbox {
         dependencies: [ ariaPkg.Contents.all ]
     }).outFiles[0];
 
-    function buildLibInterop(configuration?: string): DerivedFile {
+    function buildLibInterop(bundleInfo?: File): DerivedFile {
         return build({
             project: interopXcodeproj,
             scheme: "InteropLibrary",
             outFiles: [ a`libBuildXLInterop.dylib` ],
-            configuration: configuration
+            xcconfig: bundleInfo || bundleInfoMainFile
         }).outFiles[0];
     }
 
     const testConfigurationName = "debugTest";
 
     @@public
-    export const libInterop = isMacOs && buildLibInterop(testConfigurationName);
+    export const libInterop = isMacOs && buildLibInterop();
 
     @@public
-    export const libInteropTest = isMacOs && buildLibInterop(testConfigurationName);
+    export const libInteropTest = isMacOs && buildLibInterop(bundleInfoTestFile);
 
     @@public
     export const coreDumpTester = isMacOs && build({
@@ -125,18 +126,17 @@ namespace Sandbox {
         dSYMDwarf: DerivedFile
     }
 
-    function buildKext(configuration?: string): KextFiles {
-        configuration = configuration || qualifier.configuration;
+    function buildKext(bundleInfo?: File): KextFiles {
         const result = build({
             project: sandboxXcodeproj,
             scheme: "BuildXLSandbox",
-            configuration: configuration,
+            xcconfig: bundleInfo || bundleInfoMainFile,
             outFiles: [
                 r`BuildXLSandbox.kext/Contents/Info.plist`,
                 r`BuildXLSandbox.kext/Contents/MacOS/BuildXLSandbox`,
                 r`BuildXLSandbox.kext/Contents/Resources/LICENSE`,
                 r`BuildXLSandbox.kext/Contents/_CodeSignature/CodeResources`,
-                ...addIfLazy(configuration === "release", () => [
+                ...addIfLazy(qualifier.configuration === "release", () => [
                     r`BuildXLSandbox.kext.dSYM/Contents/Info.plist`,
                     r`BuildXLSandbox.kext.dSYM/Contents/Resources/DWARF/BuildXLSandbox`
                 ])
@@ -147,14 +147,14 @@ namespace Sandbox {
             sandbox: result.outFiles[1],
             license: result.outFiles[2],
             codeRes: result.outFiles[3],
-            dSYMPlist: configuration === "release" ? result.outFiles[4] : undefined,
-            dSYMDwarf: configuration === "release" ? result.outFiles[5] : undefined,
+            dSYMPlist: qualifier.configuration === "release" ? result.outFiles[4] : undefined,
+            dSYMDwarf: qualifier.configuration === "release" ? result.outFiles[5] : undefined,
         };
     }
 
     @@public
-    export const kext = isMacOs && buildKext(testConfigurationName);
+    export const kext = isMacOs && buildKext();
 
     @@public
-    export const kextTest = isMacOs && buildKext(testConfigurationName);
+    export const kextTest = isMacOs && buildKext(bundleInfoTestFile);
 }
