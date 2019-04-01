@@ -32,7 +32,14 @@ namespace BuildXL.Processes
         /// <summary>
         /// Configuration modes.
         /// </summary>
-        public enum ConfigurationMode { Debug, Release };
+        public enum ConfigurationMode
+        {
+            /// <nodoc/>
+            Debug,
+
+            /// <nodoc/>
+            Release
+        };
 
         private const ConfigurationMode MyConfiguration =
 #if DEBUG

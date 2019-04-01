@@ -48,5 +48,9 @@ namespace Scheduler {
             "Test.Tool.Analyzers",
             "IntegrationTest.BuildXL.Scheduler",
         ],
+        runtimeContent: [
+            ...addIf(Context.getCurrentHost().os === "macOS",
+                importFrom("BuildXL.Sandbox.MacOS").Sandbox.libInterop)
+        ]
     });
 }
