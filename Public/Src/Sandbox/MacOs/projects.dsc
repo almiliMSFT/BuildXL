@@ -6,9 +6,12 @@ namespace Sandbox {
         configuration: "debug" | "release"
     };
 
+    //type XcodeConfig = "debug" | "release" | "debugTest";
+
     interface Args {
         project: StaticDirectory,
         scheme: string,
+        configuration?: string,
         outFiles?: PathFragment[],
         semaphores?: string[],
         xcconfig?: File,
@@ -16,7 +19,7 @@ namespace Sandbox {
     }
 
     interface Result {
-        outFiles: File[],
+        outFiles: DerivedFile[],
         derivedDataOutDir: StaticDirectory
     }
 
@@ -29,7 +32,7 @@ namespace Sandbox {
         Transformer.SealSourceDirectoryOption.allDirectories);
 
     export function build(args: Args): Result {
-        const conf = qualifier.configuration;
+        const conf = args.configuration || qualifier.configuration;
         const outDir = Context.getNewOutputDirectory(args.scheme);
         const outFilePaths = (args.outFiles || []).map(a => p`${outDir}/Build/Products/${conf}/${a}`);
         const result = XCode.execute({
@@ -82,12 +85,22 @@ namespace Sandbox {
         dependencies: [ ariaPkg.Contents.all ]
     }).outFiles[0];
 
+    function buildLibInterop(configuration?: string): DerivedFile {
+        return build({
+            project: interopXcodeproj,
+            scheme: "InteropLibrary",
+            outFiles: [ a`libBuildXLInterop.dylib` ],
+            configuration: configuration
+        }).outFiles[0];
+    }
+
+    const testConfigurationName = "debugTest";
+
     @@public
-    export const libInterop = isMacOs && build({
-        project: interopXcodeproj,
-        scheme: "InteropLibrary",
-        outFiles: [ a`libBuildXLInterop.dylib` ]
-    }).outFiles[0];
+    export const libInterop = isMacOs && buildLibInterop(testConfigurationName);
+
+    @@public
+    export const libInteropTest = isMacOs && buildLibInterop(testConfigurationName);
 
     @@public
     export const coreDumpTester = isMacOs && build({
@@ -103,26 +116,45 @@ namespace Sandbox {
         outFiles: [ a`SandboxMonitor` ]
     }).outFiles[0];
 
-    const kext = isMacOs && build({
-        project: sandboxXcodeproj,
-        scheme: "BuildXLSandbox",
-        outFiles: [
-            r`BuildXLSandbox.kext/Contents/Info.plist`,
-            r`BuildXLSandbox.kext/Contents/MacOS/BuildXLSandbox`,
-            r`BuildXLSandbox.kext/Contents/Resources/LICENSE`,
-            r`BuildXLSandbox.kext/Contents/_CodeSignature/CodeResources`,
-            ...addIfLazy(qualifier.configuration === "release", () => [
-                r`BuildXLSandbox.kext.dSYM/Contents/Info.plist`,
-                r`BuildXLSandbox.kext.dSYM/Contents/Resources/DWARF/BuildXLSandbox`
-            ])
-        ]
-    });
+    interface KextFiles {
+        plist: DerivedFile,
+        sandbox: DerivedFile,
+        license: DerivedFile,
+        codeRes: DerivedFile,
+        dSYMPlist: DerivedFile,
+        dSYMDwarf: DerivedFile
+    }
 
-    @@public export const kextPlist   = kext && kext.outFiles[0];
-    @@public export const kextSandbox = kext && kext.outFiles[1];
-    @@public export const kextLicense = kext && kext.outFiles[2];
-    @@public export const kextCodeRes = kext && kext.outFiles[3];
+    function buildKext(configuration?: string): KextFiles {
+        configuration = configuration || qualifier.configuration;
+        const result = build({
+            project: sandboxXcodeproj,
+            scheme: "BuildXLSandbox",
+            configuration: configuration,
+            outFiles: [
+                r`BuildXLSandbox.kext/Contents/Info.plist`,
+                r`BuildXLSandbox.kext/Contents/MacOS/BuildXLSandbox`,
+                r`BuildXLSandbox.kext/Contents/Resources/LICENSE`,
+                r`BuildXLSandbox.kext/Contents/_CodeSignature/CodeResources`,
+                ...addIfLazy(configuration === "release", () => [
+                    r`BuildXLSandbox.kext.dSYM/Contents/Info.plist`,
+                    r`BuildXLSandbox.kext.dSYM/Contents/Resources/DWARF/BuildXLSandbox`
+                ])
+            ]
+        });
+        return {
+            plist: result.outFiles[0],
+            sandbox: result.outFiles[1],
+            license: result.outFiles[2],
+            codeRes: result.outFiles[3],
+            dSYMPlist: configuration === "release" ? result.outFiles[4] : undefined,
+            dSYMDwarf: configuration === "release" ? result.outFiles[5] : undefined,
+        };
+    }
 
-    @@public export const kextdSYMPlist = qualifier.configuration === "release" ? kext && kext.outFiles[4] : undefined;
-    @@public export const kextdSYMDwarf = qualifier.configuration === "release" ? kext && kext.outFiles[5] : undefined;
+    @@public
+    export const kext = isMacOs && buildKext(testConfigurationName);
+
+    @@public
+    export const kextTest = isMacOs && buildKext(testConfigurationName);
 }
