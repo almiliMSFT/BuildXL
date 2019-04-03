@@ -1025,7 +1025,9 @@ namespace BuildXL.Scheduler.Artifacts
         public bool TryGetContainingOutputDirectory(AbsolutePath path, out DirectoryArtifact containingOutputDirectory)
         {
             containingOutputDirectory = DirectoryArtifact.Invalid;
-            return (m_sealedFiles.TryGetValue(path, out FileArtifact sealedFile) && m_dynamicOutputFileDirectories.TryGetValue(sealedFile, out containingOutputDirectory));
+            return 
+                m_sealedFiles.TryGetValue(path, out FileArtifact sealedFile) && 
+                m_dynamicOutputFileDirectories.TryGetValue(sealedFile, out containingOutputDirectory);
         }
 
         /// <summary>

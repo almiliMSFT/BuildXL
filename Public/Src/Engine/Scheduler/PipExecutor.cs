@@ -405,6 +405,14 @@ namespace BuildXL.Scheduler
             }
         }
 
+        private static void MakeSharedOpaqueOutputIfNeeded(string pathAsString, AbsolutePath path, FileContentManager fcm)
+        {
+            if (fcm.TryGetContainingOutputDirectory(path, out DirectoryArtifact outDir) && outDir.IsSharedOpaque)
+            {
+                SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(pathAsString);
+            }
+        }
+
         private static async Task<PipResultStatus> CopyAndTrackAsync(
             OperationContext operationContext,
             IPipExecutionEnvironment environment,
@@ -419,16 +427,16 @@ namespace BuildXL.Scheduler
             var copy = await FileUtilities.CopyFileAsync(source.ExpandedPath, destination.ExpandedPath);
             if (!copy)
             {
-                (new Failure<string>(I($"Unable to copy from '{source}' to '{destination}'"))).Throw();
+                new Failure<string>(I($"Unable to copy from '{source}' to '{destination}'")).Throw();
             }
 
             var mayBeTracked = await TrackPipOutputAsync(operationContext, environment, copyFile.Destination, isSymlink: false);
-
             if (!mayBeTracked.Succeeded)
             {
                 mayBeTracked.Failure.Throw();
             }
 
+            MakeSharedOpaqueOutputIfNeeded(destination.ExpandedPath, destination.Path, environment.State.FileContentManager);
             return PipResultStatus.Succeeded;
         }
 
@@ -741,6 +749,7 @@ namespace BuildXL.Scheduler
                             throw possiblyStored.Failure.Throw();
                         }
 
+                        MakeSharedOpaqueOutputIfNeeded(destinationAsString, destinationFile, environment.State.FileContentManager);
                         outputOrigin = PipOutputOrigin.Produced;
                         fileContentInfo = possiblyStored.Result.FileMaterializationInfo;
                     }
