@@ -5351,6 +5351,11 @@ namespace BuildXL.Scheduler
                 PipExecutionCounters.IncrementCounter(PipExecutorCounter.PipMarkMaterialized);
             }
 
+            if (artifact.IsFile && PipGraph.IsPathUnderOutputDirectory(artifact.Path))
+            {
+                SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(artifact.Path.ToString(Context.PathTable));
+            }
+
             m_pipOutputMaterializationTracker.ReportMaterializedArtifact(artifact);
         }
 
