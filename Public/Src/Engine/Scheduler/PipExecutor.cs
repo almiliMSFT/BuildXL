@@ -405,7 +405,7 @@ namespace BuildXL.Scheduler
             }
         }
 
-        private static void MakeSharedOpaqueOutputIfNeeded(AbsolutePath path, IPipExecutionEnvironment env)
+        private static void MakeSharedOpaqueOutputIfNeeded(string pathAsString, AbsolutePath path, IPipExecutionEnvironment env)
         {
             if (env.PipGraphView.IsPathUnderOutputDirectory(path))
             {
@@ -436,7 +436,7 @@ namespace BuildXL.Scheduler
                 mayBeTracked.Failure.Throw();
             }
 
-            MakeSharedOpaqueOutputIfNeeded(destination.Path, environment);
+            MakeSharedOpaqueOutputIfNeeded(destination.ExpandedPath, destination.Path, environment);
             return PipResultStatus.Succeeded;
         }
 
@@ -749,7 +749,7 @@ namespace BuildXL.Scheduler
                             throw possiblyStored.Failure.Throw();
                         }
 
-                        MakeSharedOpaqueOutputIfNeeded(destinationFile, environment);
+                        MakeSharedOpaqueOutputIfNeeded(destinationAsString, destinationFile, environment);
                         outputOrigin = PipOutputOrigin.Produced;
                         fileContentInfo = possiblyStored.Result.FileMaterializationInfo;
                     }
