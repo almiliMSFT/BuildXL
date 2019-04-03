@@ -436,7 +436,6 @@ namespace BuildXL.Scheduler
                 mayBeTracked.Failure.Throw();
             }
 
-            MakeSharedOpaqueOutputIfNeeded(destination.ExpandedPath, destination.Path, environment);
             return PipResultStatus.Succeeded;
         }
 
@@ -749,7 +748,6 @@ namespace BuildXL.Scheduler
                             throw possiblyStored.Failure.Throw();
                         }
 
-                        MakeSharedOpaqueOutputIfNeeded(destinationAsString, destinationFile, environment);
                         outputOrigin = PipOutputOrigin.Produced;
                         fileContentInfo = possiblyStored.Result.FileMaterializationInfo;
                     }
@@ -4312,6 +4310,9 @@ namespace BuildXL.Scheduler
             // it's fine to just track rewritten symlinks though (all data required for
             // proper symlink materialization will be a part of cache metadata)
             Contract.Requires(isSymlink || !IsRewriteOutputFile(environment, outputFileArtifact));
+
+            // TODO
+            MakeSharedOpaqueOutputIfNeeded(outputFileArtifact.Path.ToString(environment.Context.PathTable), outputFileArtifact.Path, environment);
 
             var possiblyTracked = await environment.LocalDiskContentStore.TryTrackAsync(
                 outputFileArtifact,
