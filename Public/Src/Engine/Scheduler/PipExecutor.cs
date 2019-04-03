@@ -405,9 +405,9 @@ namespace BuildXL.Scheduler
             }
         }
 
-        private static void MakeSharedOpaqueOutputIfNeeded(string pathAsString, AbsolutePath path, FileContentManager fcm)
+        private static void MakeSharedOpaqueOutputIfNeeded(AbsolutePath path, IPipExecutionEnvironment env)
         {
-            if (fcm.TryGetContainingOutputDirectory(path, out DirectoryArtifact outDir) && outDir.IsSharedOpaque)
+            if (env.PipGraphView.IsPathUnderOutputDirectory(path))
             {
                 SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(pathAsString);
             }
@@ -436,7 +436,7 @@ namespace BuildXL.Scheduler
                 mayBeTracked.Failure.Throw();
             }
 
-            MakeSharedOpaqueOutputIfNeeded(destination.ExpandedPath, destination.Path, environment.State.FileContentManager);
+            MakeSharedOpaqueOutputIfNeeded(destination.Path, environment);
             return PipResultStatus.Succeeded;
         }
 
@@ -749,7 +749,7 @@ namespace BuildXL.Scheduler
                             throw possiblyStored.Failure.Throw();
                         }
 
-                        MakeSharedOpaqueOutputIfNeeded(destinationAsString, destinationFile, environment.State.FileContentManager);
+                        MakeSharedOpaqueOutputIfNeeded(destinationFile, environment);
                         outputOrigin = PipOutputOrigin.Produced;
                         fileContentInfo = possiblyStored.Result.FileMaterializationInfo;
                     }
