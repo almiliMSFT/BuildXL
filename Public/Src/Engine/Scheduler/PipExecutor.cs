@@ -4294,6 +4294,9 @@ namespace BuildXL.Scheduler
                     possiblyStored.Failure.DescribeIncludingInnerFailures());
             }
 
+            // TODO
+            MakeSharedOpaqueOutputIfNeeded(outputFileArtifact.Path.ToString(environment.Context.PathTable), outputFileArtifact.Path, environment);
+
             return possiblyStored;
         }
 
