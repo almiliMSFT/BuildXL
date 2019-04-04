@@ -5351,12 +5351,16 @@ namespace BuildXL.Scheduler
                 PipExecutionCounters.IncrementCounter(PipExecutorCounter.PipMarkMaterialized);
             }
 
-            if (artifact.IsFile && PipGraph.IsPathUnderOutputDirectory(artifact.Path))
+            m_pipOutputMaterializationTracker.ReportMaterializedArtifact(artifact);
+        }
+
+        [SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes")]
+        void IFileContentManagerHost.ReportFileArtifactPlaced(in FileArtifact artifact)
+        {
+            if (PipGraph.IsPathUnderOutputDirectory(artifact.Path))
             {
                 SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(artifact.Path.ToString(Context.PathTable));
             }
-
-            m_pipOutputMaterializationTracker.ReportMaterializedArtifact(artifact);
         }
 
         /// <inheritdoc />
