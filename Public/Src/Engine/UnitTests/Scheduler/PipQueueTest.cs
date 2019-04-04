@@ -461,12 +461,6 @@ namespace Test.BuildXL.Scheduler
                 // Do nothing.
             }
 
-            /// <inheritdoc />
-            public void ReportFileArtifactPlaced(in FileArtifact artifact)
-            {
-                // Do nothing.
-            }
-
             public void ReportCacheDescriptorHit(string sourceCache)
             {
                 Contract.Requires(!string.IsNullOrWhiteSpace(sourceCache));

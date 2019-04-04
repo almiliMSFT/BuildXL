@@ -472,12 +472,6 @@ namespace Test.BuildXL.Scheduler.Utils
         }
 
         /// <inheritdoc />
-        public void ReportFileArtifactPlaced(in FileArtifact artifact)
-        {
-            // Do nothing.
-        }
-
-        /// <inheritdoc />
         public void ReportWarnings(bool fromCache, int count)
         {
             Contract.Requires(count > 0);

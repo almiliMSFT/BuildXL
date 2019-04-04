@@ -5364,12 +5364,6 @@ namespace BuildXL.Scheduler
             }
         }
 
-        [SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes")]
-        void IFileContentManagerHost.ReportFileArtifactPlaced(in FileArtifact artifact)
-        {
-            // MakeSharedOpaqueOutputIfNeeded(artifact.Path);
-        }
-
         /// <inheritdoc />
         public bool CanMaterializeFile(FileArtifact artifact)
         {
