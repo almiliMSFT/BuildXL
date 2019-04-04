@@ -5316,6 +5316,8 @@ namespace BuildXL.Scheduler
                     existence = PathExistence.ExistsAsFile;
                 }
 
+                MakeSharedOpaqueOutputIfNeeded(artifact.Path);
+
                 State.FileSystemView.ReportOutputFileSystemExistence(artifact.Path, existence.Value);
             }
 
@@ -5354,13 +5356,18 @@ namespace BuildXL.Scheduler
             m_pipOutputMaterializationTracker.ReportMaterializedArtifact(artifact);
         }
 
+        private void MakeSharedOpaqueOutputIfNeeded(AbsolutePath path)
+        {
+            if (PipGraph.IsPathUnderOutputDirectory(path))
+            {
+                SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(path.ToString(Context.PathTable));
+            }
+        }
+
         [SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes")]
         void IFileContentManagerHost.ReportFileArtifactPlaced(in FileArtifact artifact)
         {
-            if (PipGraph.IsPathUnderOutputDirectory(artifact.Path))
-            {
-                SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(artifact.Path.ToString(Context.PathTable));
-            }
+            // MakeSharedOpaqueOutputIfNeeded(artifact.Path);
         }
 
         /// <inheritdoc />

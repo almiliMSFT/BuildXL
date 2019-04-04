@@ -407,10 +407,10 @@ namespace BuildXL.Scheduler
 
         private static void MakeSharedOpaqueOutputIfNeeded(string pathAsString, AbsolutePath path, IPipExecutionEnvironment env)
         {
-            if (env.PipGraphView.IsPathUnderOutputDirectory(path))
-            {
-                SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(pathAsString);
-            }
+            // if (env.PipGraphView.IsPathUnderOutputDirectory(path))
+            // {
+            //     SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(pathAsString);
+            // }
         }
 
         private static async Task<PipResultStatus> CopyAndTrackAsync(
