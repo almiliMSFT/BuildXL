@@ -4277,6 +4277,9 @@ namespace BuildXL.Scheduler
             Contract.Requires(process != null);
             Contract.Requires(outputFileArtifact.IsOutputFile);
 
+            // TODO
+            MakeSharedOpaqueOutputIfNeeded(outputFileArtifact.Path.ToString(environment.Context.PathTable), outputFileArtifact.Path, environment);
+
             var possiblyStored =
                 await
                     environment.LocalDiskContentStore.TryStoreAsync(
@@ -4293,9 +4296,6 @@ namespace BuildXL.Scheduler
                     outputFileArtifact.Path.ToString(environment.Context.PathTable),
                     possiblyStored.Failure.DescribeIncludingInnerFailures());
             }
-
-            // TODO
-            MakeSharedOpaqueOutputIfNeeded(outputFileArtifact.Path.ToString(environment.Context.PathTable), outputFileArtifact.Path, environment);
 
             return possiblyStored;
         }
