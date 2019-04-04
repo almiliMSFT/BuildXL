@@ -3526,17 +3526,18 @@ namespace BuildXL.Scheduler
 
         private void FlagSharedOpaqueOutputs(IPipExecutionEnvironment environment, ProcessRunnablePip process)
         {
-            var executionResult = process.ExecutionResult;
-
-            IEnumerable<(AbsolutePath, bool)> paths = process.Process.FileOutputs.Select(f => (f.Path, false));
+            // Select all declared output files
+            IEnumerable<(AbsolutePath, bool)> paths = process.Process
+                .FileOutputs
+                .Select(f => (f.Path, false));
 
             // The shared dynamic accesses can be null when the pip failed on preparation, in which case it didn't run at all, so there is
             // nothing to flag
-            if (executionResult.SharedDynamicDirectoryWriteAccesses != null)
+            if (process.ExecutionResult.SharedDynamicDirectoryWriteAccesses != null)
             {
                 // Directory outputs are reported only when the pip is successful. So we need to rely on the raw shared dynamic write accesses,
                 // since flagging also happens on failed pips
-                var sharedOpaqueDirOutputs = executionResult
+                var sharedOpaqueDirOutputs = process.ExecutionResult
                     .SharedDynamicDirectoryWriteAccesses
                     .SelectMany(kvp => kvp.Value);
 
@@ -3547,21 +3548,6 @@ namespace BuildXL.Scheduler
             {
                 MakeSharedOpaqueOutputIfNeeded(path, force);
             }
-            
-            //// The shared dynamic accesses can be null when the pip failed on preparation, in which case it didn't run at all, so there is
-            //// nothing to flag
-            //if (executionResult.SharedDynamicDirectoryWriteAccesses != null)
-            //{
-            //    // Directory outputs are reported only when the pip is successful. So we need to rely on the raw shared dynamic write accesses,
-            //    // since flagging also happens on failed pips
-            //    foreach (IReadOnlyCollection<AbsolutePath> writesPerSharedOpaque in executionResult.SharedDynamicDirectoryWriteAccesses.Values)
-            //    {
-            //        foreach (AbsolutePath writeInPath in writesPerSharedOpaque)
-            //        {
-            //            SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(writeInPath.ToString(environment.Context.PathTable));
-            //        }
-            //    }
-            //}
         }
 
         private static void HandleDeterminismProbe(
