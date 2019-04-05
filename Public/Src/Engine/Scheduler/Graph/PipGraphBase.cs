@@ -103,9 +103,10 @@ namespace BuildXL.Scheduler.Graph
         protected readonly ConcurrentBigMap<AbsolutePath, PipId> TemporaryPaths;
 
         /// <summary>
-        /// All roots in <see cref="OutputDirectoryProducers"/> keys
+        /// All roots in <see cref="OutputDirectoryProducers"/> keys.
+        /// The value indicates if any of the corresponding output directories is shared opaque.
         /// </summary>
-        protected readonly ConcurrentBigSet<(AbsolutePath path, bool isShared)> OutputDirectoryRoots;
+        protected readonly ConcurrentBigMap<AbsolutePath, bool> OutputDirectoryRoots;
 
         /// <summary>
         /// Set of pips that rewrite their inputs.
@@ -169,7 +170,7 @@ namespace BuildXL.Scheduler.Graph
             Modules = new ConcurrentBigMap<ModuleId, NodeId>();
             PipProducers = new ConcurrentBigMap<FileArtifact, NodeId>();
             OutputDirectoryProducers = new ConcurrentBigMap<DirectoryArtifact, NodeId>();
-            OutputDirectoryRoots = new ConcurrentBigSet<(AbsolutePath path, bool isShared)>();
+            OutputDirectoryRoots = new ConcurrentBigMap<AbsolutePath, bool>();
             CompositeOutputDirectoryProducers = new ConcurrentBigMap<DirectoryArtifact, NodeId>();
             SourceSealedDirectoryRoots = new ConcurrentBigMap<AbsolutePath, DirectoryArtifact>();
             TemporaryPaths = new ConcurrentBigMap<AbsolutePath, PipId>();
@@ -193,7 +194,7 @@ namespace BuildXL.Scheduler.Graph
                 ConcurrentBigMap<ModuleId, NodeId> modules,
                 ConcurrentBigMap<FileArtifact, NodeId> pipProducers,
                 ConcurrentBigMap<DirectoryArtifact, NodeId> outputDirectoryProducers,
-                ConcurrentBigSet<(AbsolutePath path, bool isShared)> outputDirectoryRoots,
+                ConcurrentBigMap<AbsolutePath, bool> outputDirectoryRoots,
                 ConcurrentBigMap<DirectoryArtifact, NodeId> compositeOutputDirectoryProducers,
                 ConcurrentBigMap<AbsolutePath, DirectoryArtifact> sourceSealedDirectoryRoots,
                 ConcurrentBigMap<AbsolutePath, PipId> temporaryPaths,
@@ -278,12 +279,9 @@ namespace BuildXL.Scheduler.Graph
             foreach (var current in Context.PathTable.EnumerateHierarchyBottomUp(path.Value))
             {
                 var currentPath = new AbsolutePath(current);
-                foreach (var isShared in new[] { true, false })
+                if (OutputDirectoryRoots.TryGetValue(currentPath, out bool isSharedOpaque))
                 {
-                    if (OutputDirectoryRoots.Contains((currentPath, isShared)))
-                    {
-                        return new Optional<(AbsolutePath path, bool isShared)>((currentPath, isShared));
-                    }
+                    return new Optional<(AbsolutePath path, bool isShared)>((currentPath, isSharedOpaque));
                 }
             }
 
