@@ -5270,6 +5270,14 @@ namespace BuildXL.Scheduler
             return null;
         }
 
+        private void MakeSharedOpaqueOutputIfNeeded(AbsolutePath path, bool force = false)
+        {
+            if (force || PipGraph.IsPathUnderSharedOpaqueDirectory(path))
+            {
+                SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(path.ToString(Context.PathTable));
+            }
+        }
+
         [SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes")]
         SortedReadOnlyArray<FileArtifact, OrdinalFileArtifactComparer> IFileContentManagerHost.ListSealDirectoryContents(DirectoryArtifact directory)
         {
@@ -5325,9 +5333,6 @@ namespace BuildXL.Scheduler
                     existence = PathExistence.ExistsAsFile;
                 }
 
-                Console.WriteLine($"ReportContent: {artifact.Path.ToString(Context.PathTable)}");
-                MakeSharedOpaqueOutputIfNeeded(artifact.Path);
-
                 State.FileSystemView.ReportOutputFileSystemExistence(artifact.Path, existence.Value);
             }
 
@@ -5350,7 +5355,6 @@ namespace BuildXL.Scheduler
         [SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes")]
         void IFileContentManagerHost.ReportMaterializedArtifact(in FileOrDirectoryArtifact artifact)
         {
-            Console.WriteLine($"ReportMaterializedArtifact: {artifact.Path.ToString(Context.PathTable)}");
             if (artifact.IsDirectory && IncrementalSchedulingState != null)
             {
                 // Ensure seal directory gets marked as materialized when file content manager reports that
@@ -5410,6 +5414,9 @@ namespace BuildXL.Scheduler
             return result.Then<ContentMaterializationOrigin>(
                 status =>
                 {
+                    Console.WriteLine($"TryMaterializeFileAsync: {artifact.Path}");
+                    MakeSharedOpaqueOutputIfNeeded(artifact.Path);
+
                     if (status.IndicatesFailure())
                     {
                         return new Failure<string>(I($"Failed to materialize write file destination because write file pip execution results in '{status.ToString()}'"));
