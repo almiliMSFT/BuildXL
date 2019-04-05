@@ -262,14 +262,14 @@ namespace BuildXL.Scheduler.Graph
         }
 
         /// <summary>
-        /// Returns whether there is (by walking the path upwards) an output directory -shared or exclusive- containing <paramref name="path"/> 
+        /// If exists, returns a path to a declared outputs directory---shared or exclusive---containing <paramref name="path"/>.
         /// </summary>
-        public bool IsPathUnderOutputDirectory(AbsolutePath path)
+        public Optional<AbsolutePath> TryGetParentOutputDirectoryPath(AbsolutePath path)
         {
             // If there are no output directories, shortcut the search
             if (OutputDirectoryRoots.Count == 0)
             {
-                return false;
+                return default;
             }
 
             // Walk the parent directories of the path to find if it is under a shared opaque directory.
@@ -279,11 +279,34 @@ namespace BuildXL.Scheduler.Graph
 
                 if (OutputDirectoryRoots.Contains(currentPath))
                 {
-                    return true;
+                    return new Optional<AbsolutePath>(currentPath);
                 }
             }
 
-            return false;
+            return default;
+        }
+
+        /// <summary>
+        /// Returns whether there is a shared opaque output directory containing <paramref name="path"/>
+        /// </summary>
+        public bool IsPathUnderSharedOpaqueDirectory(AbsolutePath path)
+        {
+            Optional<AbsolutePath> maybeDirectoryPath = TryGetParentOutputDirectoryPath(path);
+            if (!maybeDirectoryPath.IsValid)
+            {
+                return false;
+            }
+
+            DirectoryArtifact dir = TryGetDirectoryArtifactForPath(maybeDirectoryPath.Value);
+            return dir.IsValid && dir.IsSharedOpaque;
+        }
+
+        /// <summary>
+        /// Returns whether there is (by walking the path upwards) an output directory -shared or exclusive- containing <paramref name="path"/> 
+        /// </summary>
+        public bool IsPathUnderOutputDirectory(AbsolutePath path)
+        {
+            return TryGetParentOutputDirectoryPath(path).IsValid;
         }
 
         protected IEnumerable<Pip> HydratePips(IEnumerable<PipId> pipIds, PipQueryContext context)

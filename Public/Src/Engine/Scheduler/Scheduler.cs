@@ -5366,7 +5366,7 @@ namespace BuildXL.Scheduler
 
         private void MakeSharedOpaqueOutputIfNeeded(AbsolutePath path, bool force = false)
         {
-            if (force || PipGraph.IsPathUnderOutputDirectory(path))
+            if (force || PipGraph.IsPathUnderSharedOpaqueDirectory(path))
             {
                 SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(path.ToString(Context.PathTable));
             }
