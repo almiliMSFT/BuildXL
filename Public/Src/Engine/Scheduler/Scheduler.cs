@@ -3527,9 +3527,9 @@ namespace BuildXL.Scheduler
         private void FlagSharedOpaqueOutputs(IPipExecutionEnvironment environment, ProcessRunnablePip process)
         {
             // Select all declared output files
-            IEnumerable<(AbsolutePath, bool)> paths = process.Process
+            IEnumerable<(AbsolutePath path, bool isKnownToBeUnderSharedOpaque)> paths = process.Process
                 .FileOutputs
-                .Select(f => (f.Path, false));
+                .Select(f => (path: f.Path, isKnownToBeUnderSharedOpaque: false));
 
             // The shared dynamic accesses can be null when the pip failed on preparation, in which case it didn't run at all, so there is
             // nothing to flag
@@ -3541,12 +3541,12 @@ namespace BuildXL.Scheduler
                     .SharedDynamicDirectoryWriteAccesses
                     .SelectMany(kvp => kvp.Value);
 
-                paths = paths.Concat(sharedOpaqueDirOutputs.Select(path => (path, true)));
+                paths = paths.Concat(sharedOpaqueDirOutputs.Select(path => (path, isKnownToBeUnderSharedOpaque: true)));
             }
 
-            foreach (var (path, force) in paths)
+            foreach (var tuple in paths)
             {
-                MakeSharedOpaqueOutputIfNeeded(path, force);
+                MakeSharedOpaqueOutputIfNeeded(tuple.path, force: tuple.isKnownToBeUnderSharedOpaque);
             }
         }
 
@@ -5366,10 +5366,17 @@ namespace BuildXL.Scheduler
 
         private void MakeSharedOpaqueOutputIfNeeded(AbsolutePath path, bool force = false)
         {
-            if (force || PipGraph.IsPathUnderSharedOpaqueDirectory(path))
+            if (force || IsPathUnderSharedOpaqueDirectory(path))
             {
                 SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(path.ToString(Context.PathTable));
             }
+        }
+
+        private bool IsPathUnderSharedOpaqueDirectory(AbsolutePath path)
+        {
+            return
+                PipGraph.IsPathUnderOutputDirectory(path, out var isItSharedOpaque) &&
+                isItSharedOpaque;
         }
 
         /// <inheritdoc />

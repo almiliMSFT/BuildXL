@@ -390,7 +390,7 @@ namespace BuildXL.Scheduler
 
                     // If the file is not known to the graph, check whether the file is in an opaque or shared opaque directory.
                     // If it's inside such a directory, we treat it as an output file -> chain is not valid.
-                    if (!targetArtifact.IsValid && environment.PipGraphView.IsPathUnderOutputDirectory(targetPath))
+                    if (!targetArtifact.IsValid && environment.PipGraphView.IsPathUnderOutputDirectory(targetPath, out _))
                     {
                         return CreateInvalidChainFailure(I($"An element of the chain ('{chainElement}') is inside of an opaque directory."));
                     } 
@@ -4315,6 +4315,14 @@ namespace BuildXL.Scheduler
             // it's fine to just track rewritten symlinks though (all data required for
             // proper symlink materialization will be a part of cache metadata)
             Contract.Requires(isSymlink || !IsRewriteOutputFile(environment, outputFileArtifact));
+
+            Console.WriteLine("TrackPipOutput: " + outputFileArtifact.Path.ToString(environment.Context.PathTable));
+
+            if (environment.PipGraphView.IsPathUnderOutputDirectory(outputFileArtifact.Path, out bool isItSharedOpaque) && isItSharedOpaque)
+            {
+                string expandedPath = outputFileArtifact.Path.ToString(environment.Context.PathTable);
+                SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(expandedPath);
+            }
 
             var possiblyTracked = await environment.LocalDiskContentStore.TryTrackAsync(
                 outputFileArtifact,

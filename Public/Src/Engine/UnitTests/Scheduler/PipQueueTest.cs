@@ -693,8 +693,9 @@ namespace Test.BuildXL.Scheduler
             m_pathTable = pathTable;
         }
 
-        public bool IsPathUnderOutputDirectory(AbsolutePath path)
+        public bool IsPathUnderOutputDirectory(AbsolutePath path, out bool isItUnderSharedOpaque)
         {
+            isItUnderSharedOpaque = false;
             return false;
         }
 

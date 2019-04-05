@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.ContractsLight;
+using System.Linq;
 using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Utilities;
@@ -104,7 +105,7 @@ namespace BuildXL.Scheduler.Graph
         /// <summary>
         /// All roots in <see cref="OutputDirectoryProducers"/> keys
         /// </summary>
-        protected readonly ConcurrentBigSet<AbsolutePath> OutputDirectoryRoots;
+        protected readonly ConcurrentBigSet<(AbsolutePath path, bool isShared)> OutputDirectoryRoots;
 
         /// <summary>
         /// Set of pips that rewrite their inputs.
@@ -168,7 +169,7 @@ namespace BuildXL.Scheduler.Graph
             Modules = new ConcurrentBigMap<ModuleId, NodeId>();
             PipProducers = new ConcurrentBigMap<FileArtifact, NodeId>();
             OutputDirectoryProducers = new ConcurrentBigMap<DirectoryArtifact, NodeId>();
-            OutputDirectoryRoots = new ConcurrentBigSet<AbsolutePath>();
+            OutputDirectoryRoots = new ConcurrentBigSet<(AbsolutePath path, bool isShared)>();
             CompositeOutputDirectoryProducers = new ConcurrentBigMap<DirectoryArtifact, NodeId>();
             SourceSealedDirectoryRoots = new ConcurrentBigMap<AbsolutePath, DirectoryArtifact>();
             TemporaryPaths = new ConcurrentBigMap<AbsolutePath, PipId>();
@@ -192,7 +193,7 @@ namespace BuildXL.Scheduler.Graph
                 ConcurrentBigMap<ModuleId, NodeId> modules,
                 ConcurrentBigMap<FileArtifact, NodeId> pipProducers,
                 ConcurrentBigMap<DirectoryArtifact, NodeId> outputDirectoryProducers,
-                ConcurrentBigSet<AbsolutePath> outputDirectoryRoots,
+                ConcurrentBigSet<(AbsolutePath path, bool isShared)> outputDirectoryRoots,
                 ConcurrentBigMap<DirectoryArtifact, NodeId> compositeOutputDirectoryProducers,
                 ConcurrentBigMap<AbsolutePath, DirectoryArtifact> sourceSealedDirectoryRoots,
                 ConcurrentBigMap<AbsolutePath, PipId> temporaryPaths,
@@ -262,9 +263,10 @@ namespace BuildXL.Scheduler.Graph
         }
 
         /// <summary>
-        /// If exists, returns a path to a declared outputs directory---shared or exclusive---containing <paramref name="path"/>.
+        /// If exists, returns a path to a declared output directory containing <paramref name="path"/> and
+        /// an indicator of whether that output directory is shared or exclusive.
         /// </summary>
-        public Optional<AbsolutePath> TryGetParentOutputDirectoryPath(AbsolutePath path)
+        private Optional<(AbsolutePath path, bool isShared)> TryGetParentOutputDirectory(AbsolutePath path)
         {
             // If there are no output directories, shortcut the search
             if (OutputDirectoryRoots.Count == 0)
@@ -276,10 +278,12 @@ namespace BuildXL.Scheduler.Graph
             foreach (var current in Context.PathTable.EnumerateHierarchyBottomUp(path.Value))
             {
                 var currentPath = new AbsolutePath(current);
-
-                if (OutputDirectoryRoots.Contains(currentPath))
+                foreach (var isShared in new[] { true, false })
                 {
-                    return new Optional<AbsolutePath>(currentPath);
+                    if (OutputDirectoryRoots.Contains((currentPath, isShared)))
+                    {
+                        return new Optional<(AbsolutePath path, bool isShared)>((currentPath, isShared));
+                    }
                 }
             }
 
@@ -287,26 +291,14 @@ namespace BuildXL.Scheduler.Graph
         }
 
         /// <summary>
-        /// Returns whether there is a shared opaque output directory containing <paramref name="path"/>
+        /// Returns whether there is (by walking the path upwards) an output directory -shared or exclusive- containing <paramref name="path"/>.
+        /// If there is, the directory kind is returned via the <paramref name="isItUnderSharedOpaque"/> out parameter.
         /// </summary>
-        public bool IsPathUnderSharedOpaqueDirectory(AbsolutePath path)
+        public bool IsPathUnderOutputDirectory(AbsolutePath path, out bool isItUnderSharedOpaque)
         {
-            Optional<AbsolutePath> maybeDirectoryPath = TryGetParentOutputDirectoryPath(path);
-            if (!maybeDirectoryPath.IsValid)
-            {
-                return false;
-            }
-
-            DirectoryArtifact dir = TryGetDirectoryArtifactForPath(maybeDirectoryPath.Value);
-            return dir.IsValid && dir.IsSharedOpaque;
-        }
-
-        /// <summary>
-        /// Returns whether there is (by walking the path upwards) an output directory -shared or exclusive- containing <paramref name="path"/> 
-        /// </summary>
-        public bool IsPathUnderOutputDirectory(AbsolutePath path)
-        {
-            return TryGetParentOutputDirectoryPath(path).IsValid;
+            var result = TryGetParentOutputDirectory(path);
+            isItUnderSharedOpaque = result.IsValid && result.Value.isShared;
+            return result.IsValid;
         }
 
         protected IEnumerable<Pip> HydratePips(IEnumerable<PipId> pipIds, PipQueryContext context)
@@ -686,6 +678,6 @@ namespace BuildXL.Scheduler.Graph
         FileArtifact TryGetLatestFileArtifactForPath(AbsolutePath path);
 
         /// <nodoc/>
-        bool IsPathUnderOutputDirectory(AbsolutePath path);
+        bool IsPathUnderOutputDirectory(AbsolutePath path, out bool isItSharedOpaque);
     }
 }

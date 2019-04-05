@@ -1914,7 +1914,7 @@ namespace BuildXL.Scheduler.Graph
                     foreach (var directory in process.DirectoryOutputs)
                     {
                         OutputDirectoryProducers.Add(directory, processNode);
-                        OutputDirectoryRoots.Add(directory.Path);
+                        OutputDirectoryRoots.Add((path: directory.Path, isShared: directory.IsSharedOpaque));
                     }
 
                     // Link to value pip
