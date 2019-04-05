@@ -2066,6 +2066,8 @@ namespace BuildXL.Scheduler.Artifacts
                                         fileIndex: materializationFileIndex,
                                         origin: possiblyPlaced.Result.Origin,
                                         operationContext: operationContext);
+
+                                    m_host.ReportFileArtifactPlaced(file);
                                 }
                                 else
                                 {
