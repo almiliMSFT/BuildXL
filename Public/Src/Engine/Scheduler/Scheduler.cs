@@ -3546,6 +3546,7 @@ namespace BuildXL.Scheduler
 
             foreach (var tuple in paths)
             {
+                Console.WriteLine($"FlagSharedOpaqueOutputs: {path.ToString(Context.PathTable)}");
                 MakeSharedOpaqueOutputIfNeeded(tuple.path, force: tuple.isKnownToBeUnderSharedOpaque);
             }
         }
@@ -5324,6 +5325,7 @@ namespace BuildXL.Scheduler
                     existence = PathExistence.ExistsAsFile;
                 }
 
+                Console.WriteLine($"ReportContent: {artifact.Path.ToString(Context.PathTable)}");
                 MakeSharedOpaqueOutputIfNeeded(artifact.Path);
 
                 State.FileSystemView.ReportOutputFileSystemExistence(artifact.Path, existence.Value);
@@ -5348,6 +5350,7 @@ namespace BuildXL.Scheduler
         [SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes")]
         void IFileContentManagerHost.ReportMaterializedArtifact(in FileOrDirectoryArtifact artifact)
         {
+            Console.WriteLine($"ReportMaterializedArtifact: {artifact.Path.ToString(Context.PathTable)}");
             if (artifact.IsDirectory && IncrementalSchedulingState != null)
             {
                 // Ensure seal directory gets marked as materialized when file content manager reports that
