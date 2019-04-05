@@ -5367,6 +5367,10 @@ namespace BuildXL.Scheduler
         void IFileContentManagerHost.ReportFileArtifactPlaced(in FileArtifact artifact)
         {
             Console.WriteLine($"ReportFileArtifactPlaced: {artifact.Path.ToString(Context.PathTable)}");
+            if (artifact.Path.ToString(Context.PathTable).Contains("arbitrary1"))
+            {
+                Console.Write("");
+            }
             MakeSharedOpaqueOutputIfNeeded(artifact.Path);
         }
 

@@ -657,6 +657,15 @@ namespace BuildXL.Scheduler
             }
         }
 
+        private static void MakeSharedOpaqueOutputIfNeeded(IPipExecutionEnvironment environment, AbsolutePath path)
+        {
+            if (environment.PipGraphView.IsPathUnderOutputDirectory(path, out bool isItSharedOpaque) && isItSharedOpaque)
+            {
+                string expandedPath = path.ToString(environment.Context.PathTable);
+                SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(expandedPath);
+            }
+        }
+
         /// <summary>
         /// Writes <paramref name="contents"/> to disk at location <paramref name="destinationFile"/> using
         /// <paramref name="encoding"/>.
@@ -737,6 +746,8 @@ namespace BuildXL.Scheduler
                         Contract.Assume(
                             fileWritten,
                             "WriteAllBytes only returns false when the predicate parameter (not supplied) fails. Otherwise it should throw a BuildXLException and be handled below.");
+
+                        MakeSharedOpaqueOutputIfNeeded(environment, destinationFile.Path);
 
                         var possiblyStored = environment.Configuration.Schedule.StoreOutputsToCache
                             ? await environment.LocalDiskContentStore.TryStoreAsync(
@@ -4315,14 +4326,6 @@ namespace BuildXL.Scheduler
             // it's fine to just track rewritten symlinks though (all data required for
             // proper symlink materialization will be a part of cache metadata)
             Contract.Requires(isSymlink || !IsRewriteOutputFile(environment, outputFileArtifact));
-
-            Console.WriteLine("TrackPipOutput: " + outputFileArtifact.Path.ToString(environment.Context.PathTable));
-
-            if (environment.PipGraphView.IsPathUnderOutputDirectory(outputFileArtifact.Path, out bool isItSharedOpaque) && isItSharedOpaque)
-            {
-                string expandedPath = outputFileArtifact.Path.ToString(environment.Context.PathTable);
-                SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(expandedPath);
-            }
 
             var possiblyTracked = await environment.LocalDiskContentStore.TryTrackAsync(
                 outputFileArtifact,
