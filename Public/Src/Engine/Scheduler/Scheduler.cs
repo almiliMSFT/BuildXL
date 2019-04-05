@@ -3546,7 +3546,7 @@ namespace BuildXL.Scheduler
 
             foreach (var tuple in paths)
             {
-                Console.WriteLine($"FlagSharedOpaqueOutputs: {path.ToString(Context.PathTable)}");
+                Console.WriteLine($"FlagSharedOpaqueOutputs: {tuple.path.ToString(Context.PathTable)}");
                 MakeSharedOpaqueOutputIfNeeded(tuple.path, force: tuple.isKnownToBeUnderSharedOpaque);
             }
         }
@@ -5270,14 +5270,6 @@ namespace BuildXL.Scheduler
             return null;
         }
 
-        private void MakeSharedOpaqueOutputIfNeeded(AbsolutePath path, bool force = false)
-        {
-            if (force || PipGraph.IsPathUnderSharedOpaqueDirectory(path))
-            {
-                SharedOpaqueOutputHelper.EnforceFileIsSharedOpaqueOutput(path.ToString(Context.PathTable));
-            }
-        }
-
         [SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes")]
         SortedReadOnlyArray<FileArtifact, OrdinalFileArtifactComparer> IFileContentManagerHost.ListSealDirectoryContents(DirectoryArtifact directory)
         {
@@ -5369,6 +5361,13 @@ namespace BuildXL.Scheduler
             }
 
             m_pipOutputMaterializationTracker.ReportMaterializedArtifact(artifact);
+        }
+
+        [SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes")]
+        void IFileContentManagerHost.ReportFileArtifactPlaced(in FileArtifact artifact)
+        {
+            Console.WriteLine($"ReportFileArtifactPlaced: {artifact.Path.ToString(Context.PathTable)}");
+            MakeSharedOpaqueOutputIfNeeded(artifact.Path);
         }
 
         private void MakeSharedOpaqueOutputIfNeeded(AbsolutePath path, bool force = false)
