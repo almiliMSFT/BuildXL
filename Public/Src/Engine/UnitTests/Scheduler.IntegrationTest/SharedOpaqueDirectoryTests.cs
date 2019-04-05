@@ -917,6 +917,94 @@ namespace IntegrationTest.BuildXL.Scheduler
                 doubleWriteProducerPipCacheHitExpected: false);
         }
 
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void TestTimestampsForFilesInSharedOpaqueDirectories(bool storeOutputsToCache)
+        {
+            Configuration.Schedule.StoreOutputsToCache = storeOutputsToCache;
+
+            AbsolutePath sodPath = AbsolutePath.Create(Context.PathTable, X($"{ObjectRoot}/sod"));
+            AbsolutePath odPath = AbsolutePath.Create(Context.PathTable, X($"{ObjectRoot}/od"));
+
+            // sod process pip
+            var sodFile = CreateOutputFileArtifact(root: sodPath, prefix: "sod-file");
+            var odFile = CreateOutputFileArtifact(root: odPath, prefix: "od-file");
+            var sodPipBuilder = CreatePipBuilder(new []
+            {
+                Operation.WriteFile(sodFile, doNotInfer: true),
+                Operation.WriteFile(odFile, doNotInfer: true),
+            });
+            sodPipBuilder.AddOutputDirectory(sodPath, SealDirectoryKind.SharedOpaque);
+            sodPipBuilder.AddOutputDirectory(odPath, SealDirectoryKind.Opaque);
+            var sodPip = SchedulePipBuilder(sodPipBuilder);
+
+            // regular process that writes into the same shared opaque directory
+            var processSodOutFile = CreateOutputFileArtifact(root: sodPath, prefix: "proc-sod-out");
+            var processNonSodOutFile = CreateOutputFileArtifact(prefix: "proc-out");
+            var process = CreateAndSchedulePipBuilder(new[]
+            {
+                Operation.WriteFile(processSodOutFile),
+                Operation.WriteFile(processNonSodOutFile)
+            });
+
+            // write file pip that writes into the same shared opaque directory
+            var writePipSodOutFile = CreateOutputFileArtifact(root: sodPath, prefix: "write-sod-out");
+            var writePipNonSodOutFile = CreateOutputFileArtifact(prefix: "write-out");
+            CreateAndScheduleWriteFile(writePipSodOutFile, " ", new[] { "write pip sod" });
+            CreateAndScheduleWriteFile(writePipNonSodOutFile, " ", new[] { "write pip" });
+
+            // copy pip that copies into the same shared opaque directory
+            var copySourceFile = CreateSourceFileWithPrefix(prefix: "copy-source");
+            var copyPipSodDestFile = CreateOutputFileArtifact(root: sodPath, prefix: "copy-sod-out");
+            var copyPipNonSodDestFile = CreateOutputFileArtifact(prefix: "copy-out");
+            CreateAndScheduleCopyFile(copySourceFile, copyPipSodDestFile);
+            CreateAndScheduleCopyFile(copySourceFile, copyPipNonSodDestFile);
+
+            // collect files in and not in shared opaque directories
+            FileArtifact[] sodOutFiles = new[] { sodFile, processSodOutFile, writePipSodOutFile, copyPipSodDestFile };
+            FileArtifact[] nonSodOutFiles = new[] { odFile, processNonSodOutFile, writePipNonSodOutFile, copyPipNonSodDestFile };
+
+            (AbsolutePath path, bool isInSod)[] outPaths = sodOutFiles
+                .Select(f => (f.Path, true))
+                .Concat(nonSodOutFiles.Select(f => (f.Path, false)))
+                .ToArray();
+
+            // 1st run
+            RunScheduler().AssertSuccess();
+            AssertTimestamps();
+            
+
+            // 2nd run: don't clear outputs beforehand
+            RunScheduler().AssertSuccess();
+            AssertTimestamps();
+
+            // 3rd run: clear outputs beforehand
+            foreach (var tuple in outPaths)
+            {
+                FileUtilities.DeleteFile(tuple.path.ToString(Context.PathTable));
+            }
+            RunScheduler().AssertSuccess();
+            AssertTimestamps();
+
+            void AssertTimestamps()
+            {
+                foreach (var tuple in outPaths)
+                {
+                    var expandedPath = tuple.path.ToString(Context.PathTable);
+                    XAssert.AreEqual(tuple.isInSod, SharedOpaqueOutputHelper.IsSharedOpaqueOutput(expandedPath));
+                }
+            }
+        }
+
+        private PipData PipDataFromString(string str)
+        {
+            return PipDataBuilder.CreatePipData(
+                Context.StringTable,
+                " ",
+                PipDataFragmentEscaping.CRuntimeArgumentRules,
+                str);
+        }
         private void FirstDoubleWriteWinsMakesPipUnCacheableRunner(
             IEnumerable<Operation> writeOperation, 
             AbsolutePath sharedOpaqueDirPath, 
