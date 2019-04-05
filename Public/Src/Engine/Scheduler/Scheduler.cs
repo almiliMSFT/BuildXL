@@ -3546,7 +3546,6 @@ namespace BuildXL.Scheduler
 
             foreach (var tuple in paths)
             {
-                Console.WriteLine($"FlagSharedOpaqueOutputs: {tuple.path.ToString(Context.PathTable)}");
                 MakeSharedOpaqueOutputIfNeeded(tuple.path, force: tuple.isKnownToBeUnderSharedOpaque);
             }
         }
@@ -5366,11 +5365,6 @@ namespace BuildXL.Scheduler
         [SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes")]
         void IFileContentManagerHost.ReportFileArtifactPlaced(in FileArtifact artifact)
         {
-            Console.WriteLine($"ReportFileArtifactPlaced: {artifact.Path.ToString(Context.PathTable)}");
-            if (artifact.Path.ToString(Context.PathTable).Contains("arbitrary1"))
-            {
-                Console.Write("");
-            }
             MakeSharedOpaqueOutputIfNeeded(artifact.Path);
         }
 
@@ -5417,9 +5411,6 @@ namespace BuildXL.Scheduler
             return result.Then<ContentMaterializationOrigin>(
                 status =>
                 {
-                    Console.WriteLine($"TryMaterializeFileAsync: {artifact.Path}");
-                    MakeSharedOpaqueOutputIfNeeded(artifact.Path);
-
                     if (status.IndicatesFailure())
                     {
                         return new Failure<string>(I($"Failed to materialize write file destination because write file pip execution results in '{status.ToString()}'"));

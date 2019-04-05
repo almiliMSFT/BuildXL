@@ -422,6 +422,13 @@ namespace BuildXL.Scheduler
                 (new Failure<string>(I($"Unable to copy from '{source}' to '{destination}'"))).Throw();
             }
 
+            // if /storeOutputsToCache- was used, mark the destination here;
+            // otherwise it will get marked in ReportFileArtifactPlaced.
+            if (!environment.Configuration.Schedule.StoreOutputsToCache)
+            {
+                MakeSharedOpaqueOutputIfNeeded(environment, copyFile.Destination);
+            }
+
             var mayBeTracked = await TrackPipOutputAsync(operationContext, environment, copyFile.Destination, isSymlink: false);
 
             if (!mayBeTracked.Succeeded)
