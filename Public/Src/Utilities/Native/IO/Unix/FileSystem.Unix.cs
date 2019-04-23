@@ -550,6 +550,8 @@ namespace BuildXL.Native.IO.Unix
         {
             try
             {
+                var mayBeExistence = TryProbePathExistence(path, openSymlink);
+
                 handle = Open(path, CreateOpenFlags(desiredAccess, shareMode, fileMode, openSymlink), CreateFilePermissions(desiredAccess));
 
                 if (handle.IsInvalid)
@@ -558,15 +560,14 @@ namespace BuildXL.Native.IO.Unix
                     return CreateErrorResult(Marshal.GetLastWin32Error());
                 }
 
-                //var mayBeExistence = TryProbePathExistence(path, openSymlink);
-                //int successCode =
-                //    mayBeExistence.Succeeded && mayBeExistence.Result == PathExistence.ExistsAsFile
-                //    ? NativeIOConstants.ErrorFileExists
-                //    : (mayBeExistence.Succeeded && mayBeExistence.Result == PathExistence.ExistsAsDirectory
-                //        ? NativeIOConstants.ErrorAlreadyExists
-                //        : NativeIOConstants.ErrorSuccess);
+                int successCode =
+                    mayBeExistence.Succeeded && mayBeExistence.Result == PathExistence.ExistsAsFile
+                    ? NativeIOConstants.ErrorFileExists
+                    : (mayBeExistence.Succeeded && mayBeExistence.Result == PathExistence.ExistsAsDirectory
+                        ? NativeIOConstants.ErrorAlreadyExists
+                        : NativeIOConstants.ErrorSuccess);
 
-                return OpenFileResult.Create(path, NativeIOConstants.ErrorSuccess, fileMode, handleIsValid: true);
+                return OpenFileResult.Create(path, successCode, fileMode, handleIsValid: true);
             }
             catch (Exception e)
             {
