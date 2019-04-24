@@ -20,7 +20,10 @@ namespace BuildXL.LogGen.Generators
             m_codeGenerator.Ln("if ({0}.AriaV2StaticState.IsEnabled)", GlobalInstrumentationNamespaceCommon);
             using (m_codeGenerator.Br)
             {
-                m_codeGenerator.Lns("var eventData = new {0}.AriaEvent(\"{1}\", \"{2}\", \"{3}\")", GlobalInstrumentationNamespaceCommon, site.Method.Name, m_targetFramework, m_targetRuntime);
+                var tableName = site.Method.Name;
+                if (tableName == "EventCount") tableName = "EventCount3";
+
+                m_codeGenerator.Lns("var eventData = new {0}.AriaEvent(\"{1}\", \"{2}\", \"{3}\")", GlobalInstrumentationNamespaceCommon, tableName, m_targetFramework, m_targetRuntime);
 
                 // Save context fields that all events save
                 m_codeGenerator.Lns("eventData.SetProperty(\"Environment\", {0}.Session.Environment)", site.LoggingContextParameterName);
@@ -39,7 +42,7 @@ namespace BuildXL.LogGen.Generators
 
                 foreach (var item in site.FlattenedPayload)
                 {
-                    WritePayload(site, item);
+                    WritePayload(site, item, tableName.StartsWith("EventCount"));
                 }
 
                 m_codeGenerator.Ln("eventData.Log();");
@@ -60,7 +63,7 @@ namespace BuildXL.LogGen.Generators
         {
         }
 
-        private void WritePayload(LoggingSite site, LoggingSite.AddressedType item)
+        private void WritePayload(LoggingSite site, LoggingSite.AddressedType item, bool log)
         {
             if (item.Type.SpecialType == SpecialType.System_String)
             {
@@ -94,13 +97,19 @@ namespace BuildXL.LogGen.Generators
                     m_codeGenerator.Ln("foreach (var item in {0})", item.Address);
                     using (m_codeGenerator.Br)
                     {
+                        m_codeGenerator.Ln("var scrubbedPropertyName = {0}.AriaV2StaticState.ScrubEventProperty(item.Key);", GlobalInstrumentationNamespaceCommon);
+                        if (log) {
+                            m_codeGenerator.Ln("Console.WriteLine($\"===== Setting property '{scrubbedPropertyName}' to value {item.Value}\");");
+                            //m_codeGenerator.Ln("eventData.SetProperty('e' + scrubbedPropertyName, (long)item.Value);");
+                        }
+
                         if (value.Type.SpecialType == SpecialType.System_String)
                         {
-                            m_codeGenerator.Ln("eventData.SetProperty({0}.AriaV2StaticState.ScrubEventProperty(item.Key), item.Value);", GlobalInstrumentationNamespaceCommon);
+                            m_codeGenerator.Ln("eventData.SetProperty(scrubbedPropertyName, item.Value);");
                         }
                         else
                         {
-                            m_codeGenerator.Ln("eventData.SetProperty({0}.AriaV2StaticState.ScrubEventProperty(item.Key), (long)item.Value);", GlobalInstrumentationNamespaceCommon);
+                            m_codeGenerator.Ln("eventData.SetProperty(scrubbedPropertyName, (long)item.Value);");
                         }
                     }
 

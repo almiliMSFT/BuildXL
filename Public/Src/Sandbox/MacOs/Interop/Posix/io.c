@@ -124,9 +124,9 @@ int SetTimeStampsForFilePath(const char *path, bool followSymlink, StatBuffer bu
     cTime.tv_nsec = buffer.st_ctimespec_nsec;
     
     int result = SetAttributeList(path, ATTR_CMN_CRTIME, birthTime, followSymlink);
-    result += SetAttributeList(path, ATTR_CMN_MODTIME, mTime, followSymlink);
-    result += SetAttributeList(path, ATTR_CMN_ACCTIME, aTime, followSymlink);
-    result += SetAttributeList(path, ATTR_CMN_CHGTIME, cTime, followSymlink);
+    if (result == 0) result += SetAttributeList(path, ATTR_CMN_MODTIME, mTime, followSymlink);
+    if (result == 0) result += SetAttributeList(path, ATTR_CMN_ACCTIME, aTime, followSymlink);
+    if (result == 0) result += SetAttributeList(path, ATTR_CMN_CHGTIME, cTime, followSymlink);
 
     return result;
 }

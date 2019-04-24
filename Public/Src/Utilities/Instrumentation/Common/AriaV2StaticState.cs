@@ -52,6 +52,7 @@ namespace BuildXL.Utilities.Instrumentation.Common
             s_ariaTelemetryDBLocation = offlineTelemetryDBPath;
             Initialize(tenantToken);
             IsEnabled = true;
+            Console.WriteLine("======= Enabled AriaV2");
         }
 
         /// <summary>
