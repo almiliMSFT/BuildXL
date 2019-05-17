@@ -146,9 +146,19 @@ namespace BuildXL.FrontEnd.Workspaces
     public class WeightedCounter
     {
         private const int TopListMaxLength = 10;
-        internal readonly ConcurrentBoundedSortedCollection<long, string> SortedList = new ConcurrentBoundedSortedCollection<long, string>(TopListMaxLength);
+
+        private readonly ConcurrentBoundedSortedCollection<long, string> m_sortedList;
+
         private int m_count;
         private long m_aggregateWeight;
+
+        /// <nodoc />
+        public WeightedCounter(bool enableSorting)
+        {
+            m_sortedList = enableSorting
+                ? new ConcurrentBoundedSortedCollection<long, string>(TopListMaxLength)
+                : null;
+        }
 
         /// <summary>
         /// Returns the number of times <see cref="Increment(long, string)"/> has been called on this counter.
@@ -169,9 +179,9 @@ namespace BuildXL.FrontEnd.Workspaces
             var result = Interlocked.Increment(ref m_count);
             Interlocked.Add(ref m_aggregateWeight, weight);
 
-            if (!string.IsNullOrEmpty(path))
+            if (!string.IsNullOrEmpty(path) && m_sortedList != null)
             {
-                SortedList.TryAdd(weight, path);
+                m_sortedList.TryAdd(weight, path);
             }
 
             return result;
@@ -193,22 +203,27 @@ namespace BuildXL.FrontEnd.Workspaces
         /// <summary>
         /// Returns a user-friendly description of the most heavy-weight elements.
         /// </summary>
-        public string RenderMostHeavyWeight() => CollapseDictionaryTimeLogs(SortedList, (weight) => I($"{weight}"));
+        public string RenderMostHeavyWeight() => CollapseDictionaryTimeLogs((weight) => I($"{weight}"));
 
         /// <summary>
-        /// Renders all alements found in <paramref name="sortedList"/>.
+        /// Renders all alements found in <see cref="m_sortedList"/>
         /// Elements are sorted by weight (in descending order).
         /// Each element is rendered on a separate line using the following format string: $"[{weight}] {path}.
         /// The 'weigth' fragment is padded so that all 'path's are aligned on the left.
         /// </summary>
-        protected static string CollapseDictionaryTimeLogs(ConcurrentBoundedSortedCollection<long, string> sortedList, Func<long, string> weightRenderer)
+        protected string CollapseDictionaryTimeLogs(Func<long, string> weightRenderer)
         {
-            var maxRenderedWeightLength = sortedList.Any()
-                ? sortedList.Max(kvp => weightRenderer(kvp.Key).Length)
+            if (m_sortedList == null)
+            {
+                return string.Empty;
+            }
+
+            var maxRenderedWeightLength = m_sortedList.Any()
+                ? m_sortedList.Max(kvp => weightRenderer(kvp.Key).Length)
                 : 0;
 
             StringBuilder stringBuilder = new StringBuilder();
-            foreach (KeyValuePair<long, string> pair in sortedList.Reverse())
+            foreach (KeyValuePair<long, string> pair in m_sortedList.Reverse())
             {
                 var renderedWeight = weightRenderer(pair.Key);
                 var paddedDurationStr = renderedWeight.PadLeft(maxRenderedWeightLength);
@@ -224,6 +239,11 @@ namespace BuildXL.FrontEnd.Workspaces
     /// </summary>
     public class Counter : WeightedCounter
     {
+        /// <nodoc />
+        public Counter(bool enableSorting) : base(enableSorting)
+        {
+        }
+
         /// <summary>
         /// Returns aggregate duration.
         /// </summary>
@@ -246,7 +266,7 @@ namespace BuildXL.FrontEnd.Workspaces
         /// <summary>
         /// Returns a string of the most time-consuming elements.
         /// </summary>
-        public string RenderSlowest => CollapseDictionaryTimeLogs(SortedList, RenderTicks);
+        public string RenderSlowest => CollapseDictionaryTimeLogs(RenderTicks);
 
         private static string RenderTicks(long ticks) => I($"{(long)TimeSpan.FromTicks(ticks).TotalMilliseconds}ms");
 
@@ -294,6 +314,11 @@ namespace BuildXL.FrontEnd.Workspaces
     /// </summary>
     public sealed class CounterWithRootCause : Counter
     {
+        /// <nodoc />
+        public CounterWithRootCause(bool enableSorting) : base(enableSorting)
+        {
+        }
+
         /// <summary>
         /// The first invocation stack trace that caused this counter to be incremented.
         /// </summary>
@@ -320,31 +345,31 @@ namespace BuildXL.FrontEnd.Workspaces
     public class WorkspaceStatistics : IWorkspaceStatistics
     {
         /// <inheritdoc/>
-        public Counter SpecParsing { get; } = new Counter();
+        public Counter SpecParsing { get; }
 
         /// <inheritdoc/>
-        public Counter SpecBinding { get; } = new Counter();
+        public Counter SpecBinding { get; }
 
         /// <inheritdoc/>
-        public Counter SpecTypeChecking { get; } = new Counter();
+        public Counter SpecTypeChecking { get; }
 
         /// <inheritdoc/>
-        public Counter SpecComputeFingerprint { get; } = new Counter();
+        public Counter SpecComputeFingerprint { get; }
 
         /// <inheritdoc/>
-        public Counter SpecConversion { get; } = new Counter();
+        public Counter SpecConversion { get; }
 
         /// <inheritdoc/>
-        public Counter SpecEvaluation { get; } = new Counter();
+        public Counter SpecEvaluation { get; }
 
         /// <inheritdoc/>
-        public Counter EndToEndParsing { get; } = new Counter();
+        public Counter EndToEndParsing { get; }
 
         /// <inheritdoc/>
-        public Counter EndToEndBinding { get; } = new Counter();
+        public Counter EndToEndBinding { get; }
 
         /// <inheritdoc/>
-        public Counter EndToEndTypeChecking { get; } = new Counter();
+        public Counter EndToEndTypeChecking { get; }
 
         /// <inheritdoc/>
         public TimeSpan? FrontEndSnapshotSavingDuration { get; set; }
@@ -353,39 +378,65 @@ namespace BuildXL.FrontEnd.Workspaces
         public TimeSpan? FrontEndSnapshotLoadingDuration { get; set; }
 
         /// <inheritdoc />
-        public Counter PublicFacadeHits { get; } = new Counter();
+        public Counter PublicFacadeHits { get; }
 
         /// <inheritdoc />
-        public Counter SerializedAstHits { get; } = new Counter();
+        public Counter SerializedAstHits { get; }
 
         /// <inheritdoc/>
-        public Counter PublicFacadeGenerationFailures { get; } = new Counter();
+        public Counter PublicFacadeGenerationFailures { get; }
 
         /// <inheritdoc/>
-        public Counter PublicFacadeSaves { get; } = new Counter();
+        public Counter PublicFacadeSaves { get; }
 
         /// <inheritdoc/>
-        public Counter AstSerializationSaves { get; } = new Counter();
+        public Counter AstSerializationSaves { get; }
 
         /// <inheritdoc/>
-        public CounterValue AstSerializationBlobSize { get; } = new CounterValue();
+        public CounterValue AstSerializationBlobSize { get; }
 
         /// <inheritdoc/>
-        public CounterValue PublicFacadeSerializationBlobSize { get; } = new CounterValue();
+        public CounterValue PublicFacadeSerializationBlobSize { get; }
 
         /// <inheritdoc/>
-        public WeightedCounter SourceFileSymbols { get; } = new WeightedCounter();
+        public WeightedCounter SourceFileSymbols { get; }
 
         /// <inheritdoc/>
-        public WeightedCounter SourceFileNodes { get; } = new WeightedCounter();
+        public WeightedCounter SourceFileNodes { get; }
 
         /// <inheritdoc/>
-        public WeightedCounter SourceFileIdentifiers { get; } = new WeightedCounter();
+        public WeightedCounter SourceFileIdentifiers { get; }
 
         /// <inheritdoc/>
-        public WeightedCounter SourceFileLines { get; } = new WeightedCounter();
+        public WeightedCounter SourceFileLines { get; }
 
         /// <inheritdoc/>
-        public WeightedCounter SourceFileChars { get; } = new WeightedCounter();
+        public WeightedCounter SourceFileChars { get; }
+
+        /// <nodoc />
+        public WorkspaceStatistics(bool enableSorting)
+        {
+            SpecParsing                       = new Counter(enableSorting);
+            SpecBinding                       = new Counter(enableSorting);
+            SpecTypeChecking                  = new Counter(enableSorting);
+            SpecComputeFingerprint            = new Counter(enableSorting);
+            SpecConversion                    = new Counter(enableSorting);
+            SpecEvaluation                    = new Counter(enableSorting);
+            EndToEndParsing                   = new Counter(enableSorting);
+            EndToEndBinding                   = new Counter(enableSorting);
+            EndToEndTypeChecking              = new Counter(enableSorting);
+            PublicFacadeHits                  = new Counter(enableSorting);
+            SerializedAstHits                 = new Counter(enableSorting);
+            PublicFacadeGenerationFailures    = new Counter(enableSorting);
+            PublicFacadeSaves                 = new Counter(enableSorting);
+            AstSerializationSaves             = new Counter(enableSorting);
+            AstSerializationBlobSize          = new CounterValue();
+            PublicFacadeSerializationBlobSize = new CounterValue();
+            SourceFileSymbols                 = new WeightedCounter(enableSorting);
+            SourceFileNodes                   = new WeightedCounter(enableSorting);
+            SourceFileIdentifiers             = new WeightedCounter(enableSorting);
+            SourceFileLines                   = new WeightedCounter(enableSorting);
+            SourceFileChars                   = new WeightedCounter(enableSorting);
+        }
     }
 }

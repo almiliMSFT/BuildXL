@@ -19,31 +19,40 @@ namespace BuildXL.FrontEnd.Core
         private long m_analysisDurationInTicks;
 
         /// <nodoc />
-        public FrontEndStatistics(EventHandler<WorkspaceProgressEventArgs> workspaceProgressHandler = null)
+        public FrontEndStatistics(bool enableSorting = true, EventHandler<WorkspaceProgressEventArgs> workspaceProgressHandler = null)
+            : base(enableSorting)
         {
             WorkspaceProgress = workspaceProgressHandler;
+
+            SpecAstConversion       = new Counter(enableSorting);
+            SpecAstDeserialization  = new Counter(enableSorting);
+            SpecAstSerialization    = new Counter(enableSorting);
+            PublicFacadeComputation = new Counter(enableSorting);
+            ConfigurationProcessing = new Counter(enableSorting);
+            PreludeProcessing       = new Counter(enableSorting);
+            CounterWithRootCause    = new CounterWithRootCause(enableSorting);
         }
 
         /// <inheritdoc />
-        public Counter SpecAstConversion { get; } = new Counter();
+        public Counter SpecAstConversion { get; }
 
         /// <inheritdoc />
-        public Counter SpecAstDeserialization { get; } = new Counter();
+        public Counter SpecAstDeserialization { get; }
 
         /// <inheritdoc />
-        public Counter SpecAstSerialization { get; } = new Counter();
+        public Counter SpecAstSerialization { get; }
 
         /// <inheritdoc />
-        public Counter PublicFacadeComputation { get; } = new Counter();
+        public Counter PublicFacadeComputation { get; }
 
         /// <inheritdoc />
-        public CounterWithRootCause CounterWithRootCause { get; } = new CounterWithRootCause();
+        public CounterWithRootCause CounterWithRootCause { get; }
 
         /// <inheritdoc />
-        public Counter ConfigurationProcessing { get; } = new Counter();
+        public Counter ConfigurationProcessing { get; }
 
         /// <inheritdoc />
-        public Counter PreludeProcessing { get; } = new Counter();
+        public Counter PreludeProcessing { get; }
 
         /// <inheritdoc />
         void IFrontEndStatistics.AnalysisCompleted(AbsolutePath path, TimeSpan duration)

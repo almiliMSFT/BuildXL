@@ -128,7 +128,7 @@ namespace BuildXL.FrontEnd.Script.Analyzer
 
             BuildXLEngine.PopulateLoggingAndLayoutConfiguration(commandlineConfig, pathTable, bxlExeLocation: null);
 
-            var statistics = new FrontEndStatistics(progressHandler);
+            var statistics = new FrontEndStatistics(enableSorting: true, progressHandler);
             var frontEndControllerFactory = FrontEndControllerFactory.Create(
                 mode: FrontEndMode.NormalMode,
                 loggingContext: loggingContext,

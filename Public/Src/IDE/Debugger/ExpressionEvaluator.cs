@@ -44,7 +44,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
             s_parser = new RuntimeModelFactory(
                 m_logger,
                 m_state.LoggingContext,
-                new FrontEndStatistics(),
+                new FrontEndStatistics(enableSorting: false),
                 configuration,
                 workspace: null);
         }
@@ -58,7 +58,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
             var context = evalState.Context;
             var moduleLiteral = evalState.GetEnvForFrame(frameContext.FrameIndex);
 
-            var frontEnd = new DScriptFrontEnd(new FrontEndStatistics());
+            var frontEnd = new DScriptFrontEnd(new FrontEndStatistics(enableSorting: false));
             frontEnd.InitializeFrontEnd(context.FrontEndHost, context.FrontEndContext, s_configuration);
 
             // We clear the logger before using it.

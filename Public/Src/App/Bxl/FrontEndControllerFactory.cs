@@ -212,7 +212,8 @@ namespace BuildXL
             var workspaceResolverFactory = new DScriptWorkspaceResolverFactory();
 
             // Statistic should be global for all front-ends, not per an instance.
-            var frontEndStatistics = statistics ?? new FrontEndStatistics();
+            var enableSorting = configuration.FrontEnd.ShowLargestFilesStatistics || configuration.FrontEnd.ShowSlowestElementsStatistics;
+            var frontEndStatistics = statistics ?? new FrontEndStatistics(enableSorting);
 
             var sharedModuleRegistry = new ModuleRegistry(symbolTable);
 
@@ -223,7 +224,7 @@ namespace BuildXL
 
             frontEndFactory.SetConfigurationProcessor(
                 new ConfigurationProcessor(
-                    new FrontEndStatistics(), // Configuration processing is so lightweight that it won't affect overall perf statistics
+                    new FrontEndStatistics(enableSorting), // Configuration processing is so lightweight that it won't affect overall perf statistics
                     logger: null));
 
             var msBuildFrontEnd = new MsBuildFrontEnd();

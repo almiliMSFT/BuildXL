@@ -591,7 +591,7 @@ namespace BuildXL.FrontEnd.Core
         }
 
         /// <inheritdoc />
-        public FrontEndControllerStatistics LogStatistics(bool showSlowestElementsStatistics, bool showLargestFilesStatistics)
+        public FrontEndControllerStatistics LogStatistics()
         {
             if (m_resolvers != null)
             {
@@ -604,12 +604,12 @@ namespace BuildXL.FrontEnd.Core
             LogFrontEndStatistics();
             LogCycleDetectorStatistics();
 
-            if (showSlowestElementsStatistics)
+            if (FrontEndConfiguration.ShowSlowestElementsStatistics)
             {
                 LogSlowestElementsStatistics();
             }
 
-            if (showLargestFilesStatistics)
+            if (FrontEndConfiguration.ShowLargestFilesStatistics)
             {
                 LogLargestSourceFileStatistics();
             }
@@ -1061,7 +1061,7 @@ namespace BuildXL.FrontEnd.Core
                 new DScriptWorkspaceResolverFactory(),
                 new EvaluationScheduler(degreeOfParallelism: 1, cancellationToken: frontEndContext.CancellationToken),
                 moduleRegistry,
-                new FrontEndStatistics(),
+                new FrontEndStatistics(enableSorting: true),
                 logger ?? Logger.CreateLogger(),
                 collector: null,
                 collectMemoryAsSoonAsPossible: false); // Don't need to collect memory in tests.
