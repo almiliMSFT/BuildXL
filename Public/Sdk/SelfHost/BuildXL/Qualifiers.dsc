@@ -24,6 +24,16 @@ export interface DefaultQualifier extends Qualifier {
 }
 
 /**
+ * Qualifiers for projects that support DotNetCore but are targeting Windows only
+ */
+@@public
+export interface DefaultWindowsOnlyQualifier extends Qualifier {
+    configuration: "debug" | "release";
+    targetFramework: "net472" | "netcoreapp3.0";
+    targetRuntime: "win-x64";
+}
+
+/**
  * Qualifier for projects that support DotNetCore
  */
 @@public

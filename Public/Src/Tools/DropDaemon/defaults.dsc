@@ -3,7 +3,7 @@
 
 import * as BuildXLSdk from "Sdk.BuildXL";
 
-export declare const qualifier: BuildXLSdk.FullFrameworkQualifier;
+export declare const qualifier: BuildXLSdk.DefaultWindowsOnlyQualifier;
 
 @@public
 export const deployment = BuildXLSdk.isDropToolingEnabled ? DropDaemon.deployment : undefined;

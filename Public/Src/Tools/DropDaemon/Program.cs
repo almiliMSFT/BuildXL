@@ -32,7 +32,7 @@ using static Tool.DropDaemon.Statics;
 namespace Tool.DropDaemon
 {
     /// <summary>
-    ///     DropDaemon entry point.
+    ///     DropDaemon entry point....
     /// </summary>
     public static class Program
     {

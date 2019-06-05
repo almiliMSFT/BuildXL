@@ -117,7 +117,7 @@ export const restrictTestRunToDebugNet461OnWindows =
 * Whether drop tooling is included with the BuildXL deployment
 */
 @@public
-export const isDropToolingEnabled = Flags.isMicrosoftInternal;
+export const isDropToolingEnabled = Flags.isMicrosoftInternal && !isTargetRuntimeOsx;
 
 namespace Flags {
     export declare const qualifier: {};
