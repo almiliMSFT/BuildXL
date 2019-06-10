@@ -305,17 +305,9 @@ namespace BuildXL.FrontEnd.Script.Tracing
         [GeneratedEvent(
             (int)LogEventId.WarnForDeprecatedV1Modules,
             EventGenerators = EventGenerators.LocalOnly,
-            EventLevel = Level.Warning,
+            EventLevel = Level.Verbose,
             EventTask = (ushort)Events.Tasks.Parser,
-            Message = @"Deprecated module configuration. Module '{moduleName}' declared in '{moduleFile}' is declared as an old Legacy DScript file (V1-Format). This format will soon be deprecated. You can make it a V2 module by setting the name resolution semantics.
-    module({{
-        name: '{moduleName}',
-        nameResolutionSemantics: NameResolutionSemantics.implicitProjectReferences,
-        // and the rest of your configuration.
-    }});
-
-If you need assistance in migrating to V2, feel free to reach out to the BuildXL team and we can help.
-If you can't update and need this feature after July 2018 please reach out to the BuildXL team.",
+            Message = @"{moduleName}{moduleFile}",
             Keywords = (int)(Events.Keywords.UserMessage | Events.Keywords.Diagnostics))]
         public abstract void WarnForDeprecatedV1Modules(LoggingContext context, string moduleName, string moduleFile);
     }

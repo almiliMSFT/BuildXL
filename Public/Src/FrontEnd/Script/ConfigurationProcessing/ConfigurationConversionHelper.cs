@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.ContractsLight;
 using System.Linq;
 using System.Threading.Tasks;
@@ -109,9 +110,13 @@ namespace BuildXL.FrontEnd.Script
         public async Task<Workspace> ParseAndValidateConfigFileAsync(AbsolutePath configPath, bool typecheck)
         {
             Contract.Requires(configPath.IsValid);
+            var sw = new Stopwatch();
 
             // parse and validate config
+            sw.Restart();
             var specFileMap = await ParseConfigFileAsync(configPath);
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"Parse and discover ({sw.ElapsedMilliseconds}) : {configPath.ToString(Context.PathTable)}");
+
             var specFile = specFileMap[configPath];
             if (specFile == null)
             {
@@ -119,7 +124,9 @@ namespace BuildXL.FrontEnd.Script
                 return null;
             }
 
+            sw.Restart();
             ValidateConfigFile(specFileMap[configPath]);
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"Validate ({sw.ElapsedMilliseconds}) : {configPath.ToString(Context.PathTable)}");
 
             if (Logger.HasErrors)
             {
@@ -127,7 +134,10 @@ namespace BuildXL.FrontEnd.Script
             }
 
             // create workspace and check for errors
-            return await CreateWorkspaceAsync(configPath, specFileMap, typecheck);
+            sw.Restart();
+            var result = await CreateWorkspaceAsync(configPath, specFileMap, typecheck);
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"Create workspace ({sw.ElapsedMilliseconds}) : {configPath.ToString(Context.PathTable)}");
+            return result;
         }
 
         /// <summary>
@@ -187,38 +197,44 @@ namespace BuildXL.FrontEnd.Script
         /// </summary>
         private async Task<IReadOnlyDictionary<AbsolutePath, ISourceFile>> ParseConfigFileAsync(AbsolutePath configPath)
         {
-            // Set of specs being processed or queued for processing
-            var queuedSpecs = new ConcurrentDictionary<AbsolutePath, Unit>() { { configPath, Unit.Void } };
+            var pr = await ParseFileAndDiscoverImportsAsync(configPath);
+            return new Dictionary<AbsolutePath, ISourceFile>
+            {
+                [configPath] = pr.Source
+            };
 
-            // Set of parsed files
-            var result = new ConcurrentDictionary<AbsolutePath, ISourceFile>();
-            await ParallelAlgorithms.WhenDoneAsync(
-                DegreeOfParallelism,
-                async (addItem, path) =>
-                {
-                    // TODO: File bug to ensure we fail on errors.
-                    var parseResult = await ParseFileAndDiscoverImportsAsync(path);
+            //// Set of specs being processed or queued for processing
+            //var queuedSpecs = new ConcurrentDictionary<AbsolutePath, Unit>() { { configPath, Unit.Void } };
 
-                    var numberOfProcessedConfigs = FrontEndStatistics.ConfigurationProcessing.Increment();
+            //// Set of parsed files
+            //var result = new ConcurrentDictionary<AbsolutePath, ISourceFile>();
+            //await ParallelAlgorithms.WhenDoneAsync(
+            //    DegreeOfParallelism,
+            //    async (addItem, path) =>
+            //    {
+            //        // TODO: File bug to ensure we fail on errors.
+            //        var parseResult = await ParseFileAndDiscoverImportsAsync(path);
 
-                    NotifyProgress(numberOfProcessedConfigs);
+            //        var numberOfProcessedConfigs = FrontEndStatistics.ConfigurationProcessing.Increment();
 
-                    result[path] = parseResult.Source;
+            //        NotifyProgress(numberOfProcessedConfigs);
 
-                    if (parseResult.Imports?.Count > 0)
-                    {
-                        foreach (var dependency in parseResult.Imports)
-                        {
-                            // Add the dependency for parsing only if the dependency was not processed or scheduled for processing.
-                            if (queuedSpecs.TryAdd(dependency, Unit.Void))
-                            {
-                                addItem(dependency);
-                            }
-                        }
-                    }
-                }, configPath);
+            //        result[path] = parseResult.Source;
 
-            return result.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            //        if (parseResult.Imports?.Count > 0)
+            //        {
+            //            foreach (var dependency in parseResult.Imports)
+            //            {
+            //                // Add the dependency for parsing only if the dependency was not processed or scheduled for processing.
+            //                if (queuedSpecs.TryAdd(dependency, Unit.Void))
+            //                {
+            //                    addItem(dependency);
+            //                }
+            //            }
+            //        }
+            //    }, configPath);
+
+            //return result.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         }
 
         private void NotifyProgress(int processedSpecNumber)

@@ -4,9 +4,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.ContractsLight;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using BuildXL.FrontEnd.Script.Constants;
 using BuildXL.FrontEnd.Script.Evaluator;
 using BuildXL.FrontEnd.Script.Failures;
@@ -325,7 +327,9 @@ namespace BuildXL.FrontEnd.Script
         {
             if (m_moduleResolutionState == ModuleResolutionState.Unresolved)
             {
+                Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, "Start DoResolveModuleAsync");
                 var result = await DoResolveModuleAsync();
+                Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, "End DoResolveModuleAsync");
 
                 // Compute the set of all known modules and name -> module here, so we only do this once
                 m_allModuleDescriptors =
@@ -409,7 +413,10 @@ namespace BuildXL.FrontEnd.Script
 
             // Specified packages can reside in different config cones (i.e., different workspaces).
             // Currently we use the config qualifier space as the default fall-back.
-            return await InitPackagesAsync(packagePaths, FrontEndHost.PrimaryConfigFile);
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"Start InitPackages :: packages: {packagePaths.Count}");
+            var result = await InitPackagesAsync(packagePaths, FrontEndHost.PrimaryConfigFile);
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"End InitPackages :: packages: {packagePaths.Count}");
+            return result;
         }
 
         /// <nodoc />
@@ -621,7 +628,11 @@ namespace BuildXL.FrontEnd.Script
                     return true;
                 };
 
-            return await CheckPathsInParallel(packagePaths, checkPath);
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"Start CheckUserSpecified :: packages = {packagePaths.Count}");
+            var result = await CheckPathsInParallel(packagePaths, checkPath);
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"End CheckUserSpecified");
+
+            return result;
         }
 
         private static Task<bool> CheckPathsInParallel(IReadOnlyList<AbsolutePath> paths, Func<AbsolutePath, bool> checkFunc)
@@ -733,12 +744,16 @@ namespace BuildXL.FrontEnd.Script
                         }));
                 };
 
-            return Task.Run(
+
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"Start CollectPackages :: root: {rootPath.ToString(Context.PathTable)}");
+            var result = Task.Run(
                 () =>
                 {
                     ParallelAlgorithms.WhileNotEmpty(new[] { Tuple.Create(rootPath, false) }, collect);
                     return true;
                 });
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"End CollectPackages");
+            return result;
         }
 
         /// <summary>
@@ -760,11 +775,15 @@ namespace BuildXL.FrontEnd.Script
                 var currentPackagePath = packagePath;
 
                 // Per suggestion, create a task to avoid doing things sequential.
-                initTasks[i] = Task.Run(async () => await InitPackageFromDescriptorAsync(currentPackagePath, configPath));
+                initTasks[i] = Task.Run(() => InitPackageFromDescriptorAsync(currentPackagePath, configPath));
+                //initTasks[i] = InitPackageFromDescriptorAsync(currentPackagePath, configPath);
                 ++i;
             }
 
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"Start InitPackages :: packages: {packagePathSet.Count()}");
             var results = await Task.WhenAll(initTasks);
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"End InitPackages :: packages: {packagePathSet.Count()}");
+
             bool result = results.All(x => x.success);
             if (result && results.Length != 0)
             {
@@ -790,7 +809,12 @@ namespace BuildXL.FrontEnd.Script
             Contract.Requires(path.IsValid);
 
             AbsolutePath packageConfigPath = GetPackageConfigPath(path);
+            string strpath = packageConfigPath.ToString(Context.PathTable);
+
+            Stopwatch sw = new Stopwatch();
+            sw.Restart();
             var parseResult = await m_configConversionHelper.ParseValidateAndConvertConfigFileAsync(packageConfigPath);
+            Logger.WarnForDeprecatedV1Modules(Context.LoggingContext, default, $"Parse config ({sw.ElapsedMilliseconds}) : {strpath}");
 
             if (!parseResult.Success)
             {

@@ -88,22 +88,22 @@ namespace BuildXL.FrontEnd.Core.Tracing
         [GeneratedEvent(
             (ushort)LogEventId.FrontEndInitializeResolversPhaseStart,
             EventGenerators = EventGenerators.LocalOnly,
-            EventLevel = Level.Verbose,
-            Message = Events.PhasePrefix + "Initializing resolvers",
+            EventLevel = Level.Informational,
+            Message = Events.PhasePrefix + "*** Initializing resolvers",
             EventTask = (ushort)Events.Tasks.Engine,
             EventOpcode = (byte)EventOpcode.Start,
-            Keywords = (int)(Events.Keywords.UserMessage | Events.Keywords.Progress))]
+            Keywords = (int)(Events.Keywords.UserMessage))]
         public abstract void FrontEndInitializeResolversPhaseStart(LoggingContext context);
 
         [GeneratedEvent(
             (ushort)LogEventId.FrontEndInitializeResolversPhaseComplete,
             EventGenerators = EventGenerators.LocalAndTelemetry,
             Message =
-                Events.PhasePrefix + "Done initializing {statistics.ResolverCount} resolvers in {statistics.ElapsedMilliseconds} ms.",
-            EventLevel = Level.Verbose,
+                Events.PhasePrefix + "*** Done initializing {statistics.ResolverCount} resolvers in {statistics.ElapsedMilliseconds} ms.",
+            EventLevel = Level.Informational,
             EventTask = (ushort)Events.Tasks.Engine,
             EventOpcode = (byte)EventOpcode.Stop,
-            Keywords = (int)(Events.Keywords.UserMessage | Events.Keywords.Performance | Events.Keywords.Progress))]
+            Keywords = (int)(Events.Keywords.UserMessage | Events.Keywords.Performance))]
         public abstract void FrontEndInitializeResolversPhaseComplete(LoggingContext context, InitializeResolversStatistics statistics);
 
         [GeneratedEvent(

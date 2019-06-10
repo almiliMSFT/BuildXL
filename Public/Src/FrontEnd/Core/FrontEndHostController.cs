@@ -432,7 +432,7 @@ namespace BuildXL.FrontEnd.Core
 
             var loggingContext = FrontEndContext.LoggingContext;
 
-            UpdateIncrementalStateAndApplyFilters(evaluationFilter);
+            // UpdateIncrementalStateAndApplyFilters(evaluationFilter);
 
             if (!ProcessPhase(
                 EnginePhases.ConstructEvaluationModel,

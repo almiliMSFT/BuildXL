@@ -58,7 +58,7 @@ namespace BuildXL.FrontEnd.Workspaces.Core
             if (m_parsedPreludeModule == null)
             {
                 m_parsedPreludeModule = await CreatePreludeModuleAsync();
-            } 
+            }
 
             return m_parsedPreludeModule.Value;
         }
@@ -129,6 +129,13 @@ namespace BuildXL.FrontEnd.Workspaces.Core
                 return new Failure<string>(message);
             }
 
+//#pragma warning disable AsyncFixer02
+//            Console.WriteLine("============================= PRELUDE DONE =======================");
+//            lock (typeof(PreludeManager))
+//            {
+//                File.AppendAllLines("xxx-prelude.txt", new[] { "PRELUDE DONE" });
+//            }
+//#pragma warning restore AsyncFixer02
             Dictionary<AbsolutePath, ISourceFile> specFileMap = parsedPreludeFiles
                 .ToDictionary(
                     maybeSourceFile => AbsolutePath.Create(PathTable, maybeSourceFile.Result.FileName),
