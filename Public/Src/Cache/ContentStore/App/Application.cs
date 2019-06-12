@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.ContractsLight;
@@ -28,6 +27,7 @@ using BuildXL.Cache.ContentStore.Stores;
 using BuildXL.Cache.ContentStore.Tracing;
 using BuildXL.Cache.Host.Configuration;
 using BuildXL.Cache.Host.Service;
+using BuildXL.Utilities.Instrumentation.Common;
 using CLAP;
 
 // ReSharper disable UnusedMember.Global
@@ -284,6 +284,15 @@ namespace BuildXL.Cache.ContentStore.App
             }
 
             SetThreadPoolSizes();
+
+            var relatedActivityId = new Guid();
+            var environment = "some-string-here";
+            var topLevelContext = new LoggingContext(
+                relatedActivityId,
+                nameof(ContentStoreApp),
+                new LoggingContext.SessionInfo(Guid.NewGuid().ToString(), environment, relatedActivityId));
+            var ariaLog = new ContentStoreApp.AriaLog(topLevelContext);
+            _logger.AddLog(ariaLog);
 
             if (_fileLog == null)
             {

@@ -13,6 +13,7 @@ namespace App {
         sources: globR(d`.`,"*.cs"),
         skipDocumentationGeneration: true,
         appConfig: f`App.Config`,
+        generateLogs: true,
         references: [
             ...(BuildXLSdk.isDotNetCoreBuild
                 ? [importFrom("CLAP").withQualifier({targetFramework:"net451"}).pkg]
@@ -24,6 +25,8 @@ namespace App {
             Library.dll,
             Distributed.dll,
             Interfaces.dll,
+            importFrom("BuildXL.Utilities").dll,
+            importFrom("BuildXL.Utilities").Configuration.dll,
             importFrom("BuildXL.Cache.MemoizationStore").Distributed.dll,
             importFrom("BuildXL.Cache.DistributedCache.Host").Service.dll,
             importFrom("BuildXL.Cache.DistributedCache.Host").Configuration.dll,
