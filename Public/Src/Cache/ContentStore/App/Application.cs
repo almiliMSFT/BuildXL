@@ -55,6 +55,7 @@ namespace BuildXL.Cache.ContentStore.App
         private uint _connectionsPerSession;
         private uint _retryIntervalSeconds;
         private uint _retryCount;
+        private bool _enableRemoteTelemetry;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Application"/> class.
@@ -240,6 +241,15 @@ namespace BuildXL.Cache.ContentStore.App
             _retryCount = value;
         }
 
+        /// <summary>
+        ///     Enable/disable remote telemetry.
+        /// </summary>
+        [Global("EnableRemoteTelemetry", Description = "Whether or not to enable remote telemetry")]
+        public void EnableRemoteTelemetry(bool enableRemoteTelemetry)
+        {
+            _enableRemoteTelemetry = enableRemoteTelemetry;
+        }
+
         private static void SetThreadPoolSizes()
         {
             ThreadPool.GetMaxThreads(out var workerThreads, out var completionPortThreads);
@@ -285,27 +295,26 @@ namespace BuildXL.Cache.ContentStore.App
 
             SetThreadPoolSizes();
 
-            _logger.Always("Enabling Aria...");
-            AriaV2StaticState.Enable(BuildXL.Tracing.AriaTenantToken.Key);
-            _logger.Always("Done"); 
-
-            _logger.Always("Press Enter to continue...");
-            Console.ReadLine();
-
-            var relatedActivityId = new Guid();
-            var environment = "some-string-here";
-            var topLevelContext = new LoggingContext(
-                relatedActivityId,
-                nameof(ContentStoreApp),
-                new LoggingContext.SessionInfo(Guid.NewGuid().ToString(), environment, relatedActivityId));
-            var ariaLog = new ContentStoreApp.AriaLog(topLevelContext);
-            _logger.AddLog(ariaLog);
-            _logger.Always("Hello World");
-
             if (_fileLog == null)
             {
                 _fileLog = new FileLog(_logDirectoryPath, null, _fileLogSeverity, _logAutoFlush, _logMaxFileSize, _logMaxFileCount);
                 _logger.AddLog(_fileLog);
+            }
+
+            if (_enableRemoteTelemetry)
+            {
+                AriaV2StaticState.Enable(global::BuildXL.Tracing.AriaTenantToken.Key);
+                _logger.Always("Remote telemetry anabled");
+
+                var relatedActivityId = new Guid();
+                var environment = string.Empty; // arbitrary additional information can be set here
+                var topLevelContext = new LoggingContext
+                    (
+                    relatedActivityId,
+                    loggerComponentInfo: Path.GetFileName(Utilities.AssemblyHelper.GetThisProgramExeLocation()),
+                    session: new LoggingContext.SessionInfo(Guid.NewGuid().ToString(), environment, relatedActivityId)
+                    );
+                _logger.AddLog(new BxlLog(topLevelContext, _fileLogSeverity));
             }
         }
 

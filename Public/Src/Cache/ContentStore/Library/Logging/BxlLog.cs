@@ -9,39 +9,24 @@ using BuildXL.Cache.ContentStore.Interfaces.Logging;
 using System;
 using System.Globalization;
 
-namespace ContentStoreApp
+namespace BuildXL.Cache.ContentStore.Logging
 {
     /// <summary>
-    /// Logging
+    ///     An <see cref="ILog"/> that uses the BuildXL tracing infrastructure based
+    ///     on automatically generatd log events.  All generated log events are found
+    ///     in the <see cref="Tracing.Logger"/> log. 
     /// </summary>
-    [EventKeywordsType(typeof(Events.Keywords))]
-    [EventTasksType(typeof(Events.Tasks))]
-    public abstract partial class Logger
-    {
-        /// <summary>
-        /// Returns the logger instance
-        /// </summary>
-        public static Logger Log => m_log;
-
-        [GeneratedEvent(
-            (ushort)EventId.StartupCurrentDirectory,
-            EventGenerators = EventGenerators.TelemetryOnly,
-            EventLevel = Level.Verbose,
-            Message = "{message}")]
-        public abstract void Z_tmp_ContentAddressableStoreLogMessage
-            (
-            LoggingContext context,
-            string message
-            );
-    }
-
-    public sealed class AriaLog : ILog
+    public sealed class BxlLog : ILog
     {
         private readonly LoggingContext _loggingContext;
 
+        /// <inheritdoc />
         public Severity CurrentSeverity { get; }
 
-        public AriaLog
+        /// <summary>
+        ///     Assigns args to fields and nothing more.
+        /// </summary>
+        public BxlLog
             (
             LoggingContext loggingContext,
             Severity severity = Severity.Diagnostic
@@ -51,10 +36,19 @@ namespace ContentStoreApp
             _loggingContext = loggingContext;
         }
 
+        /// <summary>
+        ///     Nothing needs to be disposed.
+        /// </summary>
         public void Dispose() { }
 
+        /// <summary>
+        ///     Nothing needs to be flushed.
+        /// </summary>
         public void Flush() { }
 
+        /// <summary>
+        ///     Delegates to <see cref="Tracing.Logger.Z_tmp_ContentAddressableStoreLogMessage"/>
+        /// </summary>
         public void Write
             (
             DateTime dateTime,
@@ -68,16 +62,8 @@ namespace ContentStoreApp
                 return;
             }
 
-            var line = string.Format
-                (
-                    CultureInfo.CurrentCulture,
-                    "{0:yyyy-MM-dd HH:mm:ss,fff} {1,3} {2} {3}",
-                    dateTime,
-                    threadId,
-                    severity,
-                    message
-                );
-            Logger.Log.Z_tmp_ContentAddressableStoreLogMessage(_loggingContext, line);
+            var dateTimeStr = string.Format(CultureInfo.CurrentCulture, "{0:yyyy-MM-dd HH:mm:ss,fff}", dateTime);
+            Tracing.Logger.Log.Z_tmp_ContentAddressableStoreLogMessage(_loggingContext, dateTimeStr, threadId, severity, message);
         }
     }
 }
