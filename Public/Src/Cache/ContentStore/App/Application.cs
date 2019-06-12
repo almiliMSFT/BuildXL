@@ -242,9 +242,9 @@ namespace BuildXL.Cache.ContentStore.App
         }
 
         /// <summary>
-        ///     Enable/disable remote telemetry.
+        ///     Whether or not to enable remote telemetry.
         /// </summary>
-        [Global("EnableRemoteTelemetry", Description = "Whether or not to enable remote telemetry")]
+        [Global("RemoteTelemetry", Description = "Enable remote telemetry")]
         public void EnableRemoteTelemetry(bool enableRemoteTelemetry)
         {
             _enableRemoteTelemetry = enableRemoteTelemetry;

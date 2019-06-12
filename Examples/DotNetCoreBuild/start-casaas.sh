@@ -44,7 +44,7 @@ readonly casaasArgs=(
   /settingsPath:${MY_DIR}/distContSet.json
   /logdirectorypath:${CACHE_ROOT}/logs)
 
-${BUILDXL_BIN}/ContentStoreApp "${casaasArgs[@]}" # <&- > casaas.stdout &
+${BUILDXL_BIN}/ContentStoreApp "${casaasArgs[@]}" "$@" # <&- > casaas.stdout &
 # readonly casaasPid=$!
 # sleep 1
 # echo "Started casaas process: $casaasPid"
