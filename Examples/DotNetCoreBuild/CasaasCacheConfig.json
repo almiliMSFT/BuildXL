@@ -1,26 +1,17 @@
-#!/bin/bash
-
-readonly MY_DIR=$(cd `dirname ${BASH_SOURCE[0]}` && pwd)
-
-source "${MY_DIR}/env.sh"
-
-readonly cacheConfigFile=${MY_DIR}/CasaasCacheConfig.json
-
-cat > $cacheConfigFile <<EOF
 {
     "LocalCache": {
         "CacheId": "SelfhostCS2L1",
         "Assembly": "BuildXL.Cache.MemoizationStoreAdapter",
         "CacheLogPath": "[BuildXLSelectedLogPath]",
         "Type": "BuildXL.Cache.MemoizationStoreAdapter.MemoizationStoreCacheFactory",
-        "CacheRootPath": "${CACHE_ROOT}/cache",
+        "CacheRootPath": "/bxl/cache",
         "UseStreamCAS": false,
         "EnableContentServer": true,
         "EmptyFileHashShortcutEnabled": false,
         "CheckLocalFiles": false,
-        "CacheName": "${CACHE_NAME}",
+        "CacheName": "almili-test-logging-1",
         "GrpcPort": 7089,
-        "Scenario": "${CACHE_SCENARIO}"
+        "Scenario": "scenario-almili-test-logging-1"
     },
     "RemoteCache": {
         "Type": "BuildXL.Cache.BuildCacheAdapter.DistributedBuildCacheFactory",
@@ -31,8 +22,8 @@ cat > $cacheConfigFile <<EOF
         "CacheServiceContentEndpoint": "https://artifactsu0.vsblob.visualstudio.com/DefaultCollection",
         "UseBlobContentHashLists": true,
         "CacheKeyBumpTimeMins": 120,
-        "CacheNamespace": "${CACHE_NAME}",
-        "CacheName": "${CACHE_NAME}",
+        "CacheNamespace": "almili-test-logging-1",
+        "CacheName": "almili-test-logging-1",
         "ConnectionRetryCount": 5,
         "ConnectionRetryIntervalSeconds": 5,
         "GrpcPort": 7089,
@@ -44,13 +35,3 @@ cat > $cacheConfigFile <<EOF
     "Assembly": "BuildXL.Cache.VerticalAggregator",
     "RemoteContentIsReadOnly": true
 }
-EOF
-
-/bin/bash "${MacOsScriptsDir}/bxl.sh"       \
-  --config "$MY_DIR/config.dsc"             \
-  --symlink-sdks-into "$MY_DIR/sdk"         \
-  --buildxl-bin "$BUILDXL_BIN"              \
-  /sandboxKind:macOsKext                    \
-  /disableProcessRetryOnResourceExhaustion+ \
-  /cacheConfigFilePath:"$cacheConfigFile"   \
-  "$@"

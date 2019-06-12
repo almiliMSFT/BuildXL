@@ -1,0 +1,3 @@
+ :: Trying to expose GRPC port 7089 at memory mapped file 'scenario-almili-test-logging-1'
+ :: Memory mapped file 'scenario-almili-test-logging-1' successfully created
+Created memory mapped file at scenario-almili-test-logging-1

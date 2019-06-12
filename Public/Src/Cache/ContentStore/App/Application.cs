@@ -285,6 +285,13 @@ namespace BuildXL.Cache.ContentStore.App
 
             SetThreadPoolSizes();
 
+            _logger.Always("Enabling Aria...");
+            AriaV2StaticState.Enable(BuildXL.Tracing.AriaTenantToken.Key);
+            _logger.Always("Done"); 
+
+            _logger.Always("Press Enter to continue...");
+            Console.ReadLine();
+
             var relatedActivityId = new Guid();
             var environment = "some-string-here";
             var topLevelContext = new LoggingContext(
@@ -293,6 +300,7 @@ namespace BuildXL.Cache.ContentStore.App
                 new LoggingContext.SessionInfo(Guid.NewGuid().ToString(), environment, relatedActivityId));
             var ariaLog = new ContentStoreApp.AriaLog(topLevelContext);
             _logger.AddLog(ariaLog);
+            _logger.Always("Hello World");
 
             if (_fileLog == null)
             {
