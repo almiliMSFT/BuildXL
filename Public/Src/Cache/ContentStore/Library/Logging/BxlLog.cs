@@ -1,20 +1,17 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using BuildXL.Utilities.Instrumentation.Common;
-using BuildXL.Utilities.Tracing;
-using BuildXL.Tracing;
-using BuildXL.Cache.ContentStore.Logging;
-using BuildXL.Cache.ContentStore.Interfaces.Logging;
 using System;
 using System.Globalization;
+using BuildXL.Cache.ContentStore.Interfaces.Logging;
+using BuildXL.Utilities.Instrumentation.Common;
 
 namespace BuildXL.Cache.ContentStore.Logging
 {
     /// <summary>
     ///     An <see cref="ILog"/> that uses the BuildXL tracing infrastructure based
-    ///     on automatically generatd log events.  All generated log events are found
-    ///     in the <see cref="Tracing.Logger"/> log. 
+    ///     on automatically generatd log events.  All log events are found in class
+    ///     <see cref="Tracing.Logger"/>.
     /// </summary>
     public sealed class BxlLog : ILog
     {
@@ -47,7 +44,7 @@ namespace BuildXL.Cache.ContentStore.Logging
         public void Flush() { }
 
         /// <summary>
-        ///     Delegates to <see cref="Tracing.Logger.Z_tmp_ContentAddressableStoreLogMessage"/>
+        ///     Delegates to <see cref="Tracing.Logger.ContentStoreAppLogMessage"/>
         /// </summary>
         public void Write
             (
@@ -63,7 +60,7 @@ namespace BuildXL.Cache.ContentStore.Logging
             }
 
             var dateTimeStr = string.Format(CultureInfo.CurrentCulture, "{0:yyyy-MM-dd HH:mm:ss,fff}", dateTime);
-            Tracing.Logger.Log.Z_tmp_ContentAddressableStoreLogMessage(_loggingContext, dateTimeStr, threadId, severity, message);
+            Tracing.Logger.Log.ContentStoreAppLogMessage(_loggingContext, dateTimeStr, threadId, severity, message);
         }
     }
 }
