@@ -141,17 +141,18 @@ function startContentStoreApp {
         /settingsPath:${settingsFile}
         /logdirectorypath:${CACHE_ROOT}/logs)
 
-    pushd "${CACHE_ROOT}"
+    pushd "${CACHE_ROOT}" > /dev/null
     ${BUILDXL_BIN}/ContentStoreApp "${casaasArgs[@]}" > "${CACHE_STDOUT}" &
-    popd
+    popd > /dev/null
 }
 
 function runBuildXL {
-    pushd "${CACHE_ROOT}"
     local cacheConfigFile=$(createCacheConfigJson)
     print_info "Generated BuildXL cache config file: ${cacheConfigFile}"
+
+    pushd "${CACHE_ROOT}" > /dev/null
     ${MY_DIR}/build.sh --cache-config-file "${cacheConfigFile}" "$@"
-    popd
+    popd > /dev/null
 }
 
 function validateAndInit {
@@ -170,8 +171,8 @@ function validateAndInit {
     fi
 }
 
-set -e
-set -u
+set -o nounset 
+set -o errexit
 
 validateAndInit
 

@@ -34,31 +34,4 @@ namespace BuildXL.Cache.MemoizationStoreAdapter
             base.WriteLine(severity, severityName, message);
         }
     }
-
-    /// <summary>
-    /// Specialized logger which routes log messages to telemetry as well as a log file
-    /// </summary>
-    public sealed class AriaFileLog : FileLog
-    {
-        private readonly EtwOnlyTextLogger m_logger;
-
-        /// <summary>
-        /// Class constructor
-        /// </summary>
-        public AriaFileLog(string logFilePath, string logKind)
-            : base(logFilePath)
-        {
-            if (EtwOnlyTextLogger.TryGetDefaultGlobalLoggingContext(out var loggingContext))
-            {
-                m_logger = new EtwOnlyTextLogger(loggingContext, logKind);
-            }
-        }
-
-        /// <inheritdoc />
-        public override void WriteLine(Severity severity, string severityName, string message)
-        {
-            m_logger?.TextLogEtwOnly((int)EventId.CacheFileLog, severityName, message);
-            base.WriteLine(severity, severityName, message);
-        }
-    }
 }

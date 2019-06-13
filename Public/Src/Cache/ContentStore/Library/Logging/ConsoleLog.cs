@@ -127,7 +127,7 @@ namespace BuildXL.Cache.ContentStore.Logging
                 }
                 else
                 {
-                    WriteLine(" :: " + line);
+                    WriteLine(line);
                 }
 
                 if (!SkipColor)
