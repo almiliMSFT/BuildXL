@@ -171,7 +171,8 @@ export function runQTest(args: QTestArguments): Result {
         Cmd.flag("--qTestIgnoreQTestSkip", args.qTestIgnoreQTestSkip),
         Cmd.option("--qTestAdditionalOptions ", args.qTestAdditionalOptions, args.qTestAdditionalOptions ? true : false),
         Cmd.option("--qTestContextInfo ", qTestContextInfoPath),
-        Cmd.option("--qTestBuildType ", args.qTestBuildType || "unset")
+        Cmd.option("--qTestBuildType ", args.qTestBuildType || "unset"),
+        Cmd.option("--testSourceDir ", args.testSourceDir)
     ];          
 
     let unsafeOptions = {
@@ -181,6 +182,9 @@ export function runQTest(args: QTestArguments): Result {
         untrackedScopes: [
             d`d:/data`,
             d`d:/app`,
+            // Untracking Recyclebin here to primarily unblock user scenarios that
+            // deal with soft-delete and restoration of files from recycle bin.
+            d`${sandboxDir.pathRoot}/$Recycle.Bin`,
             ...addIf(Environment.hasVariable("QAUTHMATERIALROOT"), Environment.getDirectoryValue("QAUTHMATERIALROOT")),
         ]
     };
@@ -194,7 +198,10 @@ export function runQTest(args: QTestArguments): Result {
         workingDirectory: sandboxDir,
         tempDirectory: tempDirectory,
         weight: args.weight,
-        environmentVariables: [{ name: "[Sdk.BuildXL]qCodeCoverageEnumType", value: qCodeCoverageEnumType }],
+        environmentVariables: [
+            { name: "[Sdk.BuildXL]qCodeCoverageEnumType", value: qCodeCoverageEnumType },
+            ...(args.qTestEnvironmentVariables || [])
+        ],
         disableCacheLookup: Environment.getFlag("[Sdk.BuildXL]qTestForceTest"),
         additionalTempDirectories : [sandboxDir],
         privilegeLevel: args.privilegeLevel,
@@ -329,6 +336,10 @@ export interface QTestArguments extends Transformer.RunnerArguments {
     privilegeLevel?: "standard" | "admin";
     /** Specifies the build type */
     qTestBuildType?: string;
+    /** Specifies the environment variables to forward to qtest */
+    qTestEnvironmentVariables?: Transformer.EnvironmentVariable[];
+    /** Specify the path relative to enlistment root of the sources from which the test target is built */
+    testSourceDir?: RelativePath;
 }
 /**
  * Test results from a vstest.console.exe run
