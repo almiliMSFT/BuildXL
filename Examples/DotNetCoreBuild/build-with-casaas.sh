@@ -5,7 +5,7 @@ readonly MY_DIR=$(cd `dirname ${BASH_SOURCE[0]}` && pwd)
 source ${MY_DIR}/env.sh
 readonly CACHE_ROOT=${MY_DIR}/out/casaas
 readonly CACHE_STDOUT="${CACHE_ROOT}/casaas.stdout"
-readonly CACHE_NAME=example-build-casaas-1
+readonly CACHE_NAME=example-build-casaas-2
 readonly CACHE_SCENARIO=scenario-$CACHE_NAME
 
 function printRunningCasaasPid {
@@ -139,6 +139,7 @@ function startContentStoreApp {
         /scenario:${CACHE_SCENARIO}
         /useDistributedGrpc:true
         /settingsPath:${settingsFile}
+        /remoteTelemetry
         /logdirectorypath:${CACHE_ROOT}/logs)
 
     pushd "${CACHE_ROOT}" > /dev/null

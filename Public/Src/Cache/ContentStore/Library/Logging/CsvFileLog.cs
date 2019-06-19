@@ -58,11 +58,11 @@ namespace BuildXL.Cache.ContentStore.Logging
             Message
         }
 
-        private const long MaxFileSizeBytes = 100; // * 1024 * 1024; // 100 MB
+        private const long MaxFileSizeBytes = 500 * 1024; // * 1024; // 100 MB
 
         private readonly ColumnType[] _schema;
         private readonly string _host;
-        private readonly Guid _guid;
+        private readonly string _guid;
 
         /// <summary>
         ///     TODO
@@ -87,7 +87,7 @@ namespace BuildXL.Cache.ContentStore.Logging
 
             _schema = schema.ToArray();
             _host = CsvEscape(Environment.MachineName);
-            _guid = new Guid();
+            _guid = Guid.NewGuid().ToString();
         }
 
         /// <summary>
@@ -124,7 +124,7 @@ namespace BuildXL.Cache.ContentStore.Logging
             switch (col)
             {
                 case ColumnType.EmptyString: return string.Empty;
-                case ColumnType.SessionId:   return _guid.ToString();
+                case ColumnType.SessionId:   return _guid;
                 case ColumnType.HostName:    return _host;
                 case ColumnType.Timestamp:   return string.Format(CultureInfo.InvariantCulture, "{0:yyyy-MM-dd HH:mm:ss,fff}", dateTime);
                 case ColumnType.ThreadId:    return threadId.ToString();
