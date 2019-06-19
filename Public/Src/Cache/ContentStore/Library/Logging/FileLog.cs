@@ -224,9 +224,13 @@ namespace BuildXL.Cache.ContentStore.Logging
         {
             lock (_syncObject)
             {
-                _textWriter.Flush();
-                _textWriter.Dispose();
-                OnLogFileProduced?.Invoke(CurrentFilePath);
+                if (_textWriter != null)
+                {
+                    _textWriter.Flush();
+                    _textWriter.Dispose();
+                    _textWriter = null;
+                    OnLogFileProduced?.Invoke(CurrentFilePath);
+                }
             }
         }
 

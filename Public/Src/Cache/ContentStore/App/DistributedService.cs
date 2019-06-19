@@ -97,6 +97,10 @@ namespace BuildXL.Cache.ContentStore.App
                 Console.WriteLine(e);
                 throw;
             }
+            finally
+            {
+                _logger.Dispose();
+            }
         }
 
         private class EnvironmentVariableHost : IDistributedCacheServiceHost
