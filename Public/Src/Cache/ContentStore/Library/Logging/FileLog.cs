@@ -188,8 +188,7 @@ namespace BuildXL.Cache.ContentStore.Logging
             {
                 if (_maxFileSize > 0 && _textWriter.BaseStream.Position > _maxFileSize)
                 {
-                    _textWriter.Dispose();
-                    OnLogFileProduced?.Invoke(CurrentFilePath);
+                    DisposeTextWriter();
                     _fileCount++;
 
                     string filePath;
@@ -221,6 +220,16 @@ namespace BuildXL.Cache.ContentStore.Logging
             }
         }
 
+        private void DisposeTextWriter()
+        {
+            lock (_syncObject)
+            {
+                _textWriter.Flush();
+                _textWriter.Dispose();
+                OnLogFileProduced?.Invoke(CurrentFilePath);
+            }
+        }
+
         /// <nodoc />
         public virtual void WriteLine(Severity severity, string severityName, string message)
         {
@@ -230,10 +239,7 @@ namespace BuildXL.Cache.ContentStore.Logging
         /// <inheritdoc />
         public void Dispose()
         {
-            lock (_syncObject)
-            {
-                _textWriter.Dispose();
-            }
+            DisposeTextWriter();
         }
 
         private static StreamWriter CreateStreamWriter(string logFilePath, int fileNumber, int fileNumberWidth, out string filePath)
