@@ -39,6 +39,19 @@ namespace BuildXL.Cache.ContentStore.App
     internal sealed partial class Application : IDisposable
     {
         private const string HashTypeDescription = "Content hash type (SHA1/SHA256/MD5/Vso0/DedupChunk/DedupNode)";
+
+        private const string CsvLogFileExt = ".csv";
+        private const string TmpCsvLogFileExt = ".csvtmp";
+        private static readonly CsvFileLog.ColumnType[] CsvLogFileSchema = new[]
+        {
+            CsvFileLog.ColumnType.Timestamp,
+            CsvFileLog.ColumnType.SessionId,
+            CsvFileLog.ColumnType.HostName,
+            CsvFileLog.ColumnType.Severity,
+            CsvFileLog.ColumnType.ThreadId,
+            CsvFileLog.ColumnType.Message,
+        };
+
         private readonly IAbsFileSystem _fileSystem;
         private readonly ConsoleLog _consoleLog;
         private readonly Logger _logger;
@@ -295,26 +308,19 @@ namespace BuildXL.Cache.ContentStore.App
 
             SetThreadPoolSizes();
 
+            string logFilePath = FileLog.GetLogFilePath(_logDirectoryPath, logFileBaseName: null, dateInFileName: true, processIdInFileName: true);
             if (_fileLog == null)
             {
-                _fileLog = new FileLog(_logDirectoryPath, null, _fileLogSeverity, _logAutoFlush, _logMaxFileSize, _logMaxFileCount);
+                _fileLog = new FileLog(logFilePath, _fileLogSeverity, _logAutoFlush, _logMaxFileSize, _logMaxFileCount);
                 _logger.AddLog(_fileLog);
             }
 
             if (_enableRemoteTelemetry)
             {
-                AriaV2StaticState.Enable(global::BuildXL.Tracing.AriaTenantToken.Key);
-                _logger.Always("Remote telemetry anabled");
-
-                var relatedActivityId = new Guid();
-                var environment = string.Empty; // arbitrary additional information can be set here
-                var topLevelContext = new LoggingContext
-                    (
-                    relatedActivityId,
-                    loggerComponentInfo: Path.GetFileName(Utilities.AssemblyHelper.GetThisProgramExeLocation()),
-                    session: new LoggingContext.SessionInfo(Guid.NewGuid().ToString(), environment, relatedActivityId)
-                    );
-                _logger.AddLog(new BxlLog(topLevelContext, _fileLogSeverity));
+                var csvLog = new CsvFileLog(logFilePath + TmpCsvLogFileExt, CsvLogFileSchema, _fileLogSeverity);
+                csvLog.OnLogFileProduced += (p) => Console.WriteLine("=== Produced CSV log file: " + p);
+                _logger.Always("Remote telemetry enabled");
+                _logger.AddLog(csvLog);
             }
         }
 
