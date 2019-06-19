@@ -45,8 +45,8 @@ namespace BuildXL.Cache.ContentStore.App
         private static readonly CsvFileLog.ColumnType[] CsvLogFileSchema = new[]
         {
             CsvFileLog.ColumnType.Timestamp,
-            CsvFileLog.ColumnType.SessionId,
-            CsvFileLog.ColumnType.HostName,
+            //CsvFileLog.ColumnType.SessionId,
+            //CsvFileLog.ColumnType.HostName,
             CsvFileLog.ColumnType.Severity,
             CsvFileLog.ColumnType.ThreadId,
             CsvFileLog.ColumnType.Message,
