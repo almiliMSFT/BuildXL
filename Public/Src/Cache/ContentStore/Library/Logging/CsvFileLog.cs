@@ -13,12 +13,12 @@ using BuildXL.Utilities;
 namespace BuildXL.Cache.ContentStore.Logging
 {
     /// <summary>
-    ///     TODO
+    ///     Like <see cref="FileLog"/> except that it produces a valid CSV file.
     /// </summary>
     public sealed class CsvFileLog : FileLog
     {
         /// <summary>
-        ///     Types of supported columns
+        ///     Types of supported columns for the output CSV file
         /// </summary>
         public enum ColumnType
         {
@@ -58,28 +58,33 @@ namespace BuildXL.Cache.ContentStore.Logging
             Message
         }
 
-        private const long MaxFileSizeBytes = 500 * 1024; // * 1024; // 100 MB
+        private const long MaxFileSizeBytes = 100 * 1024 * 1024; // 100 MB
 
         private readonly ColumnType[] _schema;
         private readonly string _host;
         private readonly string _guid;
 
         /// <summary>
-        ///     TODO
+        ///     Constructor.
         /// </summary>
+        /// <param name="logFilePath">Full path to log file</param>
+        /// <param name="schema">CSV schema as a list of columns. Each element in the list denotes a column to be rendered at that position.</param>
+        /// <param name="severity">Minimum severity to log</param>
+        /// <param name="maxFileSize">Maximum size of the log file.</param>
         public CsvFileLog
             (
             string logFilePath,
             IEnumerable<ColumnType> schema,
-            Severity severity = Severity.Diagnostic
+            Severity severity = Severity.Diagnostic,
+            long maxFileSize = MaxFileSizeBytes
             )
             :
             base
                 (
                 logFilePath,
                 severity,
-                autoFlush: false,
-                maxFileSize: MaxFileSizeBytes,
+                autoFlush: true,
+                maxFileSize: maxFileSize,
                 maxFileCount: 0 // unlimited
                 )
         {
@@ -103,23 +108,29 @@ namespace BuildXL.Cache.ContentStore.Logging
             using (var stringBuilderPool = Pools.StringBuilderPool.GetInstance())
             {
                 StringBuilder line = stringBuilderPool.Instance;
-                foreach (var col in _schema)
-                {
-                    if (line.Length > 0)
-                    {
-                        line.Append(",");
-                    }
-
-                    line.Append('"');
-                    line.Append(RenderColumn(col, dateTime, threadId, severity, message));
-                    line.Append('"');
-                }
-
+                RenderMessage(line, dateTime, threadId, severity, message);
                 WriteLineInternal(severity, line.ToString());
             }
         }
 
-        private string RenderColumn(ColumnType col, DateTime dateTime, int threadId, Severity severity, string message)
+        /// <nodoc />
+        public void RenderMessage(StringBuilder line, DateTime dateTime, int threadId, Severity severity, string message)
+        {
+            foreach (var col in _schema)
+            {
+                if (line.Length > 0)
+                {
+                    line.Append(",");
+                }
+
+                line.Append('"');
+                line.Append(RenderColumn(col, dateTime, threadId, severity, message));
+                line.Append('"');
+            }
+        }
+
+        /// <nodoc />
+        public string RenderColumn(ColumnType col, DateTime dateTime, int threadId, Severity severity, string message)
         {
             switch (col)
             {
