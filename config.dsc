@@ -457,7 +457,7 @@ config({
                 { id: "runtime.osx-x64.Microsoft.DotNet.ILCompiler", version: "1.0.0-alpha-27527-01" },
                 { id: "runtime.win-x64.Microsoft.DotNet.ILCompiler", version: "1.0.0-alpha-27527-01" },
 
-                // Kusto SDK
+                // Kusto SDK (for netstandard)
                 { id: "Microsoft.Azure.Kusto.Cloud.Platform.Azure.NETStandard", version: "6.1.8" },
                 { id: "Microsoft.Azure.Kusto.Cloud.Platform.NETStandard", version: "6.1.8" },
                 { id: "Microsoft.Azure.Kusto.Data.NETStandard", version: "6.1.8" },

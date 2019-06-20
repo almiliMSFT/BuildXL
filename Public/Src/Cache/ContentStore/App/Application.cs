@@ -42,11 +42,14 @@ namespace BuildXL.Cache.ContentStore.App
 
         private const string CsvLogFileExt = ".csv";
         private const string TmpCsvLogFileExt = ".csvtmp";
-        private static readonly CsvFileLog.ColumnType[] CsvLogFileSchema = new[]
+        private const string KustoConnectionStringEnvVarName = "KustoConnectionString";
+        private const string KustoDatabase = "CloudBuildCBTest";
+        private const string KustoTable = "ContentStoreAppMessage";
+        private static readonly CsvFileLog.ColumnType[] KustoTableSchema = new[]
         {
             CsvFileLog.ColumnType.Timestamp,
-            //CsvFileLog.ColumnType.SessionId,
-            //CsvFileLog.ColumnType.HostName,
+            CsvFileLog.ColumnType.SessionId,
+            CsvFileLog.ColumnType.HostName,
             CsvFileLog.ColumnType.Severity,
             CsvFileLog.ColumnType.ThreadId,
             CsvFileLog.ColumnType.Message,
@@ -56,6 +59,7 @@ namespace BuildXL.Cache.ContentStore.App
         private readonly ConsoleLog _consoleLog;
         private readonly Logger _logger;
         private readonly Tracer _tracer;
+        private readonly KustoUploader _kustoUploader;
         private bool _waitForDebugger;
         private FileLog _fileLog;
         private Severity _fileLogSeverity = Severity.Diagnostic;
@@ -79,12 +83,26 @@ namespace BuildXL.Cache.ContentStore.App
             _logger = new Logger(true, _consoleLog);
             _fileSystem = new PassThroughFileSystem(_logger);
             _tracer = new Tracer(nameof(Application));
+
+            var kustoConnectionString = Environment.GetEnvironmentVariable(KustoConnectionStringEnvVarName);
+            _kustoUploader = string.IsNullOrWhiteSpace(kustoConnectionString)
+                ? null
+                : new KustoUploader
+                    (
+                    kustoConnectionString,
+                    database: KustoDatabase,
+                    table: KustoTable,
+                    deleteFilesOnSuccess: true,
+                    checkForIngestionErrors: true,
+                    log: _consoleLog
+                    );
         }
 
         /// <inheritdoc />
         [SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "_fileLog")]
         public void Dispose()
         {
+            _kustoUploader?.Dispose();
             _logger.Dispose();
             _fileLog?.Dispose();
             _consoleLog.Dispose();
@@ -315,13 +333,37 @@ namespace BuildXL.Cache.ContentStore.App
                 _logger.AddLog(_fileLog);
             }
 
-            if (_enableRemoteTelemetry)
+            EnableRemoteTelemetryIfNeeded(logFilePath);
+        }
+
+        private void EnableRemoteTelemetryIfNeeded(string logFilePath)
+        {
+            if (!_enableRemoteTelemetry)
             {
-                var csvLog = new CsvFileLog(logFilePath + TmpCsvLogFileExt, CsvLogFileSchema, _fileLogSeverity);
-                csvLog.OnLogFileProduced += (p) => Console.WriteLine("=== Produced CSV log file: " + p);
-                _logger.Always("Remote telemetry enabled");
-                _logger.AddLog(csvLog);
+                return;
             }
+
+            if (_kustoUploader == null)
+            {
+                _logger.Warning
+                    (
+                    "Remote telemetry flag is enabled but no Kusto connection string was found in environment variable '{0}'",
+                    KustoConnectionStringEnvVarName
+                    );
+                return;
+            }
+
+            var csvLog = new CsvFileLog(logFilePath + TmpCsvLogFileExt, KustoTableSchema, _fileLogSeverity);
+
+            csvLog.OnLogFileProduced += (path) =>
+            {
+                string newPath = Path.ChangeExtension(TmpCsvLogFileExt, CsvLogFileExt);
+                File.Move(path, newPath);
+                _kustoUploader.PostFileForIngestion(newPath, csvLog.Guid);
+            };
+
+            _logger.AddLog(csvLog);
+            _logger.Info("Remote telemetry enabled");
         }
 
         private void RunFileSystemContentStoreInternal(AbsolutePath rootPath, System.Func<Context, FileSystemContentStoreInternal, Task> funcAsync)

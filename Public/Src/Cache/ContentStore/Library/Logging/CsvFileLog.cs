@@ -62,7 +62,11 @@ namespace BuildXL.Cache.ContentStore.Logging
 
         private readonly ColumnType[] _schema;
         private readonly string _host;
-        private readonly string _guid;
+
+        /// <summary>
+        ///     Unique identifier of this log object.
+        /// </summary>
+        public Guid Guid { get; }
 
         /// <summary>
         ///     Constructor.
@@ -92,7 +96,7 @@ namespace BuildXL.Cache.ContentStore.Logging
 
             _schema = schema.ToArray();
             _host = CsvEscape(Environment.MachineName);
-            _guid = Guid.NewGuid().ToString();
+            Guid = Guid.NewGuid();
         }
 
         /// <summary>
@@ -135,7 +139,7 @@ namespace BuildXL.Cache.ContentStore.Logging
             switch (col)
             {
                 case ColumnType.EmptyString: return string.Empty;
-                case ColumnType.SessionId:   return _guid;
+                case ColumnType.SessionId:   return Guid.ToString();
                 case ColumnType.HostName:    return _host;
                 case ColumnType.Timestamp:   return string.Format(CultureInfo.InvariantCulture, "{0:yyyy-MM-dd HH:mm:ss,fff}", dateTime);
                 case ColumnType.ThreadId:    return threadId.ToString();
