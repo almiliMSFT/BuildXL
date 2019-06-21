@@ -229,9 +229,6 @@ namespace BuildXL.Cache.ContentStore.Service
 
             await LoadHibernatedSessionsAsync(context);
 
-            //Console.WriteLine("=== Press enter to continue");
-            //Console.ReadLine();
-
             InitializeAndStartGrpcServer(Config.GrpcPort, BindServices(), Config.RequestCallTokensPerCompletionQueue);
 
             _serviceReadinessChecker.Ready(context);
@@ -251,7 +248,7 @@ namespace BuildXL.Cache.ContentStore.Service
         private void InitializeAndStartGrpcServer(int grpcPort, ServerServiceDefinition[] definitions, int requestCallTokensPerCompletionQueue)
         {
             Contract.Requires(definitions.Length != 0);
-            GrpcEnvironment.InitializeIfNeeded(handlerInliningEnabled: false);
+            GrpcEnvironment.InitializeIfNeeded();
             _grpcServer = new Server(GrpcEnvironment.DefaultConfiguration)
                           {
                               Ports = { new ServerPort(IPAddress.Any.ToString(), grpcPort, ServerCredentials.Insecure) },
@@ -449,14 +446,14 @@ namespace BuildXL.Cache.ContentStore.Service
         /// <inheritdoc />
         protected override async Task<BoolResult> ShutdownCoreAsync(OperationContext context)
         {
-            if (_grpcServer != null)
-            {
-                //await _grpcServer.KillAsync();
-            }
-
             _serviceReadinessChecker.Reset();
 
             _portDisposer?.Dispose();
+
+            if (_grpcServer != null)
+            {
+                await _grpcServer.KillAsync();
+            }
 
             _logIncrementalStatsTimer?.Dispose();
             await LogIncrementalStatsAsync(context);
