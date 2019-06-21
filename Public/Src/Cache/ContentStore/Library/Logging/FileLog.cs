@@ -153,7 +153,10 @@ namespace BuildXL.Cache.ContentStore.Logging
         {
             lock (_syncObject)
             {
-                _textWriter.Flush();
+                if (_textWriter != null)
+                {
+                    _textWriter.Flush();
+                }
             }
         }
 

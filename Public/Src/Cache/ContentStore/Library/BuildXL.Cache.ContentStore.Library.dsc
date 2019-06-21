@@ -35,6 +35,12 @@ namespace Library {
             importFrom("Google.Protobuf").pkg,
             importFrom("Microsoft.Azure.Kusto.Data.NETStandard").withQualifier({targetFramework: "netcoreapp3.0"}).pkg,
             importFrom("Microsoft.Azure.Kusto.Ingest.NETStandard").withQualifier({targetFramework: "netcoreapp3.0"}).pkg,
+            importFrom("Microsoft.Azure.Kusto.Cloud.Platform.Azure.NETStandard").withQualifier({targetFramework: "netcoreapp3.0"}).pkg,
+            importFrom("Microsoft.Azure.Kusto.Cloud.Platform.NETStandard").withQualifier({targetFramework: "netcoreapp3.0"}).pkg,
+            importFrom("Microsoft.Extensions.PlatformAbstractions").withQualifier({targetFramework: "net472"}).pkg,
+            importFrom("Microsoft.IdentityModel.Clients.ActiveDirectory").pkg,
+
+            //importFrom("")
             importFrom("System.Interactive.Async").pkg,
 
             BuildXLSdk.Factory.createBinary(importFrom("TransientFaultHandling.Core").Contents.all, r`lib/NET4/Microsoft.Practices.TransientFaultHandling.Core.dll`),

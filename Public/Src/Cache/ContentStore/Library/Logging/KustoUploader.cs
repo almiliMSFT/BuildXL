@@ -58,7 +58,7 @@ namespace BuildXL.Cache.ContentStore.Logging
                         var result = _client.IngestFromSingleFile(fileDesc, _deleteFilesOnSuccess, _ingestionProperties);
                         var duration = DateTime.UtcNow.Subtract(start);
 
-                        Info("Ingesting file '{0}' took {1}ms", fileDesc.FilePath, duration.TotalMilliseconds);
+                        Info("Ingesting file '{0}' took {1}", fileDesc.FilePath, duration);
                     },
                     new ExecutionDataflowBlockOptions()
                     {
@@ -97,7 +97,7 @@ namespace BuildXL.Cache.ContentStore.Logging
             var start = DateTime.UtcNow;
             _block.Completion.GetAwaiter().GetResult();
             var duration = DateTime.UtcNow.Subtract(start);
-            Info("Waited {0}ms for queued ingestion tasks to complete", duration.TotalMilliseconds);
+            Info("Waited {0} for queued ingestion tasks to complete", duration);
 
             return CheckForIngestionFailuresIfNeeded();
         }
@@ -121,7 +121,7 @@ namespace BuildXL.Cache.ContentStore.Logging
             var start = DateTime.UtcNow;
             var ingestionFailures = _client.GetAndDiscardTopIngestionFailures().GetAwaiter().GetResult().ToList();
             var duration = DateTime.UtcNow.Subtract(start);
-            Info("Checking for ingestion failures took {0}ms", duration.TotalMilliseconds);
+            Info("Checking for ingestion failures took {0}", duration);
 
             if (ingestionFailures.Any() && _log != null)
             {
@@ -137,7 +137,7 @@ namespace BuildXL.Cache.ContentStore.Logging
             return $"File: {f.Info.IngestionSourcePath}, Status: {f.Info.FailureStatus}, Error code: {f.Info.ErrorCode}, Details: {f.Info.Details}";
         }
 
-        private void Info(string format, params object[] args) => Log(Severity.Info, format, args);
+        private void Info(string format, params object[] args) => Log(Severity.Always, format, args);
         private void Error(string format, params object[] args) => Log(Severity.Error, format, args);
 
         private void Log(Severity severity, string format, params object[] args)

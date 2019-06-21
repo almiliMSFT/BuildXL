@@ -62,6 +62,7 @@ namespace BuildXL.Cache.ContentStore.App
         private readonly KustoUploader _kustoUploader;
         private bool _waitForDebugger;
         private FileLog _fileLog;
+        private CsvFileLog _csvFileLog;
         private Severity _fileLogSeverity = Severity.Diagnostic;
         private bool _logAutoFlush;
         private string _logDirectoryPath;
@@ -92,7 +93,7 @@ namespace BuildXL.Cache.ContentStore.App
                     kustoConnectionString,
                     database: KustoDatabase,
                     table: KustoTable,
-                    deleteFilesOnSuccess: true,
+                    deleteFilesOnSuccess: false,
                     checkForIngestionErrors: true,
                     log: _consoleLog
                     );
@@ -102,7 +103,11 @@ namespace BuildXL.Cache.ContentStore.App
         [SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "_fileLog")]
         public void Dispose()
         {
-            _kustoUploader?.Dispose();
+            // Important to first dispose _csvFileLogger then _kustoUploader because
+            // csvFileLogger.Dispose() can post one last file to be uploaded to Kusto
+            _csvFileLog?.Dispose();
+            _kustoUploader?.Dispose(); 
+
             _logger.Dispose();
             _fileLog?.Dispose();
             _consoleLog.Dispose();
@@ -353,17 +358,20 @@ namespace BuildXL.Cache.ContentStore.App
                 return;
             }
 
-            var csvLog = new CsvFileLog(logFilePath + TmpCsvLogFileExt, KustoTableSchema, _fileLogSeverity);
+            _csvFileLog = new CsvFileLog(logFilePath + TmpCsvLogFileExt, KustoTableSchema, _fileLogSeverity);
 
-            csvLog.OnLogFileProduced += (path) =>
+            _csvFileLog.OnLogFileProduced += (path) =>
             {
-                string newPath = Path.ChangeExtension(TmpCsvLogFileExt, CsvLogFileExt);
+                Console.WriteLine("=== On Log file produced called");
+                string newPath = Path.ChangeExtension(path, CsvLogFileExt);
+                Console.WriteLine("=== Calling move to " + newPath);
                 File.Move(path, newPath);
-                _kustoUploader.PostFileForIngestion(newPath, csvLog.Guid);
+
+                _kustoUploader.PostFileForIngestion(newPath, _csvFileLog.Guid);
             };
 
-            _logger.AddLog(csvLog);
-            _logger.Info("Remote telemetry enabled");
+            _logger.AddLog(_csvFileLog);
+            _logger.Always("Remote telemetry enabled");
         }
 
         private void RunFileSystemContentStoreInternal(AbsolutePath rootPath, System.Func<Context, FileSystemContentStoreInternal, Task> funcAsync)

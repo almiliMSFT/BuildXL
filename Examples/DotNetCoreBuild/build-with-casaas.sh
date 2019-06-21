@@ -140,10 +140,12 @@ function startContentStoreApp {
         /useDistributedGrpc:true
         /settingsPath:${settingsFile}
         /remoteTelemetry
+        /logAutoFlush
         /logdirectorypath:${CACHE_ROOT}/logs)
 
     pushd "${CACHE_ROOT}" > /dev/null
-    ${BUILDXL_BIN}/ContentStoreApp "${casaasArgs[@]}" > "${CACHE_STDOUT}" &
+    ${BUILDXL_BIN}/ContentStoreApp "${casaasArgs[@]}" #> "${CACHE_STDOUT}" &
+    echo "Exited with code: $?"
     popd > /dev/null
 }
 
@@ -184,7 +186,7 @@ killRunningContentStoreApp
 startContentStoreApp
 
 # verify that ContentStoreApp process is running and that its PID matches what we have
-sleep 1
+sleep 2
 readonly casaasPid=$(printRunningCasaasPid)
 if [[ -n $casaasPid ]]; then
     print_info "ContentStoreApp(${casaasPid}) process started successfully:"
@@ -196,7 +198,7 @@ else
 fi
 
 # run the build
-runBuildXL "$@" || print_error "Build failed."
+# runBuildXL "$@" || print_error "Build failed."
 
 # in any case, kill ContentAppStore
 print_info "Shutting down ContentAppStore..."
