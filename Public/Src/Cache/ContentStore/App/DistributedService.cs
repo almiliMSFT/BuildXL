@@ -90,12 +90,7 @@ namespace BuildXL.Cache.ContentStore.App
                     ct: cancellationTokenSource.Token,
                     bufferSizeForGrpcCopies: bufferSizeForGrpcCopies);
 
-                Console.WriteLine("=== Calling Task.Run");
-                var task = Task.Run(() => DistributedCacheServiceFacade.RunAsync(arguments));
-                Thread.Sleep(5000);
-                Console.WriteLine("=== Calling cancel");
-                cancellationTokenSource.Cancel();
-                task.GetAwaiter().GetResult();
+                DistributedCacheServiceFacade.RunAsync(arguments).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {

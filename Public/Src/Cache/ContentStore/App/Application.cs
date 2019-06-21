@@ -67,6 +67,7 @@ namespace BuildXL.Cache.ContentStore.App
         private bool _logAutoFlush;
         private string _logDirectoryPath;
         private long _logMaxFileSize;
+        private long _csvLogMaxFileSize = 100 * 1024 * 1024; // 100 MB
         private int _logMaxFileCount;
         private bool _pause;
         private string _scenario;
@@ -93,7 +94,7 @@ namespace BuildXL.Cache.ContentStore.App
                     kustoConnectionString,
                     database: KustoDatabase,
                     table: KustoTable,
-                    deleteFilesOnSuccess: false,
+                    deleteFilesOnSuccess: true,
                     checkForIngestionErrors: true,
                     log: _consoleLog
                     );
@@ -103,13 +104,16 @@ namespace BuildXL.Cache.ContentStore.App
         [SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "_fileLog")]
         public void Dispose()
         {
-            // Important to first dispose _csvFileLogger then _kustoUploader because
-            // csvFileLogger.Dispose() can post one last file to be uploaded to Kusto
-            _csvFileLog?.Dispose();
-            _kustoUploader?.Dispose(); 
-
+            // 1. it's important to dispose _logger before log objects
+            //    because _logger.Dispose() calls Flush() on its log objects
+            // 2. it's important to dispose _csvFileLogger before _kustoUploader because
+            //    csvFileLogger.Dispose() can post one last file to be uploaded to Kusto
+            // 3. it's important to dispose _kustoUploader before _consoleLog because
+            //    _kustoUploader uses _consoleLog
             _logger.Dispose();
             _fileLog?.Dispose();
+            _csvFileLog?.Dispose();
+            _kustoUploader?.Dispose(); 
             _consoleLog.Dispose();
             _fileSystem.Dispose();
         }
@@ -212,6 +216,15 @@ namespace BuildXL.Cache.ContentStore.App
         public void SetLogMaxFileSizeMB(long value)
         {
             _logMaxFileSize = value * 1024 * 1024;
+        }
+
+        /// <summary>
+        ///     Set CSV log rolling max file size.
+        /// </summary>
+        [Global("CsvLogMaxFileSizeMB", Description = "Set CSV log (used only when remote telemetry is enabled) rolling max file size in MB")]
+        public void SetCsvLogMaxFileSizeMB(long value)
+        {
+            _csvLogMaxFileSize = value * 1024 * 1024;
         }
 
         /// <summary>
@@ -358,7 +371,13 @@ namespace BuildXL.Cache.ContentStore.App
                 return;
             }
 
-            _csvFileLog = new CsvFileLog(logFilePath + TmpCsvLogFileExt, KustoTableSchema, _fileLogSeverity);
+            _csvFileLog = new CsvFileLog
+                (
+                logFilePath: logFilePath + TmpCsvLogFileExt, 
+                schema: KustoTableSchema,
+                severity: _fileLogSeverity,
+                maxFileSize: _logMaxCsvFileSize
+                );
 
             _csvFileLog.OnLogFileProduced += (path) =>
             {

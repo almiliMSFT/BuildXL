@@ -58,8 +58,6 @@ namespace BuildXL.Cache.ContentStore.Logging
             Message
         }
 
-        private const long MaxFileSizeBytes = 100 * 1024 * 1024; // 100 MB
-
         private readonly ColumnType[] _schema;
         private readonly string _host;
 
@@ -69,7 +67,7 @@ namespace BuildXL.Cache.ContentStore.Logging
         public Guid Guid { get; }
 
         /// <summary>
-        ///     Constructor.
+        ///     Constructor.  Initializes this object and does nothing else.
         /// </summary>
         /// <param name="logFilePath">Full path to log file</param>
         /// <param name="schema">CSV schema as a list of columns. Each element in the list denotes a column to be rendered at that position.</param>
@@ -79,8 +77,8 @@ namespace BuildXL.Cache.ContentStore.Logging
             (
             string logFilePath,
             IEnumerable<ColumnType> schema,
-            Severity severity = Severity.Diagnostic,
-            long maxFileSize = MaxFileSizeBytes
+            Severity severity,
+            long maxFileSize
             )
             :
             base
@@ -141,7 +139,7 @@ namespace BuildXL.Cache.ContentStore.Logging
                 case ColumnType.EmptyString: return string.Empty;
                 case ColumnType.SessionId:   return Guid.ToString();
                 case ColumnType.HostName:    return _host;
-                case ColumnType.Timestamp:   return string.Format(CultureInfo.InvariantCulture, "{0:yyyy-MM-dd HH:mm:ss,fff}", dateTime);
+                case ColumnType.Timestamp:   return string.Format(CultureInfo.InvariantCulture, "{0:yyyy-MM-dd HH:mm:ss.fff}", dateTime);
                 case ColumnType.ThreadId:    return threadId.ToString();
                 case ColumnType.Severity:    return SeverityNames[(int)severity];
                 case ColumnType.Message:     return CsvEscape(message);

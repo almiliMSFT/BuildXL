@@ -248,7 +248,6 @@ namespace BuildXL.Cache.ContentStore.Logging
             foreach (ILog log in _logs)
             {
                 log.Flush();
-                log.Dispose();
             }
         }
 

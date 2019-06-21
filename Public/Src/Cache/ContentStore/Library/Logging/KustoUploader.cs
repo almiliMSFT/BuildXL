@@ -11,7 +11,7 @@ using Kusto.Ingest;
 namespace BuildXL.Cache.ContentStore.Logging
 {
     /// <summary>
-    ///     TODO
+    ///     Responsible for pumping provided log files to Kusto.
     /// </summary>
     public sealed class KustoUploader : IDisposable
     {
@@ -23,7 +23,7 @@ namespace BuildXL.Cache.ContentStore.Logging
         private readonly ActionBlock<FileDescription> _block;
 
         /// <summary>
-        ///     Constructor.  Initializes this object and does perform anything else.
+        ///     Constructor.  Initializes this object and does nothing else.
         /// </summary>
         /// <param name="connectionString">Kusto connection string.</param>
         /// <param name="database">Database into which to ingest.</param>
