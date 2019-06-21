@@ -12,6 +12,18 @@ namespace BuildXL.Cache.ContentStore.Logging
 {
     /// <summary>
     ///     Responsible for pumping provided log files to Kusto.
+    ///
+    ///     To post a log file for ingestion, call <see cref="PostFileForIngestion(string, Guid)"/>.
+    ///     This method is asynchronous and thread-safe, meaning:
+    ///       (1) it only queues a request for ingestion and doesn't wait for it to complete before it returns, and
+    ///       (2) posting multiple files from concurrent threads is ok.
+    ///
+    ///     To complete ingestion and wait for all pending ingestion tasks to finish, call
+    ///     <see cref="CompleteAndWaitForPendingIngestionsToFinish"/>.  After this method has been
+    ///     called, <see cref="PostFileForIngestion(string, Guid)"/> does not accept any new requests.
+    ///
+    ///     The <see cref="Dispose"/> method of this class implicitly waits for pending ingestions
+    ///     to finish (by calling <see cref="CompleteAndWaitForPendingIngestionsToFinish"/>.
     /// </summary>
     public sealed class KustoUploader : IDisposable
     {
@@ -85,7 +97,7 @@ namespace BuildXL.Cache.ContentStore.Logging
         ///     Synchronously waits until all posted files for ingestion complete.
         /// </summary>
         /// <returns>Whether any ingestion failures were encountered.</returns>
-        public bool WaitForCompletion()
+        public bool CompleteAndWaitForPendingIngestionsToFinish()
         {
             if (_block.Completion.IsCompleted)
             {
@@ -107,7 +119,7 @@ namespace BuildXL.Cache.ContentStore.Logging
         /// </summary>
         public void Dispose()
         {
-            WaitForCompletion();
+            CompleteAndWaitForPendingIngestionsToFinish();
             _client.Dispose();
         }
 
