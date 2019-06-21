@@ -376,16 +376,13 @@ namespace BuildXL.Cache.ContentStore.App
                 logFilePath: logFilePath + TmpCsvLogFileExt, 
                 schema: KustoTableSchema,
                 severity: _fileLogSeverity,
-                maxFileSize: _logMaxCsvFileSize
+                maxFileSize: _csvLogMaxFileSize
                 );
 
             _csvFileLog.OnLogFileProduced += (path) =>
             {
-                Console.WriteLine("=== On Log file produced called");
                 string newPath = Path.ChangeExtension(path, CsvLogFileExt);
-                Console.WriteLine("=== Calling move to " + newPath);
                 File.Move(path, newPath);
-
                 _kustoUploader.PostFileForIngestion(newPath, _csvFileLog.Guid);
             };
 
