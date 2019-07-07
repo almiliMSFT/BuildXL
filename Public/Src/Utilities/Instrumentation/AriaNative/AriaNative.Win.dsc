@@ -13,6 +13,8 @@ namespace AriaNative {
         configuration: "debug" | "release";
     };
 
+    const isWinOs = Context.getCurrentHost().os === "win";
+
     const platform: "x86" | "x64" = "x64";
     const AriaPkg = importFrom("Aria.Cpp.SDK").withQualifier({targetFramework: "netcoreapp3.0"}).pkg;
     const WindowsSdk = importFrom("WindowsSdk").withQualifier({platform: platform});
@@ -22,18 +24,13 @@ namespace AriaNative {
         d`${AriaPkg.contents.root}/win-x64/tools/include`,
         globR(d`${AriaPkg.contents.root}/win-x64/tools/include`));
 
-    
     const native = importFrom("Sdk.Native").withQualifier({platform: platform, configuration: qualifier.configuration});
 
-    export const preprocessorSymbols = {
-        items: [],
-    };
-    
     export const clRunnerDefaultValue = native.Templates.nativeBuildersClRunnerTemplate.merge({
-        preprocessorSymbols: [...preprocessorSymbols.items],
+        preprocessorSymbols: [],
         treatWarningAsError: false,
         warningLevel: native.Cl.ClWarningLevel.level4,
-        disableSpecificWarnings: [ //4668, 4505, 4702, 4722, 4820, 4191, 4061, 4514, 4365, 4710],
+        disableSpecificWarnings: [
             4668, // not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
             4514, // unreferenced inline function has been removed
         ],
@@ -51,7 +48,7 @@ namespace AriaNative {
     const ariaRoot = d`${Context.getMount("Sandbox").path}/MacOs/Interop/Aria`;
 
     @@public
-    export const dll = Context.getCurrentHost().os === "win" && native.Dll.build(nativeDllBuilderDefaultValue.merge<Native.Dll.Arguments>({
+    export const dll = !isWinOs ? undefined : native.Dll.build(nativeDllBuilderDefaultValue.merge<Native.Dll.Arguments>({
         outputFileName: a`BuildXLAria.dll`,
         preprocessorSymbols: [
             ...addIf(BuildXLSdk.Flags.isMicrosoftInternal,
@@ -90,7 +87,7 @@ namespace AriaNative {
     }));
 
     @@public
-    export const deployment: Deployment.Definition = {
+    export const deployment: Deployment.Definition = !isWinOs ? undefined : {
         contents: [
             {
                 subfolder: PathAtom.create(platform),
