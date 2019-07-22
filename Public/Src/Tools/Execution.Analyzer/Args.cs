@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.ContractsLight;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,6 +19,19 @@ using HelpLevel = BuildXL.ToolSupport.HelpLevel;
 
 namespace BuildXL.Execution.Analyzer
 {
+    internal class ConsoleEventListener : FormattingEventListener
+    {
+        public ConsoleEventListener(Events eventSource, DateTime baseTime, WarningMapper warningMapper = null, EventLevel level = EventLevel.Verbose, bool captureAllDiagnosticMessages = false, TimeDisplay timeDisplay = TimeDisplay.None, EventMask eventMask = null, DisabledDueToDiskWriteFailureEventHandler onDisabledDueToDiskWriteFailure = null, bool listenDiagnosticMessages = false, bool useCustomPipDescription = false)
+            : base(eventSource, baseTime, warningMapper, level, captureAllDiagnosticMessages, timeDisplay, eventMask, onDisabledDueToDiskWriteFailure, listenDiagnosticMessages, useCustomPipDescription)
+        {
+        }
+
+        protected override void Output(EventLevel level, int id, string eventName, EventKeywords eventKeywords, string text, bool doNotTranslatePaths = false)
+        {
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss.ff}] {text}");
+        }
+    }
+
     internal sealed partial class Args : CommandLineUtilities
     {
         private static readonly string[] s_helpStrings = new[] { "?", "help" };
@@ -34,6 +48,7 @@ namespace BuildXL.Execution.Analyzer
 
         public readonly LoggingContext LoggingContext = new LoggingContext("BuildXL.Execution.Analyzer");
         public readonly TrackingEventListener TrackingEventListener = new TrackingEventListener(Events.Log);
+        public readonly ConsoleEventListener ConsoleListener = new ConsoleEventListener(Events.Log, DateTime.UtcNow);
 
         // Variables that are unused without full telemetry
         private readonly bool m_telemetryDisabled = false;
@@ -322,6 +337,11 @@ namespace BuildXL.Execution.Analyzer
                 case AnalysisMode.CopyFile:
                     m_analyzer = InitializeCopyFilesAnalyzer();
                     break;
+                case AnalysisMode.DebugLogs:
+                    ConsoleListener.RegisterEventSource(ETWLogger.Log);
+                    ConsoleListener.RegisterEventSource(FrontEnd.Script.Debugger.ETWLogger.Log);
+                    m_analyzer = InitializeDebugLogsAnalyzer();
+                    break;
                 default:
                     Contract.Assert(false, "Unhandled analysis mode");
                     break;
@@ -594,6 +614,9 @@ namespace BuildXL.Execution.Analyzer
 
             writer.WriteLine("");
             WriteCopyFilesAnalyzerHelp(writer);
+
+            writer.WriteLine("");
+            WriteDebugLogsAnalyzerHelp(writer);
         }
 
         public void LogEventSummary()

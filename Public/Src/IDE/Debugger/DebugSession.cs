@@ -4,9 +4,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using BuildXL.FrontEnd.Script.Evaluator;
 using BuildXL.FrontEnd.Script.Values;
 using BuildXL.Utilities;
+using BuildXL.Utilities.Tasks;
 using BuildXL.Utilities.Tracing;
 using VSCode.DebugAdapter;
 using VSCode.DebugProtocol;
@@ -21,7 +23,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
     /// thread.  Thus, all the private state of this class (e.g., (<code cref="m_scopeHandles"/>)
     /// needs not be thread-safe, nor is any synchronization needed when accessing it.
     ///
-    /// The constructor of this class receives a shared debugger state (<code cref="m_state"/>),
+    /// The constructor of this class receives a shared debugger state (<code cref="State"/>),
     /// which is assumed to be thread-safe.
     ///
     /// A debug session, representing a single client debugger issuing requests to the DScript back end.
@@ -35,13 +37,15 @@ namespace BuildXL.FrontEnd.Script.Debugger
         private readonly Barrier m_sessionInitializedBarrier = new Barrier();
         private readonly Renderer m_renderer;
         private readonly ExpressionEvaluator m_expressionEvaluator;
+        private readonly TaskCompletionSource<Unit> m_taskSource;
 
         // shared state, received via the constructor.
-        private readonly DebuggerState m_state;
         private readonly PathTranslator m_buildXLToUserPathTranslator;
         private readonly PathTranslator m_userToBuildXLPathTranslator;
 
-        internal DebuggerState State => m_state;
+        public Task Completion => m_taskSource.Task;
+
+        internal DebuggerState State { get; }
 
         /// <summary>Connected debugger.</summary>
         public IDebugger Debugger { get; }
@@ -49,11 +53,12 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <nodoc/>
         public DebugSession(DebuggerState state, PathTranslator buildXLToUserPathTranslator, IDebugger debugger)
         {
-            m_state = state;
+            State = state;
+            m_taskSource = new TaskCompletionSource<Unit>();
             m_buildXLToUserPathTranslator = buildXLToUserPathTranslator;
             m_userToBuildXLPathTranslator = buildXLToUserPathTranslator?.GetInverse();
             Debugger = debugger;
-            m_renderer = new Renderer(state);
+            m_renderer = new Renderer(state.LoggingContext);
             m_expressionEvaluator = new ExpressionEvaluator(state);
         }
 
@@ -91,8 +96,8 @@ namespace BuildXL.FrontEnd.Script.Debugger
             var sourceBreakpoints = cmd.Breakpoints;
             var source = TranslateUserPath(Path.GetFullPath(cmd.Source.Path));
 
-            var sourcePath = AbsolutePath.Create(m_state.PathTable, source);
-            var breakpoints = m_state.MasterBreakpoints.Set(sourcePath, sourceBreakpoints);
+            var sourcePath = AbsolutePath.Create(State.PathTable, source);
+            var breakpoints = State.MasterBreakpoints.Set(sourcePath, sourceBreakpoints);
 
             cmd.SendResult(new SetBreakpointsResult(breakpoints.ToList()));
         }
@@ -117,7 +122,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
             if (threadId != null)
             {
                 // unblock single thread
-                var evalState = m_state.RemoveStoppedThread(threadId.Value);
+                var evalState = State.RemoveStoppedThread(threadId.Value);
                 cmd.SendResult(new ContinueResult(allThreadsContinued: false));
                 evalState.Resume();
             }
@@ -125,7 +130,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
             {
                 // unblock all
                 cmd.SendResult(new ContinueResult(allThreadsContinued: true));
-                foreach (var kvp in m_state.ClearStoppedThreads())
+                foreach (var kvp in State.ClearStoppedThreads())
                 {
                     var evalState = kvp.Value;
                     evalState.Resume();
@@ -136,14 +141,14 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <inheritdoc/>
         public void Threads(IThreadsCommand cmd)
         {
-            var threads = m_state.GetStoppedThreadsClone().Select(kvp => new VSThread(kvp.Key, kvp.Value.ThreadName())).ToList();
+            var threads = State.GetStoppedThreadsClone().Select(kvp => new VSThread(kvp.Key, kvp.Value.ThreadName())).ToList();
             cmd.SendResult(new ThreadsResult(threads));
         }
 
         /// <inheritdoc/>
         public void StackTrace(IStackTraceCommand cmd)
         {
-            var threadState = m_state.GetThreadState(cmd.ThreadId);
+            var threadState = State.GetThreadState(cmd.ThreadId);
             int startFrame = cmd.StartFrame ?? 0;
             int maxNumberOfFrames = cmd.Levels ?? int.MaxValue;
             var frames = threadState.StackTrace.Skip(startFrame).Take(maxNumberOfFrames).Select((entry, idx) =>
@@ -177,8 +182,9 @@ namespace BuildXL.FrontEnd.Script.Debugger
         public void Disconnect(IDisconnectCommand cmd)
         {
             cmd.SendResult(null);
-            m_state.StopDebugging();
+            State.StopDebugging();
             m_sessionInitializedBarrier.Signal();
+            m_taskSource.SetResult(Unit.Void);
         }
 
         /// <inheritdoc/>
@@ -285,7 +291,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
         // ===========================================================================================
         private void Step<T>(int threadId, ICommand<T> cmd, DebugAction.ActionKind kind, T result = default(T))
         {
-            var evalState = m_state.RemoveStoppedThread(threadId);
+            var evalState = State.RemoveStoppedThread(threadId);
             evalState.Resume(kind);
             cmd.SendResult(result);
         }

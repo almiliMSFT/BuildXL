@@ -18,6 +18,7 @@ using BuildXL.FrontEnd.Sdk;
 using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Utilities;
+using BuildXL.Utilities.Instrumentation.Common;
 using BuildXL.Utilities.Qualifier;
 using VSCode.DebugAdapter;
 using VSCode.DebugProtocol;
@@ -62,12 +63,13 @@ namespace BuildXL.FrontEnd.Script.Debugger
         }
 
         private readonly Handles<ObjectContext> m_handles = new Handles<ObjectContext>();
-        private readonly DebuggerState m_state;
+        private readonly Tracing.Logger m_logger = Tracing.Logger.CreateLogger();
+        private readonly LoggingContext m_loggingContext;
 
         /// <nodoc />
-        public Renderer(DebuggerState state)
+        public Renderer(LoggingContext loggingContext)
         {
-            m_state = state;
+            m_loggingContext = loggingContext;
         }
 
         /// <summary>
@@ -314,7 +316,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
             {
                 // should not happen, because all our CallableMember objects are also CallableMember<T>,
                 // and the only client of this method ('GetAmbientProperties') ensures that 'receiver' is of type T.
-                m_state.Logger.ReportDebuggerRendererFailedToBindCallableMember(m_state.LoggingContext, member.GetType().FullName, receiver.GetType().FullName, e.GetLogEventMessage());
+                m_logger.ReportDebuggerRendererFailedToBindCallableMember(m_loggingContext, member.GetType().FullName, receiver.GetType().FullName, e.GetLogEventMessage());
                 return null;
             }
         }
