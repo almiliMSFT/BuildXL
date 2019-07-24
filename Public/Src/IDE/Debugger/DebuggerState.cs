@@ -36,6 +36,9 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <nodoc />
         public Renderer.CustomRenderer CustomRenderer { get; }
 
+        /// <nodoc />
+        public IExpressionEvaluator ExpressionEvaluator { get; }
+
         /// <summary>Whether the debugger has disconnected.</summary>
         public bool DebuggerStopped => m_debuggerStopped;
 
@@ -52,14 +55,20 @@ namespace BuildXL.FrontEnd.Script.Debugger
         public LoggingContext LoggingContext { get; }
 
         /// <nodoc/>
-        public DebuggerState([CanBeNull]Renderer.CustomRenderer customRenderer, PathTable pathTable, LoggingContext loggingContext, Logger logger = null)
+        public DebuggerState(
+            PathTable pathTable, 
+            LoggingContext loggingContext,
+            Renderer.CustomRenderer customRenderer,
+            IExpressionEvaluator expressionEvaluator,
+            Logger logger = null)
         {
-            CustomRenderer = customRenderer;
             PathTable = pathTable;
+            LoggingContext = loggingContext;
+            CustomRenderer = customRenderer;
+            ExpressionEvaluator = expressionEvaluator;
             MasterBreakpoints = BreakpointStoreFactory.CreateMaster();
             m_stoppedThreads = new Dictionary<int, ThreadState>();
             m_debuggerStopped = false;
-            LoggingContext = loggingContext;
             Logger = logger ?? Logger.CreateLogger();
         }
 

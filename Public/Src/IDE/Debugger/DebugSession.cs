@@ -36,12 +36,13 @@ namespace BuildXL.FrontEnd.Script.Debugger
         private readonly Handles<FrameContext> m_scopeHandles = new Handles<FrameContext>();
         private readonly Barrier m_sessionInitializedBarrier = new Barrier();
         private readonly Renderer m_renderer;
-        private readonly ExpressionEvaluator m_expressionEvaluator;
         private readonly TaskCompletionSource<Unit> m_taskSource;
 
         // shared state, received via the constructor.
         private readonly PathTranslator m_buildXLToUserPathTranslator;
         private readonly PathTranslator m_userToBuildXLPathTranslator;
+
+        private IExpressionEvaluator ExpressionEvaluator => State.ExpressionEvaluator;
 
         /// <summary>
         /// Task that completes when this debug session is disconnected.
@@ -53,6 +54,9 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <summary>Connected debugger.</summary>
         public IDebugger Debugger { get; }
 
+        /// <nodoc />
+        public Renderer Renderer { get; }
+
         /// <nodoc/>
         public DebugSession(DebuggerState state, PathTranslator buildXLToUserPathTranslator, IDebugger debugger)
         {
@@ -62,7 +66,6 @@ namespace BuildXL.FrontEnd.Script.Debugger
             m_userToBuildXLPathTranslator = buildXLToUserPathTranslator?.GetInverse();
             Debugger = debugger;
             m_renderer = new Renderer(state.LoggingContext, state.PathTable, state.CustomRenderer);
-            m_expressionEvaluator = new ExpressionEvaluator(state);
         }
 
         /// <summary>
@@ -73,6 +76,12 @@ namespace BuildXL.FrontEnd.Script.Debugger
         {
             m_sessionInitializedBarrier.Wait();
         }
+
+        /// <nodoc />
+        public string TranslateUserPath(string path) => m_userToBuildXLPathTranslator != null ? m_userToBuildXLPathTranslator.Translate(path) : path;
+
+        /// <nodoc />
+        public string TranslateBuildXLPath(string path) => m_buildXLToUserPathTranslator != null ? m_buildXLToUserPathTranslator.Translate(path) : path;
 
         // ===========================================================================================
         // === DEBUG PROTOCOL METHODS ================================================================
@@ -200,7 +209,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
             }
 
             var frameRef = m_scopeHandles.Get(cmd.FrameId.Value, null);
-            var ans = m_expressionEvaluator.EvaluateExpression(frameRef, cmd.Expression);
+            var ans = ExpressionEvaluator.EvaluateExpression(State.GetThreadState(frameRef.ThreadId), frameRef.FrameIndex, cmd.Expression);
             if (ans.Succeeded)
             {
                 ObjectContext objContext = ans.Result;
@@ -271,7 +280,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
             }
 
             var frameRef = m_scopeHandles.Get(cmd.FrameId.Value, null);
-            var ans = m_expressionEvaluator.EvaluateExpression(frameRef, GetCompletionTextToEvaluate(cmd));
+            var ans = ExpressionEvaluator.EvaluateExpression(State.GetThreadState(frameRef.ThreadId), frameRef.FrameIndex, GetCompletionTextToEvaluate(cmd));
 
             List<ICompletionItem> items;
             if (!ans.Succeeded)
@@ -300,10 +309,6 @@ namespace BuildXL.FrontEnd.Script.Debugger
             evalState.Resume(kind);
             cmd.SendResult(result);
         }
-
-        private string TranslateUserPath(string path) => m_userToBuildXLPathTranslator != null ? m_userToBuildXLPathTranslator.Translate(path) : path;
-
-        private string TranslateBuildXLPath(string path) => m_buildXLToUserPathTranslator != null ? m_buildXLToUserPathTranslator.Translate(path) : path;
 
         private static string GetCompletionTextToEvaluate(ICompletionsCommand cmd)
         {

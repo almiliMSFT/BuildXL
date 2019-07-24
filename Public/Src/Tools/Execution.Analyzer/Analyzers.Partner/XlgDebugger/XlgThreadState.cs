@@ -20,9 +20,10 @@ namespace BuildXL.Execution.Analyzer
     /// <summary>
     /// Global XLG state (where all pips, artifacts, etc. are displayed)
     /// </summary>
-    public class XlgState : ThreadState
+    public class XlgState : ThreadState, IExpressionEvaluator
     {
         private const string ExeLevelNotCompleted = "NotCompleted";
+        private const int XlgThreadId = 1;
 
         private DebugLogsAnalyzer Analyzer { get; }
 
@@ -37,12 +38,13 @@ namespace BuildXL.Execution.Analyzer
         private ObjectInfo PipsByType { get; }
         private ObjectInfo PipsByStatus { get; }
 
+
         /// <inheritdoc />
         public override IReadOnlyList<DisplayStackTraceEntry> StackTrace { get; }
 
         /// <nodoc />
         public XlgState(DebugLogsAnalyzer analyzer)
-            : base(0)
+            : base(XlgThreadId)
         {
             Analyzer = analyzer;
 
@@ -70,6 +72,27 @@ namespace BuildXL.Execution.Analyzer
             }));
         }
 
+        #region Expression Evaluator
+
+        /// <inheritdoc />
+        public Possible<ObjectContext, Failure> EvaluateExpression(ThreadState threadState, int frameIndex, string expr)
+        {
+            if (Pip.TryParseSemiStableHash(expr, out var hash) && Analyzer.SemiStableHash2Pip.TryGetValue(hash, out var pipId))
+            {
+                return new ObjectContext(context: this, Analyzer.AsPipReference(pipId));
+            }
+
+            string translatedPath = Analyzer.Session.TranslateUserPath(expr);
+            if (AbsolutePath.TryCreate(PathTable, translatedPath, out var path) && path.IsValid)
+            {
+                return new ObjectContext(context: this, new AnalyzePath(path));
+            }
+
+            return new Failure<string>($"Can't parse expression '{expr}'");
+        }
+
+        #endregion
+
         /// <inheritdoc />
         public override string ThreadName() => "Full XLG";
 
@@ -80,8 +103,10 @@ namespace BuildXL.Execution.Analyzer
             {
                 new ObjectContext(context: this, obj: new ObjectInfo(preview: "Global Scope", properties: new[]
                     {
-                        new Property("Graph", CachedGraph),
-
+                        new Property(name: $"Pips", value: new PipsScope()),
+                        new Property(name: $"Files", value: GroupFiles(PipGraph.AllFiles)),
+                        new Property(name: $"Seal Directories", value: GroupDirs(PipGraph.AllSealDirectories)),
+                        new Property(name: $"Output Directories", value: GroupDirs(PipGraph.AllOutputDirectoriesAndProducers.Select(kvp => kvp.Key)))
                     }))
             };
         }
@@ -92,24 +117,51 @@ namespace BuildXL.Execution.Analyzer
         {
             switch (obj)
             {
-                case CachedGraph g:                return CachedGraphInfo(g);
                 case PipsScope ps:                 return PipsInfo(ps);
-                case AbsolutePath p:               return new ObjectInfo(p.ToString(PathTable));
+                case AbsolutePath p:               return new ObjectInfo(Analyzer.Session.TranslateBuildXLPath(p.ToString(PathTable)));
                 case FileArtifact f:               return FileArtifactInfo(f);
                 case DirectoryArtifact d:          return DirectoryArtifactInfo(d);
+                case AnalyzePath ap:               return AnalyzePathInfo(ap);
                 case PipId pipId:                  return Render(renderer, ctx, Analyzer.GetPip(pipId)).WithPreview(pipId.ToString());
                 case PipReference pipRef:          return Render(renderer, ctx, Analyzer.GetPip(pipRef.PipId));
                 case Process proc:                 return ProcessInfo(proc);
-                case Pip pip:                      return GenericObjectInfo(pip, preview: pip.GetShortDescription(PipGraph.Context));
+                case Pip pip:                      return GenericObjectInfo(pip, preview: PipPreview(pip));
                 case FileArtifactWithAttributes f: return GenericObjectInfo(f, preview: FileArtifactPreview(f.ToFileArtifact()));
                 default:
                     return null;
             }
         }
 
+        private ObjectInfo AnalyzePathInfo(AnalyzePath ap)
+        {
+            var props = new List<Property>()
+            {
+                new Property("Path", ap.Path)
+            };
+
+            var latestFileArtifact = PipGraph.TryGetLatestFileArtifactForPath(ap.Path);
+            if (latestFileArtifact.IsValid)
+            {
+                props.Add(new Property("LastestFileArtifact", latestFileArtifact));
+            }
+
+            var dirArtifact = PipGraph.TryGetDirectoryArtifactForPath(ap.Path);
+            if (dirArtifact.IsValid)
+            {
+                props.Add(new Property("DirectoryArtifact", dirArtifact));
+            }
+
+            return new ObjectInfo(props);
+        }
+
+        private string PipPreview(Pip pip)
+        {
+            return $"<{pip.PipType.ToString().ToUpperInvariant()}> {pip.GetShortDescription(PipGraph.Context)}";
+        }
+
         private ObjectInfo ProcessInfo(Process proc)
         {
-            return new ObjectInfo(preview: proc.GetShortDescription(PipGraph.Context), properties: Lazy.Create(() =>
+            return new ObjectInfo(preview: PipPreview(proc), properties: Lazy.Create(() =>
             {
                 var pipExePerf = Analyzer.GetPipExePerf(proc.PipId);
                 return new[]
@@ -190,21 +242,9 @@ namespace BuildXL.Execution.Analyzer
             {
                 new Property("ByType", PipsByType),
                 new Property("ByStatus", PipsByStatus),
-                new Property("ByExecutionStart", Analyzer.Pip2Perf.OrderBy(kvp => kvp.Value.ExecutionStart).Select(kvp => kvp.Key)),
-                new Property("ByExecutionStop", Analyzer.Pip2Perf.OrderBy(kvp => kvp.Value.ExecutionStop).Select(kvp => kvp.Key)),
+                new Property("ByExecutionStart", Analyzer.Pip2Perf.OrderBy(kvp => kvp.Value.ExecutionStart).Select(kvp => Analyzer.AsPipReference(kvp.Key))),
+                new Property("ByExecutionStop", Analyzer.Pip2Perf.OrderBy(kvp => kvp.Value.ExecutionStop).Select(kvp => Analyzer.AsPipReference(kvp.Key))),
             });
-        }
-
-        private ObjectInfo CachedGraphInfo(CachedGraph graph)
-        {
-            return new ObjectInfo(
-                properties: new[]
-                {
-                    new Property(name: $"Pips", value: new PipsScope()),
-                    new Property(name: $"Files", value: GroupFiles(PipGraph.AllFiles)),
-                    new Property(name: $"Seal Directories", value: GroupDirs(PipGraph.AllSealDirectories)),
-                    new Property(name: $"Output Directories", value: GroupDirs(PipGraph.AllOutputDirectoriesAndProducers.Select(kvp => kvp.Key)))
-                });
         }
 
         private ObjectInfo GroupFiles(IEnumerable<FileArtifact> files)
@@ -243,5 +283,13 @@ namespace BuildXL.Execution.Analyzer
 
         private class PipsScope { }
         private class FilesScope { }
+        private class AnalyzePath
+        {
+            internal AbsolutePath Path { get; }
+            internal AnalyzePath(AbsolutePath path)
+            {
+                Path = path;
+            }
+        }
     }
 }

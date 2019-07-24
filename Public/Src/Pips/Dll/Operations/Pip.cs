@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.ContractsLight;
 using System.Globalization;
@@ -91,6 +92,31 @@ namespace BuildXL.Pips.Operations
         /// Format the semistable hash for display 
         /// </summary>
         public static string FormatSemiStableHash(long hash) => string.Format(CultureInfo.InvariantCulture, "{0}{1:X16}", SemiStableHashPrefix, hash);
+
+        /// <summary>
+        /// Inverse of <see cref="FormatSemiStableHash"/>
+        /// </summary>
+        public static bool TryParseSemiStableHash(string formattedSemiStableHash, out long hash)
+        {
+            if (!formattedSemiStableHash.StartsWith(SemiStableHashPrefix))
+            {
+                hash = -1;
+                return false;
+            }
+
+            try
+            {
+                hash = Convert.ToInt64(formattedSemiStableHash.Substring(SemiStableHashPrefix.Length), 16);
+                return true;
+            }
+            catch
+            {
+                hash = -1;
+#pragma warning disable ERP022 // Unobserved exception in generic exception handler
+                return false;
+#pragma warning restore ERP022 // Unobserved exception in generic exception handler
+            }
+        }
 
         /// <summary>
         /// Whether this is a process pip that <see cref="Process.AllowUndeclaredSourceReads"/>

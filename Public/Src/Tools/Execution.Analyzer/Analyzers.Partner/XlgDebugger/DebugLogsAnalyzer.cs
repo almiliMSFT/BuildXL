@@ -5,16 +5,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using BuildXL.Engine;
 using BuildXL.FrontEnd.Script.Debugger;
 using BuildXL.Pips;
 using BuildXL.Scheduler.Tracing;
 using BuildXL.Storage;
 using BuildXL.ToolSupport;
 using BuildXL.Utilities;
+using BuildXL.Utilities.Configuration;
+using BuildXL.Utilities.Tracing;
 using VSCode.DebugAdapter;
 using VSCode.DebugProtocol;
-using static BuildXL.FrontEnd.Script.Debugger.Matcher;
 
 namespace BuildXL.Execution.Analyzer
 {
@@ -55,20 +55,18 @@ namespace BuildXL.Execution.Analyzer
         private readonly IList<PipExecutionPerformanceEventData> m_writeExecutionEntries = new List<PipExecutionPerformanceEventData>();
         private readonly Dictionary<FileArtifact, FileContentInfo> m_fileContentMap = new Dictionary<FileArtifact, FileContentInfo>(capacity: 10 * 1000);
         private readonly Lazy<Dictionary<PipId, PipExecutionPerformance>> m_lazyPipPerfDict;
+        private readonly Lazy<Dictionary<long, PipId>> m_lazyPipsBySemiStableHash;
+
         private string[] m_workers;
+        private PathTranslator m_pathTanslator;
         private readonly int m_port;
         private readonly DebuggerState m_state;
-
-        private Dictionary<PipId, PipExecutionPerformance> CopmutePipPerfDict()
-        {
-            return m_writeExecutionEntries.ToDictionary(e => e.PipId, e => e.ExecutionPerformance);
-        }
 
         private XlgState XlgState { get; }
 
         private IDebugger Debugger { get; set; }
 
-        private DebugSession Session { get; set; }
+        internal DebugSession Session { get; set; }
 
         /// <nodoc />
         public bool IsDebugging => Debugger != null;
@@ -79,8 +77,20 @@ namespace BuildXL.Execution.Analyzer
         {
             XlgState = new XlgState(this);
             m_port = port;
-            m_state = new DebuggerState(XlgState.Render, PathTable, LoggingContext);
-            m_lazyPipPerfDict = new Lazy<Dictionary<PipId, PipExecutionPerformance>>(CopmutePipPerfDict);
+            m_state = new DebuggerState(PathTable, LoggingContext, XlgState.Render, XlgState);
+            m_lazyPipPerfDict = new Lazy<Dictionary<PipId, PipExecutionPerformance>>(() =>
+            {
+                return m_writeExecutionEntries.ToDictionary(e => e.PipId, e => e.ExecutionPerformance);
+            });
+            m_lazyPipsBySemiStableHash = new Lazy<Dictionary<long, PipId>>(() =>
+            {
+                var result = new Dictionary<long, PipId>();
+                foreach (var pipId in PipTable.Keys)
+                {
+                    result[PipTable.GetPipSemiStableHash(pipId)] = pipId;
+                }
+                return result;
+            });
         }
 
         /// <inheritdoc />
@@ -91,7 +101,7 @@ namespace BuildXL.Execution.Analyzer
 
         private async Task<int> AnalyzeAsync()
         {
-            var debugServer = new DebugServer(LoggingContext, m_port, (d) => new DebugSession(m_state, null, d));
+            var debugServer = new DebugServer(LoggingContext, m_port, (d) => new DebugSession(m_state, m_pathTanslator, d));
             Debugger = await debugServer.StartAsync();
             Session = (DebugSession)Debugger.Session;
             Session.WaitSessionInitialized();
@@ -101,6 +111,13 @@ namespace BuildXL.Execution.Analyzer
 
             await Session.Completion;
             return 0;
+        }
+
+        private static PathTranslator GetPathTranslator(AbsolutePath substSource, AbsolutePath substTarget, PathTable pathTable)
+        {
+            return substTarget.IsValid && substSource.IsValid
+                ? new PathTranslator(substTarget.ToString(pathTable), substSource.ToString(pathTable))
+                : null;
         }
 
         /// <inheritdoc />
@@ -113,17 +130,26 @@ namespace BuildXL.Execution.Analyzer
         public IReadOnlyDictionary<PipId, PipExecutionPerformance> Pip2Perf => m_lazyPipPerfDict.Value;
 
         /// <nodoc />
+        public IReadOnlyDictionary<long, PipId> SemiStableHash2Pip => m_lazyPipsBySemiStableHash.Value;
+
+        /// <nodoc />
         public PipExecutionPerformance GetPipExePerf(PipId pipId)
         {
             return Pip2Perf.TryGetValue(pipId, out var result) ? result : null;
         }
 
+        /// <nodoc />
+        public PipReference AsPipReference(PipId pipId)
+        {
+            return new PipReference(PipTable, pipId, PipQueryContext.ViewerAnalyzer);
+        }
+
         #region Log processing
 
-        /// <inheritdoc />
         public override void DominoInvocation(DominoInvocationEventData data)
         {
-            
+            var conf = data.Configuration.Logging;
+            m_pathTanslator = GetPathTranslator(conf.SubstSource, conf.SubstTarget, PathTable);
         }
 
         /// <inheritdoc />
