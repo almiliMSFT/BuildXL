@@ -87,10 +87,11 @@ namespace BuildXL.Execution.Analyzer
             var name = f.Path.GetName(PathTable).ToString(StringTable);
             var kind = f.IsSourceFile ? "source" : "output";
             return new ObjectInfo(
-                preview: $"{name} ({f.RewriteCount}) [{kind}]", 
+                preview: $"{name} [{kind}]", 
                 properties: new[]
                 {
-                    new Property("Path", f.Path),
+                    new Property("Path", f.Path.ToString(PathTable)),
+                    new Property("Rewrite Count", f.RewriteCount),
                     f.IsOutputFile ? new Property("Producer", PipGraph.GetProducer(f)) : null,
                     new Property("Consumers", PipGraph.GetConsumingPips(f.Path))
                 }
@@ -107,14 +108,16 @@ namespace BuildXL.Execution.Analyzer
             var name = d.Path.GetName(PathTable).ToString(StringTable);
             var kind = d.IsSharedOpaque ? "shared opaque" : d.IsOutputDirectory() ? "exclusive opaque" : "source";
             return new ObjectInfo(
-                preview: $"{name} ({d.PartialSealId}) [{kind}]",
+                preview: $"{name} [{kind}]",
                 properties: new[]
                 {
-                    new Property("Path", d.Path),
+                    new Property("Path", d.Path.ToString(PathTable)),
+                    new Property("PartialSealId", d.PartialSealId),
                     d.IsOutputDirectory() ? new Property("Producer", PipGraph.GetProducer(d)) : null,
-                    new Property("Consumers", PipGraph.GetConsumingPips(d.Path))
+                    new Property("Consumers", PipGraph.GetConsumingPips(d.Path)),
+                    d.PartialSealId > 0 ? new Property("Members", PipGraph.ListSealedDirectoryContents(d)) : null
                 }
-                .Where(p => p != null).ToArray());
+                .Where(p => p != null));
         }
 
         private ObjectInfo PipsInfo(PipsScope _)
@@ -125,7 +128,6 @@ namespace BuildXL.Execution.Analyzer
                     .GetValues(s_pipTypeType)
                     .Cast<Pips.Operations.PipType>()
                     .Select(pipType => new Property(Enum.GetName(s_pipTypeType, pipType), CachedGraph.PipGraph.RetrievePipsOfType(pipType)))
-                    .ToList()
                 );
         }
 
@@ -136,29 +138,39 @@ namespace BuildXL.Execution.Analyzer
                 properties: new[]
                 {
                     new Property(name: $"Pips", value: new PipsScope()),
-                    new Property(name: $"Files", value: GroupByFirstFileNameLetter(PipGraph.AllFiles, f => f.Path)),
-                    new Property(name: $"Seal Directories", value: GroupByFirstFileNameLetter(PipGraph.AllSealDirectories, d => d.Path)),
-                    new Property(name: $"Output Directories", value: GroupByFirstFileNameLetter(PipGraph.AllOutputDirectoriesAndProducers.Select(kvp => kvp.Key), d => d.Path)),
+                    new Property(name: $"Files", value: GroupFiles(PipGraph.AllFiles)),
+                    new Property(name: $"Seal Directories", value: GroupDirs(PipGraph.AllSealDirectories)),
+                    new Property(name: $"Output Directories", value: GroupDirs(PipGraph.AllOutputDirectoriesAndProducers.Select(kvp => kvp.Key)))
                 });
         }
 
-        private ObjectInfo GroupByFirstFileNameLetter<T>(IEnumerable<T> allFiles, Func<T, AbsolutePath> toPath)
+        private ObjectInfo GroupFiles(IEnumerable<FileArtifact> files)
         {
-            var properties = allFiles
-                .GroupBy(t => "'" + toPath(t).GetName(PathTable).ToString(StringTable)[0].ToUpperInvariantFast() + "'")
-                .OrderBy(grp => grp.Key)
-                .Select(grp => new Property(name: grp.Key, value: grp.ToArray()))
-                .ToList();
-
-            return new ObjectInfo(properties: properties);
+            return new ObjectInfo(properties: new[]
+            {
+                new Property("Source Files", GroupByFirstFileNameLetter(files.Where(f => f.IsSourceFile), f => f.Path)),
+                new Property("Output Files", GroupByFirstFileNameLetter(files.Where(f => f.IsOutputFile), f => f.Path))
+            });
         }
 
-        private IDictionary<char, T[]> GroupByFirstFileNameLetter2<T>(IEnumerable<T> allFiles, Func<T, AbsolutePath> toPath)
+        private ObjectInfo GroupDirs(IEnumerable<DirectoryArtifact> dirs)
         {
-            IDictionary<char, T[]> dict = allFiles
-                .GroupBy(t => toPath(t).GetName(PathTable).ToString(StringTable)[0].ToUpperInvariantFast())
-                .ToDictionary(grp => grp.Key, grp => grp.OrderBy(t => toPath(t).ToString(PathTable).ToUpperInvariant()).ToArray());
-            return new SortedDictionary<char, T[]>(dict);
+            return new ObjectInfo(properties: new[]
+            {
+                new Property("Source Dirs", GroupByFirstFileNameLetter(dirs.Where(d => !d.IsOutputDirectory()), d => d.Path)),
+                new Property("Exclusive Opaque Dirs", GroupByFirstFileNameLetter(dirs.Where(d => d.IsOutputDirectory() && !d.IsSharedOpaque), d => d.Path)),
+                new Property("Shared Opaque Dirs", GroupByFirstFileNameLetter(dirs.Where(d => d.IsSharedOpaque), d => d.Path))
+            });
+        }
+
+        private ObjectInfo GroupByFirstFileNameLetter<T>(IEnumerable<T> elems, Func<T, AbsolutePath> toPath)
+        {
+            var properties = elems
+                .GroupBy(t => "'" + toPath(t).GetName(PathTable).ToString(StringTable)[0].ToUpperInvariantFast() + "'")
+                .OrderBy(grp => grp.Key)
+                .Select(grp => new Property(name: grp.Key, value: grp.ToArray()));
+
+            return new ObjectInfo(properties: properties);
         }
 
         private static CaseMatcher<T, ObjectInfo> Case<T>(Func<T, ObjectInfo> func)

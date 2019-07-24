@@ -805,8 +805,6 @@ namespace BuildXL.Scheduler.Graph
         public IEnumerable<KeyValuePair<DirectoryArtifact, PipId>> AllOutputDirectoriesAndProducers
             => OutputDirectoryProducers.Select(kvp => new KeyValuePair<DirectoryArtifact, PipId>(kvp.Key, kvp.Value.ToPipId()));
 
-
-
         /// <summary>
         /// Gets the number of known files for the build
         /// </summary>

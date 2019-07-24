@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.ContractsLight;
+using System.Linq;
 using BuildXL.FrontEnd.Script.Evaluator;
 using BuildXL.FrontEnd.Script.Values;
 using BuildXL.Pips;
@@ -62,15 +63,15 @@ namespace BuildXL.FrontEnd.Script.Debugger
         public object Original { get; }
 
         /// <summary>List of properties (as name-value pairs, <see cref="Property"/>)</summary>
-        public IReadOnlyList<Property> Properties => m_lazyProperties.Value;
+        public IEnumerable<Property> Properties => m_lazyProperties.Value;
 
         /// <nodoc />
         public ObjectInfo(string preview, object original)
             : this(preview, original, Lazy.Create<IReadOnlyList<Property>>(() => Property.Empty)) { }
 
         /// <nodoc />
-        public ObjectInfo(string preview = "", IReadOnlyList<Property> properties = null)
-            : this(preview, null, Lazy.Create(() => properties ?? Property.Empty)) { }
+        public ObjectInfo(string preview = "", IEnumerable<Property> properties = null)
+            : this(preview, null, new Lazy<IReadOnlyList<Property>>(() => (properties ?? Property.Empty).ToList())) { }
 
         /// <nodoc />
         public ObjectInfo(string preview, object original, Lazy<IReadOnlyList<Property>> properties)
