@@ -51,7 +51,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
     /// <summary>
     ///     Contains some basic object meta-information suitable for lazy rendering in a tree viewer.
     /// </summary>
-    internal sealed class ObjectInfo
+    public sealed class ObjectInfo
     {
         private readonly Lazy<IReadOnlyList<Property>> m_lazyProperties;
 
@@ -101,15 +101,16 @@ namespace BuildXL.FrontEnd.Script.Debugger
     /// An ObjectContext represents a compound object. Compound objects are scopes on their own,
     /// because their properties are rendered as variables too, but are not associated with stack frame.
     /// </summary>
-    internal sealed class ObjectContext
+    public sealed class ObjectContext
     {
         /// <summary>The context is needed only for "to string" conversion.</summary>
-        public Context Context { get; }
+        public object Context { get; }
 
         /// <summary>Parent object whose properties are to be rendered.</summary>
         public object Object { get; }
 
-        public ObjectContext(Context context, object obj)
+        /// <nodoc />
+        public ObjectContext(object context, object obj)
         {
             Contract.Requires(context != null);
 
@@ -121,6 +122,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
     // ===============================================================================
     // == Some special scope objects used as "object" in ObjectContext
     // ===============================================================================
+
     internal sealed class ScopeLocals
     {
         internal EvaluationState EvalState { get; }
@@ -144,11 +146,14 @@ namespace BuildXL.FrontEnd.Script.Debugger
         }
     }
 
-    internal sealed class ScopePipGraph
+    /// <nodoc />
+    public sealed class ScopePipGraph
     {
-        internal IPipGraph Graph { get; }
+        /// <nodoc />
+        public IPipGraph Graph { get; }
 
-        internal ScopePipGraph(IPipGraph graph)
+        /// <nodoc />
+        public ScopePipGraph(IPipGraph graph)
         {
             Graph = graph;
         }

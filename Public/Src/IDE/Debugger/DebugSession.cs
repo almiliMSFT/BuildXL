@@ -43,6 +43,9 @@ namespace BuildXL.FrontEnd.Script.Debugger
         private readonly PathTranslator m_buildXLToUserPathTranslator;
         private readonly PathTranslator m_userToBuildXLPathTranslator;
 
+        /// <summary>
+        /// Task that completes when this debug session is disconnected.
+        /// </summary>
         public Task Completion => m_taskSource.Task;
 
         internal DebuggerState State { get; }
@@ -58,7 +61,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
             m_buildXLToUserPathTranslator = buildXLToUserPathTranslator;
             m_userToBuildXLPathTranslator = buildXLToUserPathTranslator?.GetInverse();
             Debugger = debugger;
-            m_renderer = new Renderer(state.LoggingContext);
+            m_renderer = new Renderer(state.LoggingContext, state.PathTable, state.CustomRenderer);
             m_expressionEvaluator = new ExpressionEvaluator(state);
         }
 
@@ -278,9 +281,11 @@ namespace BuildXL.FrontEnd.Script.Debugger
             else
             {
                 var resultAsObjLiteral = ans.Result.Object as ObjectLiteral;
-                var memberProps = resultAsObjLiteral != null ? Renderer.ObjectLiteralInfo(ans.Result.Context, resultAsObjLiteral).Properties : Property.Empty;
-                var ambientProps = m_renderer.GetAmbientProperties(ans.Result.Context, ans.Result.Object);
-                items = memberProps.Concat(ambientProps).Select(p => (ICompletionItem)new CompletionItem(p.Name, p.Name, p.Kind)).ToList();
+                items = m_renderer
+                    .GetObjectInfo(ans.Result.Context, resultAsObjLiteral)
+                    .Properties
+                    .Select(p => (ICompletionItem)new CompletionItem(p.Name, p.Name, p.Kind))
+                    .ToList();
             }
 
             cmd.SendResult(new CompletionsResult(items));

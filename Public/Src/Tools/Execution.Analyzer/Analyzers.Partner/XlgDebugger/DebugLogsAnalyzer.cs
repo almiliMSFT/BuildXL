@@ -4,11 +4,15 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BuildXL.Engine;
 using BuildXL.FrontEnd.Script.Debugger;
 using BuildXL.Scheduler.Tracing;
 using BuildXL.Storage;
 using BuildXL.ToolSupport;
 using BuildXL.Utilities;
+using VSCode.DebugAdapter;
+using VSCode.DebugProtocol;
+using static BuildXL.FrontEnd.Script.Debugger.Matcher;
 
 namespace BuildXL.Execution.Analyzer
 {
@@ -51,12 +55,24 @@ namespace BuildXL.Execution.Analyzer
         private string[] m_workers;
 
         private readonly int m_port;
+        private readonly DebuggerState m_state;
+
+        private XlgThreadState XlgThread { get; }
+
+        private IDebugger Debugger { get; set; }
+
+        private DebugSession Session { get; set; }
+
+        /// <nodoc />
+        public bool IsDebugging => Debugger != null;
 
         /// <nodoc />
         internal DebugLogsAnalyzer(AnalysisInput input, int port)
             : base(input)
         {
+            XlgThread = new XlgThreadState(Input, CachedGraph);
             m_port = port;
+            m_state = new DebuggerState(XlgThread.Render, PathTable, LoggingContext);
         }
 
         /// <inheritdoc />
@@ -67,14 +83,15 @@ namespace BuildXL.Execution.Analyzer
 
         private async Task<int> AnalyzeAsync()
         {
-            var state = new DebuggerState(PathTable, LoggingContext);
-            var debugServer = new DebugServer(LoggingContext, m_port,
-                (d) => new DebugSession(state, null, d));
-            var debugger = await debugServer.StartAsync();
-            var session = (DebugSession)debugger.Session;
-            session.WaitSessionInitialized();
+            var debugServer = new DebugServer(LoggingContext, m_port, (d) => new DebugSession(m_state, null, d));
+            Debugger = await debugServer.StartAsync();
+            Session = (DebugSession)Debugger.Session;
+            Session.WaitSessionInitialized();
 
-            await session.Completion;
+            m_state.SetThreadState(XlgThread);
+            Debugger.SendEvent(new StoppedEvent(XlgThread.ThreadId, "Break on start", "txt..."));
+
+            await Session.Completion;
             return 0;
         }
 
