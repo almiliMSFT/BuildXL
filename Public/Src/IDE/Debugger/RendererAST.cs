@@ -9,6 +9,7 @@ using BuildXL.FrontEnd.Script.Evaluator;
 using BuildXL.FrontEnd.Script.Values;
 using BuildXL.Pips;
 using BuildXL.Utilities;
+using JetBrains.Annotations;
 using VSCode.DebugProtocol;
 
 #pragma warning disable SA1649 // File name must match first type name
@@ -65,22 +66,48 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <summary>List of properties (as name-value pairs, <see cref="Property"/>)</summary>
         public IEnumerable<Property> Properties => m_lazyProperties.Value;
 
+        /// <summary>Whether this object has any properties</summary>
+        public bool HasAnyProperties { get; }
+
         /// <nodoc />
         public ObjectInfo(string preview, object original)
-            : this(preview, original, Lazy.Create<IReadOnlyList<Property>>(() => Property.Empty)) { }
+            : this(preview, original, null) { }
 
         /// <nodoc />
-        public ObjectInfo(string preview = "", IEnumerable<Property> properties = null)
-            : this(preview, null, new Lazy<IReadOnlyList<Property>>(() => (properties ?? Property.Empty).ToList())) { }
+        public ObjectInfo(string preview)
+            : this(preview, null, null) { }
 
         /// <nodoc />
-        public ObjectInfo(string preview, object original, Lazy<IReadOnlyList<Property>> properties)
+        public ObjectInfo([CanBeNull] IEnumerable<Property> properties)
+            : this("", properties) { }
+
+        /// <nodoc />
+        public ObjectInfo(string preview, [CanBeNull] IEnumerable<Property> properties)
+            : this(preview, null, properties == null ? null : new Lazy<IReadOnlyList<Property>>(() => properties.ToList())) { }
+
+        /// <nodoc />
+        public ObjectInfo(string preview, [CanBeNull] Lazy<Property[]> properties)
+            : this(preview, null, properties == null ? null : new Lazy<IReadOnlyList<Property>>(() => properties.Value)) { }
+
+        /// <nodoc />
+        public ObjectInfo(Lazy<Property[]> properties)
+            : this("", properties) { }
+
+        /// <nodoc />
+        public ObjectInfo([CanBeNull] Lazy<IEnumerable<Property>> properties)
+            : this("", properties) { }
+
+        /// <nodoc />
+        public ObjectInfo(string preview, [CanBeNull] Lazy<IEnumerable<Property>> properties)
+            : this(preview, null, properties == null ? null : new Lazy<IReadOnlyList<Property>>(() => properties.Value.ToList())) { }
+
+        /// <nodoc />
+        public ObjectInfo(string preview, object original, [CanBeNull] Lazy<IReadOnlyList<Property>> properties)
         {
-            Contract.Requires(properties != null);
-
             Preview = preview;
             Original = original;
-            m_lazyProperties = properties;
+            HasAnyProperties = properties != null;
+            m_lazyProperties = properties ?? Lazy.Create<IReadOnlyList<Property>>(() => Property.Empty);
         }
 
         /// <nodoc />

@@ -3,9 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildXL.Engine;
 using BuildXL.FrontEnd.Script.Debugger;
+using BuildXL.Pips;
 using BuildXL.Scheduler.Tracing;
 using BuildXL.Storage;
 using BuildXL.ToolSupport;
@@ -48,16 +50,21 @@ namespace BuildXL.Execution.Analyzer
     /// <summary>
     /// XLG debugger
     /// </summary>
-    internal sealed class DebugLogsAnalyzer : Analyzer
+    public sealed class DebugLogsAnalyzer : Analyzer
     {
         private readonly IList<PipExecutionPerformanceEventData> m_writeExecutionEntries = new List<PipExecutionPerformanceEventData>();
         private readonly Dictionary<FileArtifact, FileContentInfo> m_fileContentMap = new Dictionary<FileArtifact, FileContentInfo>(capacity: 10 * 1000);
+        private readonly Lazy<Dictionary<PipId, PipExecutionPerformance>> m_lazyPipPerfDict;
         private string[] m_workers;
-
         private readonly int m_port;
         private readonly DebuggerState m_state;
 
-        private XlgThreadState XlgThread { get; }
+        private Dictionary<PipId, PipExecutionPerformance> CopmutePipPerfDict()
+        {
+            return m_writeExecutionEntries.ToDictionary(e => e.PipId, e => e.ExecutionPerformance);
+        }
+
+        private XlgState XlgState { get; }
 
         private IDebugger Debugger { get; set; }
 
@@ -70,9 +77,10 @@ namespace BuildXL.Execution.Analyzer
         internal DebugLogsAnalyzer(AnalysisInput input, int port)
             : base(input)
         {
-            XlgThread = new XlgThreadState(Input, CachedGraph);
+            XlgState = new XlgState(this);
             m_port = port;
-            m_state = new DebuggerState(XlgThread.Render, PathTable, LoggingContext);
+            m_state = new DebuggerState(XlgState.Render, PathTable, LoggingContext);
+            m_lazyPipPerfDict = new Lazy<Dictionary<PipId, PipExecutionPerformance>>(CopmutePipPerfDict);
         }
 
         /// <inheritdoc />
@@ -88,8 +96,8 @@ namespace BuildXL.Execution.Analyzer
             Session = (DebugSession)Debugger.Session;
             Session.WaitSessionInitialized();
 
-            m_state.SetThreadState(XlgThread);
-            Debugger.SendEvent(new StoppedEvent(XlgThread.ThreadId, "Break on start", "txt..."));
+            m_state.SetThreadState(XlgState);
+            Debugger.SendEvent(new StoppedEvent(XlgState.ThreadId, "Break on start", "txt..."));
 
             await Session.Completion;
             return 0;
@@ -101,7 +109,22 @@ namespace BuildXL.Execution.Analyzer
             return AnalyzeAsync().GetAwaiter().GetResult();
         }
 
+        /// <nodoc />
+        public IReadOnlyDictionary<PipId, PipExecutionPerformance> Pip2Perf => m_lazyPipPerfDict.Value;
+
+        /// <nodoc />
+        public PipExecutionPerformance GetPipExePerf(PipId pipId)
+        {
+            return Pip2Perf.TryGetValue(pipId, out var result) ? result : null;
+        }
+
         #region Log processing
+
+        /// <inheritdoc />
+        public override void DominoInvocation(DominoInvocationEventData data)
+        {
+            
+        }
 
         /// <inheritdoc />
         public override void FileArtifactContentDecided(FileArtifactContentDecidedEventData data)

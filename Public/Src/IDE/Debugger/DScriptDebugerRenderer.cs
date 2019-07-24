@@ -46,7 +46,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
 
             var result = Match(obj, new CaseMatcher<ObjectInfo>[]
                 {
-                    Case<AmbientPlaceholder>(amb => new ObjectInfo(string.Empty, GetAmbientProperties(context, amb.Value).ToList())),
+                    Case<AmbientPlaceholder>(amb => new ObjectInfo(string.Empty, GetAmbientProperties(context, amb.Value).ToArray())),
                     Case<FullSymbol>(sym => new ObjectInfo(sym.ToString(context.FrontEndContext.SymbolTable))),
                     Case<ScopeCurrentModule>(scope => ModuleLiteralInfo(context, scope.Env).WithPreview(Renderer.CurrentModuleScopeName)),
                     Case<ModuleLiteral>(modLit => ModuleLiteralInfo(context, modLit)),

@@ -33,7 +33,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
     /// </summary>
     public sealed class Renderer
     {
-        private static readonly ObjectInfo s_nullObj = new ObjectInfo("undefined", null);
+        private static readonly ObjectInfo s_nullObj = new ObjectInfo("undefined");
 
         /// <summary>The label used for the Locals scope.</summary>
         public const string LocalsScopeName = "Locals";
@@ -101,7 +101,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
         {
             // fetch info for the property to see if it's compound or not
             var propObjInfo = GetObjectInfo(context, value);
-            var varRef = propObjInfo.Properties.Any()
+            var varRef = propObjInfo.HasAnyProperties
                 ? m_handles.Create(new ObjectContext(context, value))
                 : 0; // the VSCode debug protocol specifies 0 to mean "non-compound object" (one that has no properties)
             return new Variable(variableName, propObjInfo.Preview, varRef);
@@ -129,7 +129,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
 
             if (obj.GetType().IsArray)
             {
-                return ArrayObjInfo(((IEnumerable)obj).Cast<object>());
+                return ArrayObjInfo(((IEnumerable)obj).Cast<object>().ToArray());
             }
 
             var customResult = m_customRenderer?.Invoke(this, context, obj);
@@ -142,7 +142,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
                 {
                     Case<ScopeLocals>(scope => new ObjectInfo(LocalsScopeName, null, Lazy.Create(() => GetLocalsForStackEntry(scope.EvalState, scope.FrameIndex)))),
                     Case<ScopePipGraph>(scope => PipGraphInfo(scope.Graph).WithPreview(PipGraphScopeName)),
-                    Case<ScopeAllModules>(scope => ArrayObjInfo(scope.EvaluatedModules).WithPreview(EvaluatedModulesScopeName)),
+                    Case<ScopeAllModules>(scope => ArrayObjInfo(scope.EvaluatedModules.ToArray()).WithPreview(EvaluatedModulesScopeName)),
                     Case<IModuleAndContext>(mc => GetObjectInfo(mc.Tree.RootContext, mc.Module)),
                     Case<ObjectInfo>(objInf => objInf),
                     Case<IPipGraph>(graph => PipGraphInfo(graph)),
@@ -171,11 +171,13 @@ namespace BuildXL.FrontEnd.Script.Debugger
                     Case<Enum>(e => new ObjectInfo($"{e.GetType().Name}.{e}", e)),
                     Case<NumberLiteral>(numLit => new ObjectInfo(numLit.UnboxedValue.ToString(), numLit)),
                     Case<Func<object>>(func => FuncObjInfo(func)),
-                    Case<IEnumerable>(arr => ArrayObjInfo(arr.Cast<object>())),
-                    Case<ArrayLiteral>(arrLit => ArrayObjInfo(arrLit.Values.Select(v => v.Value)).WithOriginal(arrLit)),
+                    Case<ArraySegment<object>>(arrSeg => ArrayObjInfo(arrSeg)),
+                    Case<IEnumerable>(enu => new ObjectInfo("IEnumerable", Lazy.Create(() => new[] { new Property("Result", enu.Cast<object>().ToArray()) }))),
+                    Case<ArrayLiteral>(arrLit => ArrayObjInfo(arrLit.Values.Select(v => v.Value).ToArray()).WithOriginal(arrLit)),
                     Case<ModuleBinding>(binding => GetObjectInfo(context, binding.Body)),
                     Case<ErrorValue>(error => ErrorValueInfo()),
-                    Case<object>(o => new ObjectInfo(o?.ToString()))
+                    Case<object>(o => GenericObjectInfo(o, o?.ToString()))
+                    //Case<object>(o => new ObjectInfo(o?.ToString()))
                 },
                 defaultResult: s_nullObj);
         }
@@ -205,9 +207,12 @@ namespace BuildXL.FrontEnd.Script.Debugger
                 });
         }
 
-        private static ObjectInfo GenericObjectInfo(object obj, string preview = null)
+        /// <summary>
+        /// Extracts values of all public properties.
+        /// </summary>
+        public static ObjectInfo GenericObjectInfo(object obj, string preview = null)
         {
-            return new ObjectInfo(preview ?? obj?.ToString(), ExtractObjectProperties(obj));
+            return new ObjectInfo(preview ?? obj?.ToString(), Lazy.Create(() => ExtractObjectProperties(obj).Concat(ExtractObjectFields(obj))));
         }
 
         private static ObjectInfo PipGraphInfo(IPipGraph graph)
@@ -264,12 +269,24 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <summary>
         ///     Extracts values of public properties of a given object
         /// </summary>
-        public static IReadOnlyList<Property> ExtractObjectProperties(object obj, PropertyInfo[] propertiesToInclude = null)
+        public static IEnumerable<Property> ExtractObjectProperties(object obj, PropertyInfo[] propertiesToInclude = null)
         {
             propertiesToInclude = propertiesToInclude ?? GetPublicProperties(obj);
             return IsInvalid(obj, propertiesToInclude)
                 ? Property.Empty
-                : propertiesToInclude.Select(p => new Property(p.Name, p.GetValue(obj))).ToArray();
+                : propertiesToInclude
+                    .Where(p => p.GetIndexParameters().Length == 0)
+                    .Select(p => new Property(p.Name, p.GetValue(obj)));
+        }
+
+        /// <summary>
+        ///     Extracts values of public properties of a given object
+        /// </summary>
+        public static IEnumerable<Property> ExtractObjectFields(object obj, FieldInfo[] fieldsToInclude = null)
+        {
+            fieldsToInclude = fieldsToInclude ?? GetPublicFields(obj);
+            return fieldsToInclude
+                .Select(f => new Property(f.Name, f.GetValue(obj)));
         }
 
         private static PropertyInfo[] GetPublicProperties(object obj)
@@ -277,18 +294,27 @@ namespace BuildXL.FrontEnd.Script.Debugger
             return obj?.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public) ?? new PropertyInfo[0];
         }
 
+        private static FieldInfo[] GetPublicFields(object obj)
+        {
+            return obj?.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public) ?? new FieldInfo[0];
+        }
+
         private const int MaxArrayLength = 1000;
 
-        private static ObjectInfo ArrayObjInfo(IEnumerable<object> values)
+        private static ObjectInfo ArrayObjInfo(object[] arr)
+        {
+            return ArrayObjInfo(new ArraySegment<object>(arr));
+        }
+
+        private static ObjectInfo ArrayObjInfo(ArraySegment<object> arr)
         {
             var bucketSize = MaxArrayLength;
-            var valuesArr = values.ToArray();
-            var arrLen = valuesArr.Length;
+            var arrLen = arr.Count;
 
             IEnumerable<Property> properties;
             if (arrLen <= bucketSize)
             {
-                properties = values.Select((elem, i) => new Property($"{i}", elem));
+                properties = arr.Select((elem, i) => new Property($"{i + arr.Offset}", elem));
             }
             else
             {
@@ -301,11 +327,11 @@ namespace BuildXL.FrontEnd.Script.Debugger
                         var endIdx = Math.Min(arrLen - 1, (bucketIdx + 1)*bucketSize - 1);
                         return new Property(
                             name: $"[{startIdx}..{endIdx}]", 
-                            value: valuesArr.Skip(startIdx).Take(endIdx - startIdx + 1));
+                            value: new ArraySegment<object>(arr.Array, arr.Offset + startIdx, count: endIdx - startIdx + 1));
                     });
             }
 
-            return new ObjectInfo($"array[{arrLen}]", properties.ToList());
+            return new ObjectInfo($"array[{arrLen}]", properties.ToArray());
         }
 
         private static IReadOnlyList<Property> GetLocalsForStackEntry(EvaluationState evalState, int frameIndex)
