@@ -11,9 +11,12 @@ using BuildXL.FrontEnd.Script.Debugger;
 using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Scheduler.Graph;
+using BuildXL.Scheduler.Tracing;
 using BuildXL.Utilities;
 using static BuildXL.FrontEnd.Script.Debugger.Matcher;
 using static BuildXL.FrontEnd.Script.Debugger.Renderer;
+
+using ProcessMonitoringData = BuildXL.Scheduler.Tracing.ProcessExecutionMonitoringReportedEventData;
 
 namespace BuildXL.Execution.Analyzer
 {
@@ -36,8 +39,8 @@ namespace BuildXL.Execution.Analyzer
         private StringTable StringTable => PathTable.StringTable;
 
         private ObjectInfo PipsByType { get; }
-        private ObjectInfo PipsByStatus { get; }
 
+        private ObjectInfo PipsByStatus { get; }
 
         /// <inheritdoc />
         public override IReadOnlyList<DisplayStackTraceEntry> StackTrace { get; }
@@ -67,7 +70,7 @@ namespace BuildXL.Execution.Analyzer
             {
                 return PipGraph
                     .RetrievePipReferencesOfType(PipType.Process)
-                    .GroupBy(pipRef => Analyzer.GetPipExePerf(pipRef.PipId)?.ExecutionLevel.ToString() ?? ExeLevelNotCompleted)
+                    .GroupBy(pipRef => Analyzer.TryGetPipExePerf(pipRef.PipId)?.ExecutionLevel.ToString() ?? ExeLevelNotCompleted)
                     .Select(grp => new Property(grp.Key, grp.ToArray()));
             }));
         }
@@ -88,6 +91,17 @@ namespace BuildXL.Execution.Analyzer
                 return new ObjectContext(context: this, new AnalyzePath(path));
             }
 
+            if (PathAtom.TryCreate(StringTable, expr, out var atom))
+            {
+                var files = PipGraph.AllFiles.Where(f => f.Path.GetName(PathTable) == atom).Cast<object>();
+                var dirs = PipGraph.AllOutputDirectoriesAndProducers
+                    .Select(kvp => kvp.Key)
+                    .Concat(PipGraph.AllSealDirectories)
+                    .Where(dir => dir.Path.GetName(PathTable) == atom)
+                    .Cast<object>();
+                return new ObjectContext(context: this, files.Concat(dirs).ToArray());
+            }
+
             return new Failure<string>($"Can't parse expression '{expr}'");
         }
 
@@ -101,13 +115,14 @@ namespace BuildXL.Execution.Analyzer
         {
             return new[]
             {
-                new ObjectContext(context: this, obj: new ObjectInfo(preview: "Global Scope", properties: new[]
-                    {
-                        new Property(name: $"Pips", value: new PipsScope()),
-                        new Property(name: $"Files", value: GroupFiles(PipGraph.AllFiles)),
-                        new Property(name: $"Seal Directories", value: GroupDirs(PipGraph.AllSealDirectories)),
-                        new Property(name: $"Output Directories", value: GroupDirs(PipGraph.AllOutputDirectoriesAndProducers.Select(kvp => kvp.Key)))
-                    }))
+                new ObjectContext(context: this, obj: new ObjectInfo(preview: "Global Scope", properties: Lazy.Create(() => new[]
+                {
+                    new Property("Pips", value: new PipsScope()),
+                    new Property("Files", value: GroupFiles(PipGraph.AllFiles)),
+                    new Property("Seal Directories", value: GroupDirs(PipGraph.AllSealDirectories)),
+                    new Property("Output Directories", value: GroupDirs(PipGraph.AllOutputDirectoriesAndProducers.Select(kvp => kvp.Key))),
+                    new Property("CriticalPath", value: new AnalyzeCricialPath())
+                })))
             };
         }
 
@@ -122,14 +137,26 @@ namespace BuildXL.Execution.Analyzer
                 case FileArtifact f:               return FileArtifactInfo(f);
                 case DirectoryArtifact d:          return DirectoryArtifactInfo(d);
                 case AnalyzePath ap:               return AnalyzePathInfo(ap);
+                case AnalyzeCricialPath cp:        return AnalyzeCricialPathInfo();
                 case PipId pipId:                  return Render(renderer, ctx, Analyzer.GetPip(pipId)).WithPreview(pipId.ToString());
                 case PipReference pipRef:          return Render(renderer, ctx, Analyzer.GetPip(pipRef.PipId));
                 case Process proc:                 return ProcessInfo(proc);
                 case Pip pip:                      return GenericObjectInfo(pip, preview: PipPreview(pip));
                 case FileArtifactWithAttributes f: return GenericObjectInfo(f, preview: FileArtifactPreview(f.ToFileArtifact()));
+                case ProcessMonitoringData m:      return ProcessMonitoringInfo(m);
                 default:
                     return null;
             }
+        }
+
+        private ObjectInfo AnalyzeCricialPathInfo()
+        {
+            return GenericObjectInfo(Analyzer.CriticalPath);
+        }
+
+        private ObjectInfo ProcessMonitoringInfo(ProcessMonitoringData m)
+        {
+            return GenericObjectInfo(m, excludeProperties: new[] { "PipId", "Metadata" });
         }
 
         private ObjectInfo AnalyzePathInfo(AnalyzePath ap)
@@ -163,7 +190,7 @@ namespace BuildXL.Execution.Analyzer
         {
             return new ObjectInfo(preview: PipPreview(proc), properties: Lazy.Create(() =>
             {
-                var pipExePerf = Analyzer.GetPipExePerf(proc.PipId);
+                var pipExePerf = Analyzer.TryGetPipExePerf(proc.PipId);
                 return new[]
                 {
                     new Property("PipType", proc.PipType),
@@ -183,6 +210,7 @@ namespace BuildXL.Execution.Analyzer
                         new Property("Directories", proc.DirectoryOutputs)
                     })),
                     new Property("ExecutionPerformance", pipExePerf),
+                    new Property("MonitoringData", Analyzer.TryGetProcessMonitoringData(proc.PipId)),
                     new Property("GenericInfo", GenericObjectInfo(proc, preview: ""))
                 };
             }));
@@ -207,8 +235,9 @@ namespace BuildXL.Execution.Analyzer
                 properties: Lazy.Create(() => new[]
                 {
                     new Property("Path", f.Path.ToString(PathTable)),
-                    new Property("Rewrite Count", f.RewriteCount),
-                    f.IsOutputFile ? new Property("Producer", PipGraph.GetProducer(f)) : null,
+                    new Property("RewriteCount", f.RewriteCount),
+                    new Property("FileContentInfo", Analyzer.TryGetFileContentInfo(f)),
+                    f.IsOutputFile ? new Property("Producer", Analyzer.AsPipReference(PipGraph.GetProducer(f))) : null,
                     new Property("Consumers", PipGraph.GetConsumingPips(f.Path))
                 }
                 .Where(p => p != null)));
@@ -283,6 +312,7 @@ namespace BuildXL.Execution.Analyzer
 
         private class PipsScope { }
         private class FilesScope { }
+        private class AnalyzeCricialPath { }
         private class AnalyzePath
         {
             internal AbsolutePath Path { get; }

@@ -210,9 +210,27 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <summary>
         /// Extracts values of all public properties.
         /// </summary>
-        public static ObjectInfo GenericObjectInfo(object obj, string preview = null)
+        public static ObjectInfo GenericObjectInfo(
+            object obj, 
+            string preview = null, 
+            IEnumerable<string> includeProperties = null,
+            IEnumerable<string> excludeProperties = null)
         {
-            return new ObjectInfo(preview ?? obj?.ToString(), Lazy.Create(() => ExtractObjectProperties(obj).Concat(ExtractObjectFields(obj))));
+            return new ObjectInfo(
+                preview ?? obj?.ToString(), 
+                Lazy.Create(() =>
+                {
+                    var props = ExtractObjectProperties(obj).Concat(ExtractObjectFields(obj));
+                    if (includeProperties != null)
+                    {
+                        props = props.Where(p => includeProperties.Contains(p.Name));
+                    }
+                    if (excludeProperties != null)
+                    {
+                        props = props.Where(p => !excludeProperties.Contains(p.Name));
+                    }
+                    return props;
+                }));
         }
 
         private static ObjectInfo PipGraphInfo(IPipGraph graph)

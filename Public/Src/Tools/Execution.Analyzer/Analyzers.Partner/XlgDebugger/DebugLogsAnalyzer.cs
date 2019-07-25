@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BuildXL.Execution.Analyzer.Model;
 using BuildXL.FrontEnd.Script.Debugger;
 using BuildXL.Pips;
 using BuildXL.Scheduler.Tracing;
@@ -54,11 +55,15 @@ namespace BuildXL.Execution.Analyzer
     {
         private readonly IList<PipExecutionPerformanceEventData> m_writeExecutionEntries = new List<PipExecutionPerformanceEventData>();
         private readonly Dictionary<FileArtifact, FileContentInfo> m_fileContentMap = new Dictionary<FileArtifact, FileContentInfo>(capacity: 10 * 1000);
+        private readonly Dictionary<PipId, ProcessExecutionMonitoringReportedEventData> m_processMonitoringData = new Dictionary<PipId, ProcessExecutionMonitoringReportedEventData>();
+
         private readonly Lazy<Dictionary<PipId, PipExecutionPerformance>> m_lazyPipPerfDict;
         private readonly Lazy<Dictionary<long, PipId>> m_lazyPipsBySemiStableHash;
+        private readonly Lazy<CriticalPathData> m_lazyCricialPath;
 
         private string[] m_workers;
         private PathTranslator m_pathTanslator;
+        private readonly CriticalPathAnalyzer m_criticalPathAnalyzer;
         private readonly int m_port;
         private readonly DebuggerState m_state;
 
@@ -76,6 +81,12 @@ namespace BuildXL.Execution.Analyzer
             : base(input)
         {
             XlgState = new XlgState(this);
+            m_criticalPathAnalyzer = new CriticalPathAnalyzer(input, outputFilePath: null);
+            m_lazyCricialPath = Lazy.Create(() =>
+            {
+                m_criticalPathAnalyzer.Analyze();
+                return m_criticalPathAnalyzer.criticalPathData;
+            });
             m_port = port;
             m_state = new DebuggerState(PathTable, LoggingContext, XlgState.Render, XlgState);
             m_lazyPipPerfDict = new Lazy<Dictionary<PipId, PipExecutionPerformance>>(() =>
@@ -133,9 +144,38 @@ namespace BuildXL.Execution.Analyzer
         public IReadOnlyDictionary<long, PipId> SemiStableHash2Pip => m_lazyPipsBySemiStableHash.Value;
 
         /// <nodoc />
-        public PipExecutionPerformance GetPipExePerf(PipId pipId)
+        public CriticalPathData CriticalPath => m_lazyCricialPath.Value;
+
+        /// <nodoc />
+        public FileContentInfo? TryGetFileContentInfo(FileArtifact f)
+        {
+            if (m_fileContentMap.TryGetValue(f, out var result))
+            {
+                return result;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        /// <nodoc />
+        public PipExecutionPerformance TryGetPipExePerf(PipId pipId)
         {
             return Pip2Perf.TryGetValue(pipId, out var result) ? result : null;
+        }
+
+        /// <nodoc />
+        public ProcessExecutionMonitoringReportedEventData? TryGetProcessMonitoringData(PipId pipId)
+        {
+            if (m_processMonitoringData.TryGetValue(pipId, out var result))
+            {
+                return result;
+            }
+            else
+            {
+                return null;
+            }
         }
 
         /// <nodoc />
@@ -146,6 +186,13 @@ namespace BuildXL.Execution.Analyzer
 
         #region Log processing
 
+        /// <inheritdoc />
+        public override void ProcessExecutionMonitoringReported(ProcessExecutionMonitoringReportedEventData data)
+        {
+            m_processMonitoringData[data.PipId] = data;
+        }
+
+        /// <inheritdoc />
         public override void DominoInvocation(DominoInvocationEventData data)
         {
             var conf = data.Configuration.Logging;
@@ -168,6 +215,13 @@ namespace BuildXL.Execution.Analyzer
         public override void PipExecutionPerformance(PipExecutionPerformanceEventData data)
         {
             m_writeExecutionEntries.Add(data);
+            m_criticalPathAnalyzer.PipExecutionPerformance(data);
+        }
+
+        /// <inheritdoc />
+        public override void PipExecutionStepPerformanceReported(PipExecutionStepPerformanceEventData data)
+        {
+            m_criticalPathAnalyzer.PipExecutionStepPerformanceReported(data);
         }
 
         #endregion
