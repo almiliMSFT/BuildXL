@@ -13,7 +13,6 @@ using BuildXL.FrontEnd.Sdk;
 using BuildXL.Utilities;
 using BuildXL.Utilities.Qualifier;
 using VSCode.DebugProtocol;
-using static BuildXL.FrontEnd.Script.Debugger.Matcher;
 
 using EvaluationContext = BuildXL.FrontEnd.Script.Evaluator.Context;
 using LineInfo = TypeScript.Net.Utilities.LineInfo;
@@ -44,17 +43,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
                 return null;
             }
 
-            var result = Match(obj, new CaseMatcher<ObjectInfo>[]
-                {
-                    Case<AmbientPlaceholder>(amb => new ObjectInfo(string.Empty, GetAmbientProperties(context, amb.Value).ToArray())),
-                    Case<FullSymbol>(sym => new ObjectInfo(sym.ToString(context.FrontEndContext.SymbolTable))),
-                    Case<ScopeCurrentModule>(scope => ModuleLiteralInfo(context, scope.Env).WithPreview(Renderer.CurrentModuleScopeName)),
-                    Case<ModuleLiteral>(modLit => ModuleLiteralInfo(context, modLit)),
-                    Case<CallableValue>(cv => CallableValueInfo(renderer, context, cv).WithOriginal(cv)),
-                    Case<Package>(package => PackageInfo(context, package)),
-                    Case<ObjectLiteral>(objLit => ObjectLiteralInfo(context, objLit).WithOriginal(objLit)),
-                },
-                defaultResult: null);
+            var result = Match();
 
             if (result == null)
             {
@@ -63,12 +52,26 @@ namespace BuildXL.FrontEnd.Script.Debugger
 
             var ambientProperties = obj is AmbientPlaceholder
                 ? new Property[0]
-                : new[] { new Property("__prototype__", new AmbientPlaceholder(obj)) };
+                : new[] { new Property("__proto__", new AmbientPlaceholder(obj)) };
 
             return new ObjectInfo(result.Preview, result.Properties.Concat(ambientProperties).ToArray());
+
+            ObjectInfo Match()
+            {
+                switch (obj)
+                {
+                    case AmbientPlaceholder amb:   return new ObjectInfo(string.Empty, GetAmbientProperties(context, amb.Value).ToArray());
+                    case FullSymbol sym:           return new ObjectInfo(sym.ToString(context.FrontEndContext.SymbolTable));
+                    case ScopeCurrentModule scope: return ModuleLiteralInfo(context, scope.Env).WithPreview(Renderer.CurrentModuleScopeName);
+                    case ModuleLiteral modLit:     return ModuleLiteralInfo(context, modLit);
+                    case CallableValue cv:         return CallableValueInfo(renderer, context, cv).WithOriginal(cv);
+                    case Package package:          return PackageInfo(context, package);
+                    case ObjectLiteral objLit:     return ObjectLiteralInfo(context, objLit).WithOriginal(objLit);
+                    default:
+                        return null;
+                }
+            }
         }
-
-
 
         private static IEnumerable<Property> GetAmbientProperties(EvaluationContext context, object obj)
         {
@@ -252,11 +255,6 @@ namespace BuildXL.FrontEnd.Script.Debugger
         private static ObjectInfo PrimitiveObjInfo(EvaluationContext context, object obj)
         {
             return new ObjectInfo(ToStringConverter.ObjectToString(context, obj));
-        }
-
-        private static CaseMatcher<T, ObjectInfo> Case<T>(Func<T, ObjectInfo> func)
-        {
-            return Case<T, ObjectInfo>(func);
         }
 
         private static string Invariant(string format, params object[] args)

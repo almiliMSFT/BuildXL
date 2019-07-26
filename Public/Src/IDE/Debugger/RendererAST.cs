@@ -38,15 +38,31 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// </summary>
         public object Value => m_valueAsLazy.Value;
 
+        public bool IsValueCreated => m_valueAsLazy.IsValueCreated;
+
         /// <summary>Property kind.</summary>
         public CompletionItemType Kind { get; }
 
         /// <nodoc />
         public Property(string name, object value, CompletionItemType kind = CompletionItemType.property)
+            : this(name, Preload(Lazy.Create(() => value)), kind) { }
+
+        /// <nodoc />
+        public Property(string name, Func<object> factory, CompletionItemType kind = CompletionItemType.property)
+            : this(name, Lazy.Create(factory), kind) { }
+
+        /// <nodoc />
+        public Property(string name, Lazy<object> lazyValue, CompletionItemType kind = CompletionItemType.property)
         {
             Name = name;
-            m_valueAsLazy = value as Lazy<object> ?? Lazy.Create(() => value);
+            m_valueAsLazy = lazyValue;
             Kind = kind;
+        }
+
+        private static Lazy<T> Preload<T>(Lazy<T> lazy)
+        {
+            Analysis.IgnoreResult(lazy.Value, "intentionally precomputing lazy value");
+            return lazy;
         }
     }
 
@@ -121,6 +137,50 @@ namespace BuildXL.FrontEnd.Script.Debugger
         {
             return new ObjectInfo(Preview, original, m_lazyProperties);
         }
+        ///// <summary>Short preview as a plain string.</summary>
+        //public string Preview { get; }
+
+        ///// <summary>Original object (used when converting to ObjectLiteral)</summary>
+        //public object Original { get; }
+
+        ///// <summary>List of properties (as name-value pairs, <see cref="Property"/>)</summary>
+        //public IReadOnlyList<Property> Properties { get; }
+
+        ///// <nodoc />
+        //public ObjectInfo(string preview, object original)
+        //    : this(preview, original, null) { }
+
+        ///// <nodoc />
+        //public ObjectInfo(string preview)
+        //    : this(preview, null, null) { }
+
+        ///// <nodoc />
+        //public ObjectInfo([CanBeNull] IEnumerable<Property> properties)
+        //    : this("", properties) { }
+
+        ///// <nodoc />
+        //public ObjectInfo(string preview, [CanBeNull] IEnumerable<Property> properties)
+        //    : this(preview, null, properties.ToArray()) { }
+
+        ///// <nodoc />
+        //public ObjectInfo(string preview, object original, [CanBeNull] IReadOnlyList<Property> properties)
+        //{
+        //    Preview = preview;
+        //    Original = original;
+        //    Properties = properties ?? Property.Empty;
+        //}
+
+        ///// <nodoc />
+        //public ObjectInfo WithPreview(string preview)
+        //{
+        //    return new ObjectInfo(preview, Original, Properties);
+        //}
+
+        ///// <nodoc />
+        //public ObjectInfo WithOriginal(object original)
+        //{
+        //    return new ObjectInfo(Preview, original, Properties);
+        //}
     }
 
     /// <summary>

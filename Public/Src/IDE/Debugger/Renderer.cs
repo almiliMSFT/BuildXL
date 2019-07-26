@@ -85,8 +85,12 @@ namespace BuildXL.FrontEnd.Script.Debugger
         internal IEnumerable<IVariable> GetVariablesForScope(int handle)
         {
             var objectContext = m_handles.Get(handle, null);
-            var objInfo = GetObjectInfo(objectContext);
-            return objInfo.Properties.Select(prop => ObjectToVariable(objectContext.Context, prop.Value, prop.Name)).ToArray();
+            var ctx = objectContext.Context;
+            var obj = (objectContext.Object is Property p) ? p.Value : objectContext.Object;
+            var objInfo = GetObjectInfo(ctx, obj);
+            return objInfo.Properties
+                .Select(prop => ObjectToVariable(ctx, prop.Value, prop.Name))
+                .ToArray();
         }
 
         /// <summary>
@@ -120,7 +124,9 @@ namespace BuildXL.FrontEnd.Script.Debugger
         [SuppressMessage("Microsoft.Maintainability", "CA1505:ModerateMaintainabilityIndex", Justification = "Despite its size, it's very linear and straightforward")]
         public ObjectInfo GetObjectInfo(object context, object obj)
         {
-            obj = obj is EvaluationResult evalResult ? evalResult.Value : obj;
+            obj = obj is EvaluationResult evalResult 
+                ? evalResult.Value
+                : obj;
 
             if (obj == null || IsInvalid(obj))
             {
@@ -237,13 +243,10 @@ namespace BuildXL.FrontEnd.Script.Debugger
         {
             return new ObjectInfo(
                 "PipGraph",
-                null,
-                Lazy.Create<IReadOnlyList<Property>>(() => new[]
-                {
-                    new Property("Process Pips", Lazy.Create<object>(() => graph.RetrieveScheduledPips().Where(pip => pip.PipType == PipType.Process))),
-                    new Property("Seal Directory Pips", Lazy.Create<object>(() => graph.RetrieveScheduledPips().Where(pip => pip.PipType == PipType.SealDirectory))),
-                    new Property("Copy Pips", Lazy.Create<object>(() => graph.RetrieveScheduledPips().Where(pip => pip.PipType == PipType.CopyFile))),
-                }));
+                Enum.GetValues(typeof(PipType))
+                    .Cast<PipType>()
+                    .Select(pipType => new Property(pipType.ToString(), () => graph.RetrieveScheduledPips().Where(pip => pip.PipType == pipType).ToArray()))
+                    .ToArray());
         }
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ParameterNeverUsed", Justification = "Parameter 'lambda' may be used in the future, e.g., to render function signature.")]
