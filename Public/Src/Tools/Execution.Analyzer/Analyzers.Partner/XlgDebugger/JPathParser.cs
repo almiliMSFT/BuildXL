@@ -19,6 +19,7 @@
 // Ambiguous reference in cref attribute
 #pragma warning disable 419
 
+namespace BuildXL.Execution.Analyzer.JPath {
 using System;
 using System.IO;
 using System.Text;
@@ -381,3 +382,4 @@ public partial class JPathParser : Parser {
 
 
 }
+} // namespace BuildXL.Execution.Analyzer.JPath
