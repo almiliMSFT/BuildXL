@@ -3,7 +3,6 @@ grammar JPath;
 ID : [a-zA-Z][a-zA-Z0-9_]* ;
 WS : [ \t\r\n]+ -> skip    ; // skip spaces, tabs, newlines
 
-IntConst : [1-9][0-9]* ;
 GTE      : '>=';
 LTE      : '<=';
 GT       : '>' ;
@@ -11,16 +10,23 @@ LT       : '<' ;
 EQ       : '=' ;
 NEQ      : '!=';
 TLDE     : '~' ;
+SQUOT    : '\'';
+DQUOT    : '"' ;
+IntLit   : [1-9][0-9]* ;
+StrLit   : SQUOT [^SQUOT]* SQUOT
+         | DQUOT [^DQUOT]* DQUOT
+         ;
 
 expr     : ID
-         | IntConst
+         | IntLit
+         | StrLit
          | expr '.' ID
          | expr '[' filter ']'
          ;
 
 boolOp   : GTE | GT | LTE | LT | EQ | NEQ | TLDE ;
 
-filter   : IntConst
-         | IntConst '..' IntConst
+filter   : IntLit
+         | IntLit '..' IntLit
          | expr boolOp expr
          ;
