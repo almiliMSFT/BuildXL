@@ -195,7 +195,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitMapExpr([NotNull] JPathParser.MapExprContext context)
         {
-            return new MapExpr(context.Lhs.Accept(this), context.PropertyName.ToString());
+            return new MapExpr(context.Lhs.Accept(this), context.PropertyName.Text);
         }
 
         public override Expr VisitRangeExpr([NotNull] JPathParser.RangeExprContext context)
@@ -207,7 +207,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         {
             try
             {
-                var regex = new Regex(context.Value.ToString());
+                var regex = new Regex(context.Value.Text);
                 return new RegexLit(regex);
             }
             catch (ArgumentException e)
@@ -223,12 +223,12 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitSelectorExpr([NotNull] JPathParser.SelectorExprContext context)
         {
-            return new Selector(context.PropertyName.ToString());
+            return new Selector(context.PropertyName.Text);
         }
 
         public override Expr VisitStrLitExpr([NotNull] JPathParser.StrLitExprContext context)
         {
-            return new StrLit(context.Value.ToString().Trim('"', '\''));
+            return new StrLit(context.Value.Text.Trim('"', '\''));
         }
 
         public override Expr VisitSubExpr([NotNull] JPathParser.SubExprContext context)

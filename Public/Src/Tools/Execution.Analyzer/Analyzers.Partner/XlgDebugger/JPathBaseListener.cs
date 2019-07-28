@@ -60,6 +60,128 @@ public partial class JPathBaseListener : IJPathListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitBinaryOp([NotNull] JPathParser.BinaryOpContext context) { }
 	/// <summary>
+	/// Enter a parse tree produced by <see cref="JPathParser.logicBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterLogicBinaryOp([NotNull] JPathParser.LogicBinaryOpContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JPathParser.logicBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitLogicBinaryOp([NotNull] JPathParser.LogicBinaryOpContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="JPathParser.logicUnaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterLogicUnaryOp([NotNull] JPathParser.LogicUnaryOpContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JPathParser.logicUnaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitLogicUnaryOp([NotNull] JPathParser.LogicUnaryOpContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>BinaryBoolExpr</c>
+	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterBinaryBoolExpr([NotNull] JPathParser.BinaryBoolExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>BinaryBoolExpr</c>
+	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitBinaryBoolExpr([NotNull] JPathParser.BinaryBoolExprContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>UnaryBoolExpr</c>
+	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterUnaryBoolExpr([NotNull] JPathParser.UnaryBoolExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>UnaryBoolExpr</c>
+	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitUnaryBoolExpr([NotNull] JPathParser.UnaryBoolExprContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>SubBoolExpr</c>
+	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterSubBoolExpr([NotNull] JPathParser.SubBoolExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>SubBoolExpr</c>
+	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitSubBoolExpr([NotNull] JPathParser.SubBoolExprContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>BoolLogicExpr</c>
+	/// labeled alternative in <see cref="JPathParser.logicExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterBoolLogicExpr([NotNull] JPathParser.BoolLogicExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>BoolLogicExpr</c>
+	/// labeled alternative in <see cref="JPathParser.logicExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitBoolLogicExpr([NotNull] JPathParser.BoolLogicExprContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>UnaryLogicExpr</c>
+	/// labeled alternative in <see cref="JPathParser.logicExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterUnaryLogicExpr([NotNull] JPathParser.UnaryLogicExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>UnaryLogicExpr</c>
+	/// labeled alternative in <see cref="JPathParser.logicExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitUnaryLogicExpr([NotNull] JPathParser.UnaryLogicExprContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>SubLogicExpr</c>
+	/// labeled alternative in <see cref="JPathParser.logicExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterSubLogicExpr([NotNull] JPathParser.SubLogicExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>SubLogicExpr</c>
+	/// labeled alternative in <see cref="JPathParser.logicExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitSubLogicExpr([NotNull] JPathParser.SubLogicExprContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>BinaryLogicExpr</c>
+	/// labeled alternative in <see cref="JPathParser.logicExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterBinaryLogicExpr([NotNull] JPathParser.BinaryLogicExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>BinaryLogicExpr</c>
+	/// labeled alternative in <see cref="JPathParser.logicExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitBinaryLogicExpr([NotNull] JPathParser.BinaryLogicExprContext context) { }
+	/// <summary>
 	/// Enter a parse tree produced by the <c>MapExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// <para>The default implementation does nothing.</para>
@@ -158,20 +280,6 @@ public partial class JPathBaseListener : IJPathListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitSubExpr([NotNull] JPathParser.SubExprContext context) { }
 	/// <summary>
-	/// Enter a parse tree produced by the <c>BinaryExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void EnterBinaryExpr([NotNull] JPathParser.BinaryExprContext context) { }
-	/// <summary>
-	/// Exit a parse tree produced by the <c>BinaryExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void ExitBinaryExpr([NotNull] JPathParser.BinaryExprContext context) { }
-	/// <summary>
 	/// Enter a parse tree produced by the <c>StrLitExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// <para>The default implementation does nothing.</para>
@@ -199,20 +307,6 @@ public partial class JPathBaseListener : IJPathListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitRangeExpr([NotNull] JPathParser.RangeExprContext context) { }
-	/// <summary>
-	/// Enter a parse tree produced by the <c>UnaryExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void EnterUnaryExpr([NotNull] JPathParser.UnaryExprContext context) { }
-	/// <summary>
-	/// Exit a parse tree produced by the <c>UnaryExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void ExitUnaryExpr([NotNull] JPathParser.UnaryExprContext context) { }
 
 	/// <inheritdoc/>
 	/// <remarks>The default implementation does nothing.</remarks>

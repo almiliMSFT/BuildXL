@@ -45,20 +45,38 @@ ID  : [a-zA-Z][a-zA-Z0-9_]*
     ;
 
 unaryOp
-    : NOT | MINUS ;
+    : MINUS ;
+
 binaryOp
-    : GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH | AND | OR | XOR | IFF ; 
+    : GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH ;
+    
+logicBinaryOp
+    : AND | OR | XOR | IFF ; 
+
+logicUnaryOp
+    : NOT ;
+
+boolExpr
+    : expr binaryOp expr #BinaryBoolExpr
+    | unaryOp expr       #UnaryBoolExpr
+    | '(' boolExpr ')'   #SubBoolExpr
+    ;
+
+logicExpr
+    : boolExpr                          #BoolLogicExpr
+    | logicExpr logicBinaryOp logicExpr #BinaryLogicExpr
+    | logicUnaryOp logicExpr            #UnaryLogicExpr
+    | '(' logicExpr ')'                 #SubLogicExpr
+    ;
 
 expr
-    : '$'                             #RootExpr
-    | PropertyName=ID                 #SelectorExpr
-    | Value=StrLit                    #StrLitExpr
-    | Value=RegExLit                  #RegExLitExpr
-    | Value=IntLit                    #IntLitExpr
-    | Begin=expr '..' End=expr        #RangeExpr
-    | Lhs=expr '.' PropertyName=ID    #MapExpr
-    | Lhs=expr '[' Filter=expr ']'    #FilterExpr
-    | Op=unaryOp Sub=expr             #UnaryExpr
-    | Lhs=expr Op=binaryOp Rhs=expr   #BinaryExpr
-    | '(' Sub=expr ')'                #SubExpr
+    : '$'                               #RootExpr
+    | PropertyName=ID                   #SelectorExpr
+    | Value=StrLit                      #StrLitExpr
+    | Value=RegExLit                    #RegExLitExpr
+    | Value=IntLit                      #IntLitExpr
+    | Begin=expr '..' End=expr          #RangeExpr
+    | Lhs=expr '.' PropertyName=ID      #MapExpr
+    | Lhs=expr '[' Filter=logicExpr ']' #FilterExpr
+    | '(' Sub=expr ')'                  #SubExpr
     ;
