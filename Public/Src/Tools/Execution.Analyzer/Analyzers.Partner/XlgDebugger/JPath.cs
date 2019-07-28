@@ -172,11 +172,6 @@ namespace BuildXL.Execution.Analyzer.JPath
             return new AstException($"({token.Line}:{token.Column}) :: {message}");
         }
 
-        public override Expr VisitBinaryExpr([NotNull] JPathParser.BinaryExprContext context)
-        {
-            return new BinaryExpr(context.Op.GetText(), context.Lhs.Accept(this), context.Rhs.Accept(this));
-        }
-
         public override Expr VisitFilterExpr([NotNull] JPathParser.FilterExprContext context)
         {
             return new FilterExpr(lhs: context.Lhs.Accept(this), filter: context.Filter.Accept(this));
@@ -236,9 +231,44 @@ namespace BuildXL.Execution.Analyzer.JPath
             return context.Sub.Accept(this);
         }
 
-        public override Expr VisitUnaryExpr([NotNull] JPathParser.UnaryExprContext context)
+        public override Expr VisitExprBoolExpr([NotNull] JPathParser.ExprBoolExprContext context)
+        {
+            return context.Expr.Accept(this);
+        }
+
+        public override Expr VisitBinaryBoolExpr([NotNull] JPathParser.BinaryBoolExprContext context)
+        {
+            return new BinaryExpr(context.Op.GetText(), context.Lhs.Accept(this), context.Rhs.Accept(this));
+        }
+
+        public override Expr VisitUnaryBoolExpr([NotNull] JPathParser.UnaryBoolExprContext context)
         {
             return new UnaryExpr(context.Op.GetText(), context.Sub.Accept(this));
+        }
+
+        public override Expr VisitSubBoolExpr([NotNull] JPathParser.SubBoolExprContext context)
+        {
+            return context.Sub.Accept(this);
+        }
+
+        public override Expr VisitBoolLogicExpr([NotNull] JPathParser.BoolLogicExprContext context)
+        {
+            return context.Expr.Accept(this);
+        }
+
+        public override Expr VisitBinaryLogicExpr([NotNull] JPathParser.BinaryLogicExprContext context)
+        {
+            return new BinaryExpr(context.Op.GetText(), context.Lhs.Accept(this), context.Rhs.Accept(this));
+        }
+
+        public override Expr VisitUnaryLogicExpr([NotNull] JPathParser.UnaryLogicExprContext context)
+        {
+            return new UnaryExpr(context.Op.GetText(), context.Sub.Accept(this));
+        }
+
+        public override Expr VisitSubLogicExpr([NotNull] JPathParser.SubLogicExprContext context)
+        {
+            return context.Sub.Accept(this);
         }
     }
 
