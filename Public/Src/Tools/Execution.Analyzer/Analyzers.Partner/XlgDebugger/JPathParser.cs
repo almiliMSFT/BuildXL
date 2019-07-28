@@ -218,7 +218,7 @@ public partial class JPathParser : Parser {
 	}
 	public partial class MapExprContext : ExprContext {
 		public ExprContext Lhs;
-		public IToken FieldName;
+		public IToken PropertyName;
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
@@ -257,7 +257,7 @@ public partial class JPathParser : Parser {
 		}
 	}
 	public partial class SelectorExprContext : ExprContext {
-		public IToken Name;
+		public IToken PropertyName;
 		public ITerminalNode ID() { return GetToken(JPathParser.ID, 0); }
 		public SelectorExprContext(ExprContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
@@ -480,7 +480,7 @@ public partial class JPathParser : Parser {
 				_localctx = new SelectorExprContext(_localctx);
 				Context = _localctx;
 				_prevctx = _localctx;
-				State = 12; ((SelectorExprContext)_localctx).Name = Match(ID);
+				State = 12; ((SelectorExprContext)_localctx).PropertyName = Match(ID);
 				}
 				break;
 			case IntLit:
@@ -573,7 +573,7 @@ public partial class JPathParser : Parser {
 						State = 32;
 						if (!(Precpred(Context, 5))) throw new FailedPredicateException(this, "Precpred(Context, 5)");
 						State = 33; Match(T__2);
-						State = 34; ((MapExprContext)_localctx).FieldName = Match(ID);
+						State = 34; ((MapExprContext)_localctx).PropertyName = Match(ID);
 						}
 						break;
 					case 4:
