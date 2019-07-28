@@ -51,12 +51,12 @@ binaryOp
 
 expr
     : '$'                             #RootExpr
-    | Name=ID                         #SelectorExpr
-    | Value=IntLit                    #IntLitExpr
-    | Begin=expr '..' End=expr        #RangeExpr
+    | PropertyName=ID                 #SelectorExpr
     | Value=StrLit                    #StrLitExpr
     | Value=RegExLit                  #RegExLitExpr
-    | Lhs=expr '.' FieldName=ID       #MapExpr
+    | Value=IntLit                    #IntLitExpr
+    | Begin=expr '..' End=expr        #RangeExpr
+    | Lhs=expr '.' PropertyName=ID    #MapExpr
     | Lhs=expr '[' Filter=expr ']'    #FilterExpr
     | Op=unaryOp Sub=expr             #UnaryExpr
     | Lhs=expr Op=binaryOp Rhs=expr   #BinaryExpr

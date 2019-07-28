@@ -483,20 +483,12 @@ public partial class JPathParser : Parser {
 				State = 12; ((SelectorExprContext)_localctx).PropertyName = Match(ID);
 				}
 				break;
-			case IntLit:
-				{
-				_localctx = new IntLitExprContext(_localctx);
-				Context = _localctx;
-				_prevctx = _localctx;
-				State = 13; ((IntLitExprContext)_localctx).Value = Match(IntLit);
-				}
-				break;
 			case StrLit:
 				{
 				_localctx = new StrLitExprContext(_localctx);
 				Context = _localctx;
 				_prevctx = _localctx;
-				State = 14; ((StrLitExprContext)_localctx).Value = Match(StrLit);
+				State = 13; ((StrLitExprContext)_localctx).Value = Match(StrLit);
 				}
 				break;
 			case RegExLit:
@@ -504,7 +496,15 @@ public partial class JPathParser : Parser {
 				_localctx = new RegExLitExprContext(_localctx);
 				Context = _localctx;
 				_prevctx = _localctx;
-				State = 15; ((RegExLitExprContext)_localctx).Value = Match(RegExLit);
+				State = 14; ((RegExLitExprContext)_localctx).Value = Match(RegExLit);
+				}
+				break;
+			case IntLit:
+				{
+				_localctx = new IntLitExprContext(_localctx);
+				Context = _localctx;
+				_prevctx = _localctx;
+				State = 15; ((IntLitExprContext)_localctx).Value = Match(IntLit);
 				}
 				break;
 			case NOT:
@@ -549,9 +549,9 @@ public partial class JPathParser : Parser {
 						((RangeExprContext)_localctx).Begin = _prevctx;
 						PushNewRecursionContext(_localctx, _startState, RULE_expr);
 						State = 25;
-						if (!(Precpred(Context, 8))) throw new FailedPredicateException(this, "Precpred(Context, 8)");
+						if (!(Precpred(Context, 6))) throw new FailedPredicateException(this, "Precpred(Context, 6)");
 						State = 26; Match(T__1);
-						State = 27; ((RangeExprContext)_localctx).End = expr(9);
+						State = 27; ((RangeExprContext)_localctx).End = expr(7);
 						}
 						break;
 					case 2:
@@ -616,7 +616,7 @@ public partial class JPathParser : Parser {
 	}
 	private bool expr_sempred(ExprContext _localctx, int predIndex) {
 		switch (predIndex) {
-		case 0: return Precpred(Context, 8);
+		case 0: return Precpred(Context, 6);
 		case 1: return Precpred(Context, 2);
 		case 2: return Precpred(Context, 5);
 		case 3: return Precpred(Context, 4);
@@ -643,8 +643,8 @@ public partial class JPathParser : Parser {
 		'\x3', '\x3', '\x2', '\x2', '\x2', '\n', '\v', '\t', '\x3', '\x2', '\x2', 
 		'\v', '\x5', '\x3', '\x2', '\x2', '\x2', '\f', '\r', '\b', '\x4', '\x1', 
 		'\x2', '\r', '\x1A', '\a', '\x3', '\x2', '\x2', '\xE', '\x1A', '\a', '\x1C', 
-		'\x2', '\x2', '\xF', '\x1A', '\a', '\x19', '\x2', '\x2', '\x10', '\x1A', 
-		'\a', '\x1A', '\x2', '\x2', '\x11', '\x1A', '\a', '\x1B', '\x2', '\x2', 
+		'\x2', '\x2', '\xF', '\x1A', '\a', '\x1A', '\x2', '\x2', '\x10', '\x1A', 
+		'\a', '\x1B', '\x2', '\x2', '\x11', '\x1A', '\a', '\x19', '\x2', '\x2', 
 		'\x12', '\x13', '\x5', '\x2', '\x2', '\x2', '\x13', '\x14', '\x5', '\x6', 
 		'\x4', '\x5', '\x14', '\x1A', '\x3', '\x2', '\x2', '\x2', '\x15', '\x16', 
 		'\a', '\b', '\x2', '\x2', '\x16', '\x17', '\x5', '\x6', '\x4', '\x2', 
@@ -654,8 +654,8 @@ public partial class JPathParser : Parser {
 		'\x19', '\x10', '\x3', '\x2', '\x2', '\x2', '\x19', '\x11', '\x3', '\x2', 
 		'\x2', '\x2', '\x19', '\x12', '\x3', '\x2', '\x2', '\x2', '\x19', '\x15', 
 		'\x3', '\x2', '\x2', '\x2', '\x1A', ',', '\x3', '\x2', '\x2', '\x2', '\x1B', 
-		'\x1C', '\f', '\n', '\x2', '\x2', '\x1C', '\x1D', '\a', '\x4', '\x2', 
-		'\x2', '\x1D', '+', '\x5', '\x6', '\x4', '\v', '\x1E', '\x1F', '\f', '\x4', 
+		'\x1C', '\f', '\b', '\x2', '\x2', '\x1C', '\x1D', '\a', '\x4', '\x2', 
+		'\x2', '\x1D', '+', '\x5', '\x6', '\x4', '\t', '\x1E', '\x1F', '\f', '\x4', 
 		'\x2', '\x2', '\x1F', ' ', '\x5', '\x4', '\x3', '\x2', ' ', '!', '\x5', 
 		'\x6', '\x4', '\x5', '!', '+', '\x3', '\x2', '\x2', '\x2', '\"', '#', 
 		'\f', '\a', '\x2', '\x2', '#', '$', '\a', '\x5', '\x2', '\x2', '$', '+', 

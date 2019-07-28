@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
-using BuildXL.Utilities;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
@@ -225,7 +224,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
     public static class JPath
     {
-        public static Possible<Expr> Parse(string str)
+        public static Expr Parse(string str)
         {
             var lexer = new JPathLexer(new AntlrInputStream(str));
             var parser = new JPathParser(new CommonTokenStream(lexer));
@@ -235,12 +234,12 @@ namespace BuildXL.Execution.Analyzer.JPath
             var expr = parser.expr();
             if (listener.HasErrors)
             {
-                return new Failure<string>("Syntex error: " + listener.FirstError);
+                throw new Exception("Syntex error: " + listener.FirstError);
             }
 
 
             Expr result = expr.Accept(new AstConverter());
-            return Possible.Create(result);
+            return result;
         }
     }
 
