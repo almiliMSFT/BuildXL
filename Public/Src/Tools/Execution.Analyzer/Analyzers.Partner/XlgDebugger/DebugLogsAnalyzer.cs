@@ -118,7 +118,7 @@ namespace BuildXL.Execution.Analyzer
             Session.WaitSessionInitialized();
 
             m_state.SetThreadState(XlgState);
-            Debugger.SendEvent(new StoppedEvent(XlgState.ThreadId, "Break on start", "txt..."));
+            Debugger.SendEvent(new StoppedEvent(XlgState.ThreadId, "Break on start", ""));
 
             await Session.Completion;
             return 0;

@@ -12,6 +12,7 @@ using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Scheduler.Graph;
 using BuildXL.Utilities;
+using BuildXL.Execution.Analyzer.JPath;
 using static BuildXL.FrontEnd.Script.Debugger.Renderer;
 
 using ProcessMonitoringData = BuildXL.Scheduler.Tracing.ProcessExecutionMonitoringReportedEventData;
@@ -40,6 +41,8 @@ namespace BuildXL.Execution.Analyzer
 
         private ObjectInfo PipsByStatus { get; }
 
+        private ObjectInfo[] SupportedScopes { get; }
+
         /// <inheritdoc />
         public override IReadOnlyList<DisplayStackTraceEntry> StackTrace { get; }
 
@@ -67,6 +70,17 @@ namespace BuildXL.Execution.Analyzer
                 .Select(level => level.ToString())
                 .Concat(new[] { ExeLevelNotCompleted })
                 .Select(levelStr => new Property(levelStr, () => GetPipsForExecutionLevel(levelStr))));
+
+            SupportedScopes = new[]
+            {
+                new ObjectInfo(preview: "Global", properties: new[]
+                {
+                    new Property("Pips",          new PipsScope()),
+                    new Property("Files",         () => GroupFiles(PipGraph.AllFiles)),
+                    new Property("Directories",   () => GroupDirs(PipGraph.AllSealDirectories)),
+                    new Property("CriticalPath",  new AnalyzeCricialPath())
+                })
+            };
         }
 
         private PipReference[] GetPipsForExecutionLevel(string level)
@@ -91,6 +105,8 @@ namespace BuildXL.Execution.Analyzer
         /// <inheritdoc />
         public Possible<ObjectContext, Failure> EvaluateExpression(ThreadState threadState, int frameIndex, string expr)
         {
+            JPath.JPath.Parse(expr);
+
             if (Pip.TryParseSemiStableHash(expr, out var hash) && Analyzer.SemiStableHash2Pip.TryGetValue(hash, out var pipId))
             {
                 return new ObjectContext(context: this, Analyzer.AsPipReference(pipId));
@@ -100,6 +116,18 @@ namespace BuildXL.Execution.Analyzer
             if (AbsolutePath.TryCreate(PathTable, translatedPath, out var path) && path.IsValid)
             {
                 return new ObjectContext(context: this, new AnalyzePath(path));
+            }
+
+            var scope = SupportedScopes.Where(s => s.Preview == expr).FirstOrDefault();
+            if (scope != null)
+            {
+                return new ObjectContext(context: this, scope);
+            }
+
+            var varInScope = SupportedScopes.SelectMany(obj => obj.Properties).Where(prop => prop.Name == expr).FirstOrDefault();
+            if (varInScope != null)
+            {
+                return new ObjectContext(context: this, varInScope.Value);
             }
 
             if (PathAtom.TryCreate(StringTable, expr, out var atom))
@@ -124,16 +152,7 @@ namespace BuildXL.Execution.Analyzer
         /// <inheritdoc />
         public override IEnumerable<ObjectContext> GetSupportedScopes(int frameIndex)
         {
-            return new[]
-            {
-                new ObjectContext(context: this, obj: new ObjectInfo(preview: "Global Scope", properties: new[]
-                {
-                    new Property("Pips",          new PipsScope()),
-                    new Property("Files",         () => GroupFiles(PipGraph.AllFiles)),
-                    new Property("Directories",   () => GroupDirs(PipGraph.AllSealDirectories)),
-                    new Property("CriticalPath",  new AnalyzeCricialPath())
-                }))
-            };
+            return SupportedScopes.Select(obj => new ObjectContext(this, obj));
         }
 
         /// <nodoc />
@@ -294,8 +313,8 @@ namespace BuildXL.Execution.Analyzer
         {
             return new ObjectInfo(properties: new[]
             {
-                new Property("Source Files", () => GroupByFirstFileNameLetter(files.Where(f => f.IsSourceFile), f => f.Path)),
-                new Property("Output Files", () => GroupByFirstFileNameLetter(files.Where(f => f.IsOutputFile), f => f.Path))
+                new Property("Source", () => GroupByFirstFileNameLetter(files.Where(f => f.IsSourceFile), f => f.Path)),
+                new Property("Output", () => GroupByFirstFileNameLetter(files.Where(f => f.IsOutputFile), f => f.Path))
             });
         }
 
@@ -303,9 +322,9 @@ namespace BuildXL.Execution.Analyzer
         {
             return new ObjectInfo(properties: new[]
             {
-                new Property("Source Dirs",           () => GroupByFirstFileNameLetter(dirs.Where(d => !d.IsOutputDirectory()), d => d.Path)),
-                new Property("Exclusive Opaque Dirs", () => GroupByFirstFileNameLetter(dirs.Where(d => d.IsOutputDirectory() && !d.IsSharedOpaque), d => d.Path)),
-                new Property("Shared Opaque Dirs",    () => GroupByFirstFileNameLetter(dirs.Where(d => d.IsSharedOpaque), d => d.Path))
+                new Property("Source",          () => GroupByFirstFileNameLetter(dirs.Where(d => !d.IsOutputDirectory()), d => d.Path)),
+                new Property("ExclusiveOpaque", () => GroupByFirstFileNameLetter(dirs.Where(d => d.IsOutputDirectory() && !d.IsSharedOpaque), d => d.Path)),
+                new Property("SharedOpaque",    () => GroupByFirstFileNameLetter(dirs.Where(d => d.IsSharedOpaque), d => d.Path))
             });
         }
 

@@ -33,6 +33,7 @@ namespace Execution.Analyzer {
             ),
             VSCode.DebugAdapter.dll,
             VSCode.DebugProtocol.dll,
+            importFrom("Antlr4.Runtime.Standard").pkg,
             importFrom("BuildXL.FrontEnd").Script.dll,
             importFrom("BuildXL.Ide").Script.Debugger.dll,
             importFrom("BuildXL.Cache.VerticalStore").Interfaces.dll,

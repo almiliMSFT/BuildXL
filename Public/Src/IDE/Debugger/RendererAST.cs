@@ -38,8 +38,6 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// </summary>
         public object Value => m_valueAsLazy.Value;
 
-        public bool IsValueCreated => m_valueAsLazy.IsValueCreated;
-
         /// <summary>Property kind.</summary>
         public CompletionItemType Kind { get; }
 
@@ -120,7 +118,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <nodoc />
         public ObjectInfo(string preview, object original, [CanBeNull] Lazy<IReadOnlyList<Property>> properties)
         {
-            Preview = preview;
+            Preview = string.IsNullOrWhiteSpace(preview) ? "{object}" : preview;
             Original = original;
             HasAnyProperties = properties != null;
             m_lazyProperties = properties ?? Lazy.Create<IReadOnlyList<Property>>(() => Property.Empty);
