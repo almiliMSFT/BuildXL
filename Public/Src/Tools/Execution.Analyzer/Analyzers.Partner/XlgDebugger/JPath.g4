@@ -1,4 +1,5 @@
-grammar JPath;
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 // To generate lexer/parser/... run:
 //
@@ -6,38 +7,58 @@ grammar JPath;
 //      org.antlr.v4.Tool \
 //      -listener -visitor -Dlanguage=CSharp -package BuildXL.Execution.Analyzer.JPath JPath.g4
 
+grammar JPath;
 
-ID : [a-zA-Z][a-zA-Z0-9_]* ;
-WS : [ \t\r\n]+ -> skip    ; // skip spaces, tabs, newlines
+WS      : [ \t\r\n]+ -> skip    ; // skip spaces, tabs, newlines
 
-GTE      : '>=' ;
-LTE      : '<=' ;
-GT       : '>'  ;
-LT       : '<'  ;
-EQ       : '='  ;
-NEQ      : '!=' ;
-MATCH    : '~'  ;
-NMATCH   : '!~' ;
+NOT     : 'not';
+AND     : 'and';
+OR      : 'or' ;
+XOR     : 'xor';
+IFF     : 'iff';
 
-IntLit   : [1-9][0-9]* ;
+GTE     : '>=' ;
+LTE     : '<=' ;
+GT      : '>'  ;
+LT      : '<'  ;
+EQ      : '='  ;
+NEQ     : '!=' ;
+MATCH   : '~'  ;
+NMATCH  : '!~' ;
+MINUS   : '-'  ;
 
-StrLit   : '\'' [^']* '\''
-         | '"' [^"]* '"'
-         ;
+IntLit
+    : [1-9][0-9]* ;
 
-RegExLit : '/' [^/]+ '/' ;
+StrLit
+    : '\'' ~[']* '\''
+    | '"' ~["]* '"'
+    ;
 
-expr    : Name=ID                         #VarExpr
-        | Value=IntLit                    #IntLitExpr
-        | Value=StrLit                    #StrLitExpr
-        | Value=RegExLit                  #RegExLitExpr
-        | Lhs=expr '.' FieldName=ID       #MapExpr
-        | Lhs=expr '[' Filter=filter ']'  #FilterExpr
-        ;
+RegExLit
+    : '/' ~[/]+ '/' 
+    | '!' ~[!]+ '!'
+    ;
 
-boolOp  : GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH ;
+ID  : [a-zA-Z][a-zA-Z0-9_]* 
+    | '`' ~[`]+ '`'
+    ;
 
-filter  : Index=IntLit                    #IndexFilter
-        | Start=IntLit '..' End=IntLit    #RangeFilter
-        | Lhs=expr Op=boolOp Rhs=expr     #BoolFilter
-        ;
+unaryOp
+    : NOT | MINUS ;
+binaryOp
+    : GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH | AND | OR | XOR | IFF ; 
+
+expr
+    : '$'                             #RootExpr
+    | Name=ID                         #SelectorExpr
+    | Value=IntLit                    #IntLitExpr
+    | Begin=expr '..' End=expr        #RangeExpr
+    | Value=StrLit                    #StrLitExpr
+    | Value=RegExLit                  #RegExLitExpr
+    | Lhs=expr '.' FieldName=ID       #MapExpr
+    | Lhs=expr '[' Filter=expr ']'    #FilterExpr
+    | Op=unaryOp Sub=expr             #UnaryExpr
+    | Lhs=expr Op=binaryOp Rhs=expr   #BinaryExpr
+    | '(' Sub=expr ')'                #SubExpr
+    ;
