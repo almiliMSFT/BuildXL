@@ -98,6 +98,8 @@ public partial class JPathParser : Parser {
 		}
 	}
 	public partial class MapExprContext : ExprContext {
+		public ExprContext Lhs;
+		public IToken FieldName;
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
@@ -118,6 +120,7 @@ public partial class JPathParser : Parser {
 		}
 	}
 	public partial class RegExLitExprContext : ExprContext {
+		public IToken Value;
 		public ITerminalNode RegExLit() { return GetToken(JPathParser.RegExLit, 0); }
 		public RegExLitExprContext(ExprContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
@@ -135,6 +138,8 @@ public partial class JPathParser : Parser {
 		}
 	}
 	public partial class FilterExprContext : ExprContext {
+		public ExprContext Lhs;
+		public FilterContext Filter;
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
@@ -157,6 +162,7 @@ public partial class JPathParser : Parser {
 		}
 	}
 	public partial class IntLitExprContext : ExprContext {
+		public IToken Value;
 		public ITerminalNode IntLit() { return GetToken(JPathParser.IntLit, 0); }
 		public IntLitExprContext(ExprContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
@@ -174,6 +180,7 @@ public partial class JPathParser : Parser {
 		}
 	}
 	public partial class VarExprContext : ExprContext {
+		public IToken Name;
 		public ITerminalNode ID() { return GetToken(JPathParser.ID, 0); }
 		public VarExprContext(ExprContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
@@ -191,6 +198,7 @@ public partial class JPathParser : Parser {
 		}
 	}
 	public partial class StrLitExprContext : ExprContext {
+		public IToken Value;
 		public ITerminalNode StrLit() { return GetToken(JPathParser.StrLit, 0); }
 		public StrLitExprContext(ExprContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
@@ -233,7 +241,7 @@ public partial class JPathParser : Parser {
 				Context = _localctx;
 				_prevctx = _localctx;
 
-				State = 7; Match(ID);
+				State = 7; ((VarExprContext)_localctx).Name = Match(ID);
 				}
 				break;
 			case IntLit:
@@ -241,7 +249,7 @@ public partial class JPathParser : Parser {
 				_localctx = new IntLitExprContext(_localctx);
 				Context = _localctx;
 				_prevctx = _localctx;
-				State = 8; Match(IntLit);
+				State = 8; ((IntLitExprContext)_localctx).Value = Match(IntLit);
 				}
 				break;
 			case StrLit:
@@ -249,7 +257,7 @@ public partial class JPathParser : Parser {
 				_localctx = new StrLitExprContext(_localctx);
 				Context = _localctx;
 				_prevctx = _localctx;
-				State = 9; Match(StrLit);
+				State = 9; ((StrLitExprContext)_localctx).Value = Match(StrLit);
 				}
 				break;
 			case RegExLit:
@@ -257,7 +265,7 @@ public partial class JPathParser : Parser {
 				_localctx = new RegExLitExprContext(_localctx);
 				Context = _localctx;
 				_prevctx = _localctx;
-				State = 10; Match(RegExLit);
+				State = 10; ((RegExLitExprContext)_localctx).Value = Match(RegExLit);
 				}
 				break;
 			default:
@@ -279,21 +287,23 @@ public partial class JPathParser : Parser {
 					case 1:
 						{
 						_localctx = new MapExprContext(new ExprContext(_parentctx, _parentState));
+						((MapExprContext)_localctx).Lhs = _prevctx;
 						PushNewRecursionContext(_localctx, _startState, RULE_expr);
 						State = 13;
 						if (!(Precpred(Context, 2))) throw new FailedPredicateException(this, "Precpred(Context, 2)");
 						State = 14; Match(T__0);
-						State = 15; Match(ID);
+						State = 15; ((MapExprContext)_localctx).FieldName = Match(ID);
 						}
 						break;
 					case 2:
 						{
 						_localctx = new FilterExprContext(new ExprContext(_parentctx, _parentState));
+						((FilterExprContext)_localctx).Lhs = _prevctx;
 						PushNewRecursionContext(_localctx, _startState, RULE_expr);
 						State = 16;
 						if (!(Precpred(Context, 1))) throw new FailedPredicateException(this, "Precpred(Context, 1)");
 						State = 17; Match(T__1);
-						State = 18; filter();
+						State = 18; ((FilterExprContext)_localctx).Filter = filter();
 						State = 19; Match(T__2);
 						}
 						break;
@@ -389,6 +399,7 @@ public partial class JPathParser : Parser {
 		}
 	}
 	public partial class IndexFilterContext : FilterContext {
+		public IToken Index;
 		public ITerminalNode IntLit() { return GetToken(JPathParser.IntLit, 0); }
 		public IndexFilterContext(FilterContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
@@ -406,6 +417,8 @@ public partial class JPathParser : Parser {
 		}
 	}
 	public partial class RangeFilterContext : FilterContext {
+		public IToken Start;
+		public IToken End;
 		public ITerminalNode[] IntLit() { return GetTokens(JPathParser.IntLit); }
 		public ITerminalNode IntLit(int i) {
 			return GetToken(JPathParser.IntLit, i);
@@ -426,6 +439,9 @@ public partial class JPathParser : Parser {
 		}
 	}
 	public partial class BoolFilterContext : FilterContext {
+		public ExprContext Lhs;
+		public BoolOpContext Op;
+		public ExprContext Rhs;
 		public ExprContext[] expr() {
 			return GetRuleContexts<ExprContext>();
 		}
@@ -463,25 +479,25 @@ public partial class JPathParser : Parser {
 				_localctx = new IndexFilterContext(_localctx);
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 28; Match(IntLit);
+				State = 28; ((IndexFilterContext)_localctx).Index = Match(IntLit);
 				}
 				break;
 			case 2:
 				_localctx = new RangeFilterContext(_localctx);
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 29; Match(IntLit);
+				State = 29; ((RangeFilterContext)_localctx).Start = Match(IntLit);
 				State = 30; Match(T__3);
-				State = 31; Match(IntLit);
+				State = 31; ((RangeFilterContext)_localctx).End = Match(IntLit);
 				}
 				break;
 			case 3:
 				_localctx = new BoolFilterContext(_localctx);
 				EnterOuterAlt(_localctx, 3);
 				{
-				State = 32; expr(0);
-				State = 33; boolOp();
-				State = 34; expr(0);
+				State = 32; ((BoolFilterContext)_localctx).Lhs = expr(0);
+				State = 33; ((BoolFilterContext)_localctx).Op = boolOp();
+				State = 34; ((BoolFilterContext)_localctx).Rhs = expr(0);
 				}
 				break;
 			}

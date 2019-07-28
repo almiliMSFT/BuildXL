@@ -27,17 +27,17 @@ StrLit   : '\'' [^']* '\''
 
 RegExLit : '/' [^/]+ '/' ;
 
-expr    : ID                    #VarExpr
-        | IntLit                #IntLitExpr
-        | StrLit                #StrLitExpr
-        | RegExLit              #RegExLitExpr
-        | expr '.' ID           #MapExpr
-        | expr '[' filter ']'   #FilterExpr
+expr    : Name=ID                         #VarExpr
+        | Value=IntLit                    #IntLitExpr
+        | Value=StrLit                    #StrLitExpr
+        | Value=RegExLit                  #RegExLitExpr
+        | Lhs=expr '.' FieldName=ID       #MapExpr
+        | Lhs=expr '[' Filter=filter ']'  #FilterExpr
         ;
 
 boolOp  : GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH ;
 
-filter  : IntLit                #IndexFilter
-        | IntLit '..' IntLit    #RangeFilter
-        | expr boolOp expr      #BoolFilter
+filter  : Index=IntLit                    #IndexFilter
+        | Start=IntLit '..' End=IntLit    #RangeFilter
+        | Lhs=expr Op=boolOp Rhs=expr     #BoolFilter
         ;
