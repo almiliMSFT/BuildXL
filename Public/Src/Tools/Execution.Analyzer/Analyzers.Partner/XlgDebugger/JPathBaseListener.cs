@@ -84,6 +84,20 @@ public partial class JPathBaseListener : IJPathListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitLogicUnaryOp([NotNull] JPathParser.LogicUnaryOpContext context) { }
 	/// <summary>
+	/// Enter a parse tree produced by the <c>ExprBoolExpr</c>
+	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterExprBoolExpr([NotNull] JPathParser.ExprBoolExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>ExprBoolExpr</c>
+	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitExprBoolExpr([NotNull] JPathParser.ExprBoolExprContext context) { }
+	/// <summary>
 	/// Enter a parse tree produced by the <c>BinaryBoolExpr</c>
 	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
 	/// <para>The default implementation does nothing.</para>

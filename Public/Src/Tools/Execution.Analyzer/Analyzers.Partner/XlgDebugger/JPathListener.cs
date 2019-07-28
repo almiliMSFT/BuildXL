@@ -72,6 +72,18 @@ public interface IJPathListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitLogicUnaryOp([NotNull] JPathParser.LogicUnaryOpContext context);
 	/// <summary>
+	/// Enter a parse tree produced by the <c>ExprBoolExpr</c>
+	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterExprBoolExpr([NotNull] JPathParser.ExprBoolExprContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>ExprBoolExpr</c>
+	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitExprBoolExpr([NotNull] JPathParser.ExprBoolExprContext context);
+	/// <summary>
 	/// Enter a parse tree produced by the <c>BinaryBoolExpr</c>
 	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
 	/// </summary>

@@ -57,16 +57,17 @@ logicUnaryOp
     : NOT ;
 
 boolExpr
-    : expr binaryOp expr #BinaryBoolExpr
-    | unaryOp expr       #UnaryBoolExpr
-    | '(' boolExpr ')'   #SubBoolExpr
+    : Expr=expr                     #ExprBoolExpr
+    | Lhs=expr Op=binaryOp Rhs=expr #BinaryBoolExpr
+    | Op=unaryOp Sub=expr           #UnaryBoolExpr
+    | '(' Sub=boolExpr ')'          #SubBoolExpr
     ;
 
 logicExpr
-    : boolExpr                          #BoolLogicExpr
-    | logicExpr logicBinaryOp logicExpr #BinaryLogicExpr
-    | logicUnaryOp logicExpr            #UnaryLogicExpr
-    | '(' logicExpr ')'                 #SubLogicExpr
+    : Expr=boolExpr                                #BoolLogicExpr
+    | Lhs=logicExpr Op=logicBinaryOp Rhs=logicExpr #BinaryLogicExpr
+    | Op=logicUnaryOp Sub=logicExpr                #UnaryLogicExpr
+    | '(' Sub=logicExpr ')'                        #SubLogicExpr
     ;
 
 expr

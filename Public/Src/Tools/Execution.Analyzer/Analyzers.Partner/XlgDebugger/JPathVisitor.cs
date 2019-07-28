@@ -57,6 +57,13 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitLogicUnaryOp([NotNull] JPathParser.LogicUnaryOpContext context);
 	/// <summary>
+	/// Visit a parse tree produced by the <c>ExprBoolExpr</c>
+	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitExprBoolExpr([NotNull] JPathParser.ExprBoolExprContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>BinaryBoolExpr</c>
 	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
 	/// </summary>
