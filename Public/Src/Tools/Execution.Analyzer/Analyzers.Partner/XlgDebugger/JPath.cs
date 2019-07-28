@@ -27,7 +27,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         public Expr Lhs;
     }
 
-    public sealed class IntConst : Expr
+    public sealed class IntLit : Expr
     {
         public int Value;
     }
@@ -92,53 +92,13 @@ namespace BuildXL.Execution.Analyzer.JPath
     //    }
     //}
 
-    class JPathListener : IJPathListener
+    class JPathListener : JPathBaseListener
     {
-        public void EnterBoolOp([NotNull] JPathParser.BoolOpContext context)
-        {
-            Console.WriteLine("== BoolOp: " + context.GetText());
-        }
+    }
 
-        public void EnterEveryRule(ParserRuleContext ctx)
-        {
-            Console.WriteLine("== Rule: " + ctx.GetText());
-        }
-
-        public void EnterExpr([NotNull] JPathParser.ExprContext context)
-        {
-            Console.WriteLine("== Expr: " + context.GetText());
-        }
-
-        public void EnterFilter([NotNull] JPathParser.FilterContext context)
-        {
-            Console.WriteLine("== Filter: " + context.GetText());
-        }
-
-        public void ExitBoolOp([NotNull] JPathParser.BoolOpContext context)
-        {
-        }
-
-        public void ExitEveryRule(ParserRuleContext ctx)
-        {
-        }
-
-        public void ExitExpr([NotNull] JPathParser.ExprContext context)
-        {
-        }
-
-        public void ExitFilter([NotNull] JPathParser.FilterContext context)
-        {
-        }
-
-        public void VisitErrorNode(IErrorNode node)
-        {
-            Console.WriteLine("Error: " + node.GetText());
-        }
-
-        public void VisitTerminal(ITerminalNode node)
-        {
-            Console.WriteLine("Terminal: " + node.GetText());
-        }
+    class JPathVisitor : JPathBaseVisitor<Expr>
+    {
+        
     }
 
     public static class JPath
@@ -150,6 +110,9 @@ namespace BuildXL.Execution.Analyzer.JPath
             var listener = new JPathListener();
             parser.AddParseListener(listener);
             var expr = parser.expr();
+            Console.WriteLine(expr.ToInfoString(parser));
+            Console.WriteLine("======");
+            Console.WriteLine(expr.ToStringTree());
             return null;
         }
     }
