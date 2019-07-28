@@ -14,7 +14,10 @@ using Antlr4.Runtime.Tree;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
-    public interface Expr { }
+    public abstract class Expr
+    {
+        public abstract string Print();
+    }
 
     public sealed class Selector : Expr
     {
@@ -24,6 +27,8 @@ namespace BuildXL.Execution.Analyzer.JPath
         {
             PropertyName = propertyName;
         }
+
+        public override string Print() => PropertyName;
     }
 
     public sealed class IntLit : Expr
@@ -34,6 +39,8 @@ namespace BuildXL.Execution.Analyzer.JPath
         {
             Value = value;
         }
+
+        public override string Print() => Value.ToString();
     }
 
     public sealed class StrLit : Expr
@@ -45,6 +52,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             Value = value;
         }
 
+        public override string Print() => $"'{Value}'";
     }
 
     public sealed class RegexLit : Expr
@@ -55,6 +63,8 @@ namespace BuildXL.Execution.Analyzer.JPath
         {
             Value = value;
         }
+
+        public override string Print() => $"/{Value}/";
     }
 
     public sealed class RangeExpr : Expr
@@ -67,6 +77,8 @@ namespace BuildXL.Execution.Analyzer.JPath
             Begin = begin;
             End = end;
         }
+
+        public override string Print() => $"{Begin.Print()}..{End.Print()}";
     }
 
     public sealed class MapExpr : Expr
@@ -79,6 +91,8 @@ namespace BuildXL.Execution.Analyzer.JPath
             Lhs = lhs;
             PropertyName = propertyName;
         }
+
+        public override string Print() => $"{Lhs.Print()}.{PropertyName}";
     }
 
     public class FilterExpr : Expr
@@ -91,6 +105,8 @@ namespace BuildXL.Execution.Analyzer.JPath
             Lhs = lhs;
             Filter = filter;
         }
+
+        public override string Print() => $"{Lhs.Print()}[{Filter.Print()}]";
     }
 
     public class UnaryExpr : Expr
@@ -103,6 +119,8 @@ namespace BuildXL.Execution.Analyzer.JPath
             Op = op;
             Sub = sub;
         }
+
+        public override string Print() => $"({Op} {Sub.Print()})";
     }
 
     public class BinaryExpr : Expr
@@ -117,11 +135,13 @@ namespace BuildXL.Execution.Analyzer.JPath
             Lhs = lhs;
             Rhs = rhs;
         }
+
+        public override string Print() => $"({Lhs.Print()} {Op} {Rhs.Print()})";
     }
 
     public class RootExpr : Expr
     {
-
+        public override string Print() => "$";
     }
 
     class JPathListener : JPathBaseListener, IAntlrErrorListener<IToken>
