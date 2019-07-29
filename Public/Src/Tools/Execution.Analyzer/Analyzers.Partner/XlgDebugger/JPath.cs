@@ -5,18 +5,75 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
-using Antlr4.Runtime.Tree;
+using BuildXL.FrontEnd.Script.Debugger;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
+    public class Env
+    {
+        public Func<object, ObjectInfo> GetObjectInfo { get; }
+        public object Root { get; }
+        public IEnumerable<object> Current { get; }
+
+        public Env(Func<object, ObjectInfo> getObjectInfo, object root, IEnumerable<object> current)
+        {
+            GetObjectInfo = getObjectInfo;
+            Root = root;
+            Current = current;
+        }
+
+        internal Env WithCurrent(IEnumerable<object> newCurrent)
+        {
+            return new Env(GetObjectInfo, Root, newCurrent);
+        }
+    }
+
+    public static class Converter
+    {
+        public static string TokenName(this int tokenType)
+        {
+            return JPathLexer.DefaultVocabulary.GetSymbolicName(tokenType);
+        }
+
+        public static int ToInt(this object obj)
+        {
+            switch (obj)
+            {
+                case IEnumerable<object> arr:
+                    var first = arr.FirstOrDefault();
+                    return first == null ? false : first.ToInt();
+            }
+        }
+
+        public static bool ToBool(this object obj)
+        {
+            switch (obj)
+            {
+                case IEnumerable<object> arr:
+                    var first = arr.FirstOrDefault();
+                    return first == null ? false : first.ToBool();
+                case string str:
+                    return !string.IsNullOrEmpty(str);
+                case bool b:
+                    return b;
+                case int i:
+                    return i != 0;
+                default:
+                    return false;
+            }
+        }
+
+    }
+
+
     public abstract class Expr
     {
         public abstract string Print();
+
+        public abstract IEnumerable<object> Eval(Env env);
     }
 
     public sealed class Selector : Expr
@@ -29,6 +86,15 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         public override string Print() => PropertyName;
+
+        public override IEnumerable<object> Eval(Env env)
+        {
+            return env.Current
+                .Select(env.GetObjectInfo)
+                .SelectMany(obj => obj.Properties.Where(p => p.Name == PropertyName))
+                .Select(prop => prop.Value);
+        }
+
     }
 
     public sealed class IntLit : Expr
@@ -41,6 +107,8 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         public override string Print() => Value.ToString();
+
+        public override IEnumerable<object> Eval(Env env) => new object[] { Value };
     }
 
     public sealed class StrLit : Expr
@@ -53,6 +121,8 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         public override string Print() => $"'{Value}'";
+
+        public override IEnumerable<object> Eval(Env env) => new object[] { Value };
     }
 
     public sealed class RegexLit : Expr
@@ -65,6 +135,8 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         public override string Print() => $"/{Value}/";
+
+        public override IEnumerable<object> Eval(Env env) => new object[] { Value };
     }
 
     public sealed class RangeExpr : Expr
@@ -79,6 +151,13 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         public override string Print() => $"{Begin.Print()}..{End.Print()}";
+
+        public override IEnumerable<object> Eval(Env env)
+        {
+            var begin = Begin.Eval(env);
+            var end = End.Eval(env);
+            return new object[] { new Pair<object, object>(begin, end) };
+        }
     }
 
     public sealed class MapExpr : Expr
@@ -93,6 +172,12 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         public override string Print() => $"{Lhs.Print()}.{PropertyName}";
+
+        public override IEnumerable<object> Eval(Env env)
+        {
+            var lhs = Lhs.Eval(env);
+            return new Selector(PropertyName).Eval(env.WithCurrent(lhs));
+        }
     }
 
     public class FilterExpr : Expr
@@ -107,6 +192,13 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         public override string Print() => $"{Lhs.Print()}[{Filter.Print()}]";
+
+        public override IEnumerable<object> Eval(Env env)
+        {
+            return Lhs
+                .Eval(env)
+                .Where(obj => Filter.Eval(env.WithCurrent(new[] { obj })).ToBool());
+        }
     }
 
     public class UnaryExpr : Expr
@@ -121,6 +213,18 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         public override string Print() => $"({Op} {Sub.Print()})";
+
+        public override IEnumerable<object> Eval(Env env)
+        {
+            var sub = Sub.Eval(env);
+            switch (Op)
+            {
+                case JPathLexer.NOT.TokenName():
+
+                case JPathLexer.MINUS.TokenName():
+                    return new object[] { -sub.ToInt() };
+            }
+        }
     }
 
     public class BinaryExpr : Expr
@@ -144,7 +248,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         public override string Print() => "$";
     }
 
-    class JPathListener : JPathBaseListener, IAntlrErrorListener<IToken>
+    class JPathListener : IAntlrErrorListener<IToken>
     {
         public string FirstError { get; private set; }
 
@@ -279,7 +383,6 @@ namespace BuildXL.Execution.Analyzer.JPath
             var lexer = new JPathLexer(new AntlrInputStream(str));
             var parser = new JPathParser(new CommonTokenStream(lexer));
             var listener = new JPathListener();
-            parser.AddParseListener(listener);
             parser.AddErrorListener(listener);
             var expr = parser.expr();
             if (listener.HasErrors)
