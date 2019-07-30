@@ -44,9 +44,10 @@ RegExLit
     | '!' ~[!]+ '!'
     ;
 
-ID  : [a-zA-Z][a-zA-Z0-9_]* 
-    | '`' ~[`]+ '`'
-    ;
+ID  : [a-zA-Z][a-zA-Z0-9_]* ;
+
+ESC_ID
+    : '`' ~[`]+ '`' ;
 
 intBinaryOp
     : Token=(PLUS | MINUS | TIMES | DIV | MOD) ;
@@ -85,6 +86,7 @@ logicExpr
 expr
     : '$'                                             #RootExpr
     | PropertyName=ID                                 #SelectorExpr
+    | PropertyName=ESC_ID                             #EscSelectorExpr
     | Value=StrLit                                    #StrLitExpr
     | Value=RegExLit                                  #RegExLitExpr
     | Value=IntLit                                    #IntLitExpr

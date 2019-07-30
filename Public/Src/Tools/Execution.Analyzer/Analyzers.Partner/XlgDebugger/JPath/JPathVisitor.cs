@@ -140,6 +140,13 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitMapExpr([NotNull] JPathParser.MapExprContext context);
 	/// <summary>
+	/// Visit a parse tree produced by the <c>EscSelectorExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitEscSelectorExpr([NotNull] JPathParser.EscSelectorExprContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>RegExLitExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
