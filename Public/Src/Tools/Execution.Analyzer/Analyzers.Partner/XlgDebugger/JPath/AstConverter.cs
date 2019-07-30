@@ -98,12 +98,12 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitBinaryBoolExpr([NotNull] JPathParser.BinaryBoolExprContext context)
         {
-            return new BinaryExpr(context.Op.Token, context.Lhs.Accept(this), context.Rhs.Accept(this));
+            return new BinaryExpr(context.Op.Token.Type, context.Lhs.Accept(this), context.Rhs.Accept(this));
         }
 
         public override Expr VisitUnaryBoolExpr([NotNull] JPathParser.UnaryBoolExprContext context)
         {
-            return new UnaryExpr(context.Op.Token, context.Sub.Accept(this));
+            return new UnaryExpr(context.Op.Token.Type, context.Sub.Accept(this));
         }
 
         public override Expr VisitSubBoolExpr([NotNull] JPathParser.SubBoolExprContext context)
@@ -118,12 +118,12 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitBinaryLogicExpr([NotNull] JPathParser.BinaryLogicExprContext context)
         {
-            return new BinaryExpr(context.Op.GetText(), context.Lhs.Accept(this), context.Rhs.Accept(this));
+            return new BinaryExpr(context.Op.Token.Type, context.Lhs.Accept(this), context.Rhs.Accept(this));
         }
 
         public override Expr VisitUnaryLogicExpr([NotNull] JPathParser.UnaryLogicExprContext context)
         {
-            return new UnaryExpr(context.Op.GetText(), context.Sub.Accept(this));
+            return new UnaryExpr(context.Op.Token.Type, context.Sub.Accept(this));
         }
 
         public override Expr VisitSubLogicExpr([NotNull] JPathParser.SubLogicExprContext context)

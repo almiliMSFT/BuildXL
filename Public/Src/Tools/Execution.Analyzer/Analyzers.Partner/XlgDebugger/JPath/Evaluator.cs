@@ -2,30 +2,61 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BuildXL.FrontEnd.Script.Debugger;
+using BuildXL.Utilities;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
     public class Evaluator
     {
+        public sealed class Result : IEnumerable<object>
+        {
+            private readonly Lazy<IReadOnlyList<object>> m_value;
+
+            public IReadOnlyList<object> Value => m_value.Value;
+
+            public int Count => Value.Count;
+
+            private Result(IEnumerable<object> arr)
+            {
+                m_value = new Lazy<IReadOnlyList<object>>(() => arr.ToList());
+            }
+
+            public static Result Scalar(object scalar) => new Result(new[] { scalar });
+            public static Result Array(IEnumerable<object> arr) => new Result(arr);
+
+            public IEnumerator<object> GetEnumerator() => Value.GetEnumerator();
+            IEnumerator IEnumerable.GetEnumerator() => Value.GetEnumerator();
+
+            public static implicit operator Result(int scalar) => Scalar(scalar);
+            public static implicit operator Result(bool scalar) => Scalar(scalar);
+            public static implicit operator Result(string scalar) => Scalar(scalar);
+            public static implicit operator Result(Regex scalar) => Scalar(scalar);
+            public static implicit operator Result(object[] arr) => Array(arr);
+            public static implicit operator Result(List<object> arr) => Array(arr);
+
+        }
+
         public class Env
         {
             public Func<object, ObjectInfo> GetObjectInfo { get; }
             public object Root { get; }
-            public IEnumerable<object> Current { get; }
+            public Result Current { get; }
 
-            public Env(Func<object, ObjectInfo> getObjectInfo, object root, IEnumerable<object> current)
+            public Env(Func<object, ObjectInfo> getObjectInfo, object root, Result current)
             {
                 GetObjectInfo = getObjectInfo;
                 Root = root;
                 Current = current;
             }
 
-            internal Env WithCurrent(IEnumerable<object> newCurrent)
+            internal Env WithCurrent(Result newCurrent)
             {
                 return new Env(GetObjectInfo, Root, newCurrent);
             }
@@ -33,7 +64,9 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         private readonly Stack<(Env, Expr)> m_evalStack = new Stack<(Env, Expr)>();
 
-        public IEnumerable<object> Eval(Env env, Expr expr, string context = null)
+        private Env TopEnv => m_evalStack.Any() ? m_evalStack.Peek().Item1 : null;
+
+        public Result Eval(Env env, Expr expr, string context = null)
         {
             m_evalStack.Push((env, expr));
             try
@@ -41,28 +74,29 @@ namespace BuildXL.Execution.Analyzer.JPath
                 switch (expr)
                 {
                     case RootExpr rootExpr:
-                        return new[] { env.Root };
+                        return Result.Scalar(env.Root);
 
                     case Selector selector:
                         return env.Current
                             .Select(env.GetObjectInfo)
                             .SelectMany(obj => obj.Properties.Where(p => p.Name == selector.PropertyName))
-                            .Select(prop => prop.Value);
+                            .Select(prop => prop.Value)
+                            .ToList();
 
                     case RangeExpr rangeExpr:
-                        var list = Eval(env, rangeExpr.Array).ToList();
+                        var array = Eval(env, rangeExpr.Array);
 
-                        if (list.Count == 0)
+                        if (array.Count == 0)
                         {
-                            return list;
+                            return array;
                         }
 
-                        var beginNormalized = NormalizeArrayIndex(rangeExpr.Begin, list.Count);
-                        var endNormalized = NormalizeArrayIndex(rangeExpr.End, list.Count);
+                        var beginNormalized = NormalizeArrayIndex(rangeExpr.Begin, array.Count);
+                        var endNormalized = NormalizeArrayIndex(rangeExpr.End, array.Count);
 
-                        return list.GetRange(
-                            index: beginNormalized,
-                            count: endNormalized - beginNormalized + 1);
+                        return array
+                            .ToList()
+                            .GetRange(index: beginNormalized, count: endNormalized - beginNormalized + 1);
 
                     case MapExpr mapExpr:
                         var lhs = Eval(env, mapExpr.Lhs);
@@ -73,21 +107,27 @@ namespace BuildXL.Execution.Analyzer.JPath
                             .Where(obj =>
                             {
                                 var filterValue = Eval(env.WithCurrent(new[] { obj }), filterExpr.Filter);
-                                return ToBool(ToScalar(filterValue));
-                            });
+                                return ToBool(filterValue);
+                            })
+                            .ToList();
 
                     case IntLit intLit:
-                        return new object[] { intLit.Value };
+                        return intLit.Value;
 
                     case StrLit strLit:
-                        return new object[] { strLit.Value };
+                        return strLit.Value;
 
                     case RegexLit regexLit:
-                        return new object[] { regexLit.Value };
+                        return regexLit.Value;
 
                     case UnaryExpr ue:
                         var sub = Eval(env, ue.Sub);
-                        return ApplyUnaryExpr(sub, ue.Op);
+                        return ApplyUnaryExpr(ue.Op, sub);
+
+                    case BinaryExpr be:
+                        var lhsVal = Eval(env, be.Lhs);
+                        var rhsVal = Eval(env, be.Rhs);
+                        return ApplyBinaryExpr(be.Op, lhsVal, rhsVal);
 
                     default:
                         throw new Exception("Evaluation not implemented for type: " + expr?.GetType().FullName);
@@ -99,11 +139,40 @@ namespace BuildXL.Execution.Analyzer.JPath
             }
         }
 
-        private IEnumerable<object> ApplyUnaryExpr(IEnumerable<object> value, string op)
+        private Result ApplyUnaryExpr(int op, Result value)
         {
-            
+            switch (op)
+            {
+                case JPathLexer.NOT:
+                    return !ToBool(value);
 
-            return null;
+                case JPathLexer.MINUS:
+                    return -ToInt(value);
+
+                default:
+                    throw ApplyError(op, value);
+            }
+        }
+
+        private Result ApplyBinaryExpr(int op, Result lhs, Result rhs)
+        {
+            switch (op)
+            {
+                case JPathLexer.GTE: return ToInt(lhs) >= ToInt(rhs);
+                case JPathLexer.GT:  return ToInt(lhs) >  ToInt(rhs);
+                case JPathLexer.LTE: return ToInt(lhs) <= ToInt(rhs);
+                case JPathLexer.LT:  return ToInt(lhs) <  ToInt(rhs);
+                case JPathLexer.EQ:  return lhs.ToHashSet().SetEquals(rhs);
+                case JPathLexer.NEQ: return !lhs.ToHashSet().SetEquals(rhs);
+
+                case JPathLexer.AND: return ToBool(lhs) && ToBool(rhs);
+                case JPathLexer.OR: return ToBool(lhs) || ToBool(rhs);
+                case JPathLexer.XOR: return ToBool(lhs) != ToBool(rhs);
+                case JPathLexer.IFF: return ToBool(lhs) == ToBool(rhs);
+
+                default:
+                    throw ApplyError(op, lhs, rhs);
+            }
         }
 
         private string TokenName(int tokenType)
@@ -111,14 +180,54 @@ namespace BuildXL.Execution.Analyzer.JPath
             return JPathLexer.DefaultVocabulary.GetSymbolicName(tokenType);
         }
 
-        private object ToScalar(IEnumerable<object> value)
+        private string PreviewObj(object obj)
         {
-            if (value.Count() != 1)
+            var env = TopEnv;
+            if (env == null)
             {
-                throw Error("Expected a scalar value, got array of size " + value.Count());
+                return obj?.ToString() ?? "<null>";
             }
 
-            return value.First();
+            var objInfo = env.GetObjectInfo(obj);
+            return objInfo.Preview;
+        }
+
+        private string PreviewArray(Result result)
+        {
+            return "[" + Environment.NewLine +
+                    string.Join(string.Empty, result.Select(PreviewObj).Select(str => Environment.NewLine + "  " + str)) +
+                    Environment.NewLine + "]";
+        }
+
+        private Exception ApplyError(int op, params Result[] values)
+        {
+            var valuesStr = string.Join(string.Empty, values
+                .Select(PreviewArray)
+                .Select(str => Environment.NewLine + str));
+            return Error($"Cannot apply operation '{JPathLexer.DefaultVocabulary.GetSymbolicName(op)}', to values {valuesStr}");
+        }
+
+        private Exception TypeError(object obj, string expectedType)
+        {
+            return Error($"Cannot convert an object of type {obj?.GetType().Name} to {expectedType}");
+        }
+
+        private Exception Error(string message)
+        {
+            return new Exception(message);
+        }
+
+        private bool ToBool(Result value) => ToBool(ToScalar(value));
+        private int ToInt(Result value) => ToInt(ToScalar(value));
+
+        private object ToScalar(Result value)
+        {
+            if (value.Count != 1)
+            {
+                throw Error("Expected a scalar value, got array of size " + value.Count);
+            }
+
+            return value.Value.First();
         }
 
         private int ToInt(object obj)
@@ -132,16 +241,6 @@ namespace BuildXL.Execution.Analyzer.JPath
                 default:
                     throw TypeError(obj, "int");
             }
-        }
-
-        private Exception TypeError(object obj, string expectedType)
-        {
-            return Error($"Cannot convert an object of type {obj?.GetType().Name} to {expectedType}");
-        }
-
-        private Exception Error(string message)
-        {
-            return new Exception(message);
         }
 
         private bool ToBool(object obj)
