@@ -4,6 +4,8 @@
 using System;
 using System.IO;
 using Antlr4.Runtime;
+using BuildXL.FrontEnd.Script.Debugger;
+using BuildXL.Utilities;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
@@ -24,21 +26,61 @@ namespace BuildXL.Execution.Analyzer.JPath
 
     public static class JPath
     {
-        public static Expr Parse(string str)
+        private static Possible<JPathParser.ExprContext> TryParseInternal(string str)
         {
             var lexer = new JPathLexer(new AntlrInputStream(str));
             var parser = new JPathParser(new CommonTokenStream(lexer));
             var listener = new JPathListener();
             parser.AddErrorListener(listener);
             var expr = parser.expr();
+
             if (listener.HasErrors)
             {
-                throw new Exception("Syntex error: " + listener.FirstError);
+                return new Failure<string>("Syntex error: " + listener.FirstError);
             }
+            else
+            {
+                return expr;
+            }
+        }
 
+        private static Possible<Expr> TryConvertInternal(JPathParser.ExprContext expr)
+        {
+            try
+            {
+                return expr.Accept(new AstConverter());
+            }
+            catch (Exception e)
+            {
+                return new Failure<string>(e.ToString());
+            }
+        }
 
-            Expr result = expr.Accept(new AstConverter());
-            return result;
+        public static Possible<Expr> TryParse(string str)
+        {
+            return TryParseInternal(str).Then(TryConvertInternal);
+        }
+
+        public static Evaluator.Result Eval(Evaluator.Env env, Expr expr)
+        {
+            return new Evaluator().Eval(env, expr);
+        }
+
+        public static Possible<Evaluator.Result> TryEval(Evaluator.Env env, Expr expr)
+        {
+            try
+            {
+                return Eval(env, expr);
+            }
+            catch (Exception e)
+            {
+                return new Failure<string>(e.ToString());
+            }
+        }
+
+        public static Possible<Evaluator.Result> TryEval(Evaluator.Env env, string expr)
+        {
+            return TryParse(expr).Then(e => TryEval(env, e));
         }
     }
 

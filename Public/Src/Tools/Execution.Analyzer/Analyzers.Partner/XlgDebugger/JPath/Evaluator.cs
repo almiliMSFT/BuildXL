@@ -5,11 +5,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using BuildXL.FrontEnd.Script.Debugger;
-using BuildXL.Utilities;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
@@ -56,6 +53,9 @@ namespace BuildXL.Execution.Analyzer.JPath
                 Current = current;
             }
 
+            public Env(Func<object, ObjectInfo> getObjectInfo, object root)
+                : this(getObjectInfo, root, Result.Scalar(root)) { }
+
             internal Env WithCurrent(Result newCurrent)
             {
                 return new Env(GetObjectInfo, Root, newCurrent);
@@ -80,7 +80,16 @@ namespace BuildXL.Execution.Analyzer.JPath
                         return env.Current
                             .Select(env.GetObjectInfo)
                             .SelectMany(obj => obj.Properties.Where(p => p.Name == selector.PropertyName))
-                            .Select(prop => prop.Value)
+                            .SelectMany(prop =>
+                            {
+                                switch (prop.Value)
+                                {
+                                    case IEnumerable<object> ie:
+                                        return ie; // automatically flatten all non-scalar results
+                                    default:
+                                        return new[] { prop.Value };
+                                }
+                            })
                             .ToList();
 
                     case RangeExpr rangeExpr:
@@ -143,11 +152,8 @@ namespace BuildXL.Execution.Analyzer.JPath
         {
             switch (op)
             {
-                case JPathLexer.NOT:
-                    return !ToBool(value);
-
-                case JPathLexer.MINUS:
-                    return -ToInt(value);
+                case JPathLexer.NOT:   return !ToBool(value);
+                case JPathLexer.MINUS: return -ToInt(value);
 
                 default:
                     throw ApplyError(op, value);
@@ -166,12 +172,28 @@ namespace BuildXL.Execution.Analyzer.JPath
                 case JPathLexer.NEQ: return !lhs.ToHashSet().SetEquals(rhs);
 
                 case JPathLexer.AND: return ToBool(lhs) && ToBool(rhs);
-                case JPathLexer.OR: return ToBool(lhs) || ToBool(rhs);
+                case JPathLexer.OR:  return ToBool(lhs) || ToBool(rhs);
                 case JPathLexer.XOR: return ToBool(lhs) != ToBool(rhs);
                 case JPathLexer.IFF: return ToBool(lhs) == ToBool(rhs);
 
+                case JPathLexer.MATCH:  return Matches();
+                case JPathLexer.NMATCH: return !Matches();
+
                 default:
                     throw ApplyError(op, lhs, rhs);
+            }
+
+            bool Matches()
+            {
+                var lhsVal = ToScalar(lhs);
+                var rhsVal = ToScalar(rhs);
+                switch (rhsVal)
+                {
+                    case string str: return lhsVal.ToString().Contains(str);
+                    case Regex regex: return regex.Match(lhsVal.ToString()).Success;
+                    default:
+                        throw TypeError(rhsVal, "string | Regex");
+                }
             }
         }
 

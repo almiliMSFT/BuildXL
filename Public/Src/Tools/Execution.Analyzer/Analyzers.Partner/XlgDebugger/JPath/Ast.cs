@@ -1,10 +1,12 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
+    [DebuggerDisplay("{Print(),nq}")]
     public abstract class Expr
     {
         public abstract string Print();

@@ -105,8 +105,6 @@ namespace BuildXL.Execution.Analyzer
         /// <inheritdoc />
         public Possible<ObjectContext, Failure> EvaluateExpression(ThreadState threadState, int frameIndex, string expr)
         {
-            JPath.JPath.Parse(expr);
-
             if (Pip.TryParseSemiStableHash(expr, out var hash) && Analyzer.SemiStableHash2Pip.TryGetValue(hash, out var pipId))
             {
                 return new ObjectContext(context: this, Analyzer.AsPipReference(pipId));
@@ -118,30 +116,28 @@ namespace BuildXL.Execution.Analyzer
                 return new ObjectContext(context: this, new AnalyzePath(path));
             }
 
-            var scope = SupportedScopes.Where(s => s.Preview == expr).FirstOrDefault();
-            if (scope != null)
+            var rootVars =
+                SupportedScopes.Select(obj => new Property(obj.Preview, obj))
+                .Concat(SupportedScopes.SelectMany(obj => obj.Properties));
+            var root = new ObjectInfo(preview: "$", properties: rootVars);
+            var env = new Evaluator.Env(
+                (obj) => 
+                    Analyzer.Session.Renderer.GetObjectInfo(context: this, obj), 
+                root);
+            var maybeResult = JPath.JPath.TryEval(env, expr);
+            if (maybeResult.Succeeded)
             {
-                return new ObjectContext(context: this, scope);
-            }
 
-            var varInScope = SupportedScopes.SelectMany(obj => obj.Properties).Where(prop => prop.Name == expr).FirstOrDefault();
-            if (varInScope != null)
+                return new ObjectContext(
+                    this, 
+                    maybeResult.Result.Count == 1 
+                        ? maybeResult.Result.First()
+                        : maybeResult.Result.Value.ToArray());
+            }
+            else
             {
-                return new ObjectContext(context: this, varInScope.Value);
+                return maybeResult.Failure;
             }
-
-            if (PathAtom.TryCreate(StringTable, expr, out var atom))
-            {
-                var files = PipGraph.AllFiles.Where(f => f.Path.GetName(PathTable) == atom).Cast<object>();
-                var dirs = PipGraph.AllOutputDirectoriesAndProducers
-                    .Select(kvp => kvp.Key)
-                    .Concat(PipGraph.AllSealDirectories)
-                    .Where(dir => dir.Path.GetName(PathTable) == atom)
-                    .Cast<object>();
-                return new ObjectContext(context: this, files.Concat(dirs).ToArray());
-            }
-
-            return new Failure<string>($"Can't parse expression '{expr}'");
         }
 
         #endregion

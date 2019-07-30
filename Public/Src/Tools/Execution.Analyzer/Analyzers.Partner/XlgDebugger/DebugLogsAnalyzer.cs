@@ -71,7 +71,7 @@ namespace BuildXL.Execution.Analyzer
 
         private IDebugger Debugger { get; set; }
 
-        internal DebugSession Session { get; set; }
+        internal DebugSession Session { get; private set; }
 
         /// <nodoc />
         public bool IsDebugging => Debugger != null;

@@ -35,7 +35,6 @@ namespace BuildXL.FrontEnd.Script.Debugger
         // private state that no one outside of this class can access
         private readonly Handles<FrameContext> m_scopeHandles = new Handles<FrameContext>();
         private readonly Barrier m_sessionInitializedBarrier = new Barrier();
-        private readonly Renderer m_renderer;
         private readonly TaskCompletionSource<Unit> m_taskSource;
 
         // shared state, received via the constructor.
@@ -65,7 +64,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
             m_buildXLToUserPathTranslator = buildXLToUserPathTranslator;
             m_userToBuildXLPathTranslator = buildXLToUserPathTranslator?.GetInverse();
             Debugger = debugger;
-            m_renderer = new Renderer(state.LoggingContext, state.PathTable, state.CustomRenderer);
+            Renderer = new Renderer(state.LoggingContext, state.PathTable, state.CustomRenderer);
         }
 
         /// <summary>
@@ -179,14 +178,14 @@ namespace BuildXL.FrontEnd.Script.Debugger
         {
             var frameRef = m_scopeHandles.Get(cmd.FrameId, null);
             var scopeContexts = frameRef.ThreadState.GetSupportedScopes(frameRef.FrameIndex);
-            var scopes = scopeContexts.Select(m_renderer.CreateScope).ToList();
+            var scopes = scopeContexts.Select(Renderer.CreateScope).ToList();
             cmd.SendResult(new ScopesResult(scopes));
         }
 
         /// <inheritdoc/>
         public void Variables(IVariablesCommand cmd)
         {
-            var vars = m_renderer.GetVariablesForScope(cmd.VariablesReference);
+            var vars = Renderer.GetVariablesForScope(cmd.VariablesReference);
             cmd.SendResult(new VariablesResult(vars.ToList()));
         }
 
@@ -213,7 +212,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
             if (ans.Succeeded)
             {
                 ObjectContext objContext = ans.Result;
-                var variable = m_renderer.ObjectToVariable(objContext.Context, value: objContext.Object, variableName: null);
+                var variable = Renderer.ObjectToVariable(objContext.Context, value: objContext.Object, variableName: null);
                 cmd.SendResult(new EvaluateResult(variable.Value, variable.VariablesReference));
             }
             else
@@ -290,7 +289,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
             else
             {
                 var resultAsObjLiteral = ans.Result.Object as ObjectLiteral;
-                items = m_renderer
+                items = Renderer
                     .GetObjectInfo(ans.Result.Context, resultAsObjLiteral)
                     .Properties
                     .Select(p => (ICompletionItem)new CompletionItem(p.Name, p.Name, p.Kind))
