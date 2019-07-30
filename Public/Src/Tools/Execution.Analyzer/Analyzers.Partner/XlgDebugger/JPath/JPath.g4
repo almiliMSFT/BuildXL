@@ -45,7 +45,7 @@ ID  : [a-zA-Z][a-zA-Z0-9_]*
     ;
 
 unaryOp
-    : MINUS ;
+    : Token=MINUS ;
 
 binaryOp
     : Token=(GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH) ;
@@ -54,7 +54,7 @@ logicBinaryOp
     : Token=(AND | OR | XOR | IFF) ; 
 
 logicUnaryOp
-    : NOT ;
+    : Token=NOT ;
 
 boolExpr
     : Expr=expr                     #ExprBoolExpr

@@ -91,6 +91,7 @@ public partial class JPathParser : Parser {
 	}
 
 	public partial class UnaryOpContext : ParserRuleContext {
+		public IToken Token;
 		public ITerminalNode MINUS() { return GetToken(JPathParser.MINUS, 0); }
 		public UnaryOpContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -119,7 +120,7 @@ public partial class JPathParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 14; Match(MINUS);
+			State = 14; _localctx.Token = Match(MINUS);
 			}
 		}
 		catch (RecognitionException re) {
@@ -252,6 +253,7 @@ public partial class JPathParser : Parser {
 	}
 
 	public partial class LogicUnaryOpContext : ParserRuleContext {
+		public IToken Token;
 		public ITerminalNode NOT() { return GetToken(JPathParser.NOT, 0); }
 		public LogicUnaryOpContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -280,7 +282,7 @@ public partial class JPathParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 20; Match(NOT);
+			State = 20; _localctx.Token = Match(NOT);
 			}
 		}
 		catch (RecognitionException re) {
