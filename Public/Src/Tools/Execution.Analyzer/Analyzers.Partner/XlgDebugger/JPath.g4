@@ -64,20 +64,21 @@ boolExpr
     ;
 
 logicExpr
-    : Expr=boolExpr                                #BoolLogicExpr
-    | Lhs=logicExpr Op=logicBinaryOp Rhs=logicExpr #BinaryLogicExpr
-    | Op=logicUnaryOp Sub=logicExpr                #UnaryLogicExpr
-    | '(' Sub=logicExpr ')'                        #SubLogicExpr
+    : Expr=boolExpr                                 #BoolLogicExpr
+    | Lhs=logicExpr Op=logicBinaryOp Rhs=logicExpr  #BinaryLogicExpr
+    | Op=logicUnaryOp Sub=logicExpr                 #UnaryLogicExpr
+    | '(' Sub=logicExpr ')'                         #SubLogicExpr
     ;
 
 expr
-    : '$'                               #RootExpr
-    | PropertyName=ID                   #SelectorExpr
-    | Value=StrLit                      #StrLitExpr
-    | Value=RegExLit                    #RegExLitExpr
-    | Value=IntLit                      #IntLitExpr
-    | Begin=expr '..' End=expr          #RangeExpr
-    | Lhs=expr '.' PropertyName=ID      #MapExpr
-    | Lhs=expr '[' Filter=logicExpr ']' #FilterExpr
-    | '(' Sub=expr ')'                  #SubExpr
+    : '$'                                           #RootExpr
+    | PropertyName=ID                               #SelectorExpr
+    | Value=StrLit                                  #StrLitExpr
+    | Value=RegExLit                                #RegExLitExpr
+    | Value=IntLit                                  #IntLitExpr
+    | Lhs=expr '.' PropertyName=ID                  #MapExpr
+    | Lhs=expr '[' Filter=logicExpr ']'             #FilterExpr
+    | Lhs=expr '[' Index=IntLit ']'                 #IndexExpr
+    | Lhs=expr '[' Begin=IntLit '..' End=IntLit ']' #RangeExpr
+    | '(' Sub=expr ')'                              #SubExpr
     ;
