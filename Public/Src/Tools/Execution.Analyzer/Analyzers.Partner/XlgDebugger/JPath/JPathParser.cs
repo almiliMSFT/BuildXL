@@ -927,8 +927,8 @@ public partial class JPathParser : Parser {
 
 	public partial class FuncContext : ParserRuleContext {
 		public IToken Name;
-		public ExprContext Arg1;
-		public ExprContext ArgN;
+		public ExprContext _expr;
+		public IList<ExprContext> _Args = new List<ExprContext>();
 		public ITerminalNode FuncID() { return GetToken(JPathParser.FuncID, 0); }
 		public ExprContext[] expr() {
 			return GetRuleContexts<ExprContext>();
@@ -971,7 +971,8 @@ public partial class JPathParser : Parser {
 			case 1:
 				{
 				State = 87; Match(T__0);
-				State = 88; _localctx.Arg1 = expr(0);
+				State = 88; _localctx._expr = expr(0);
+				_localctx._Args.Add(_localctx._expr);
 				State = 93;
 				ErrorHandler.Sync(this);
 				_la = TokenStream.LA(1);
@@ -979,7 +980,8 @@ public partial class JPathParser : Parser {
 					{
 					{
 					State = 89; Match(T__2);
-					State = 90; _localctx.ArgN = expr(0);
+					State = 90; _localctx._expr = expr(0);
+					_localctx._Args.Add(_localctx._expr);
 					}
 					}
 					State = 95;

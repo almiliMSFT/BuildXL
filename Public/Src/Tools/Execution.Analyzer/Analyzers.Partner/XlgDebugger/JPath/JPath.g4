@@ -96,7 +96,7 @@ selector
     ;
 
 func
-    : Name=FuncID ('(' Arg1=expr (',' ArgN=expr)* ')')?
+    : Name=FuncID ('(' Args+=expr (',' Args+=expr)* ')')?
     ;
 
 expr
