@@ -39,9 +39,12 @@ StrLit
     | '"' ~["]* '"'
     ;
 
+fragment RegExDelim1 : '/' ;
+fragment RegExDelim2 : '!' ;
+
 RegExLit
-    : '/' ~[/]+ '/' 
-    | '!' ~[!]+ '!'
+    : RegExDelim1 ~[/]+ RegExDelim1
+    | RegExDelim2 ~[!]+ RegExDelim2
     ;
 
 ID  : [a-zA-Z][a-zA-Z0-9_]* 
@@ -94,3 +97,4 @@ expr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
     | '(' Sub=expr ')'                                #SubExpr
     ;
+
