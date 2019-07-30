@@ -134,6 +134,7 @@ public partial class JPathParser : Parser {
 	}
 
 	public partial class BinaryOpContext : ParserRuleContext {
+		public IToken Token;
 		public ITerminalNode GTE() { return GetToken(JPathParser.GTE, 0); }
 		public ITerminalNode GT() { return GetToken(JPathParser.GT, 0); }
 		public ITerminalNode LTE() { return GetToken(JPathParser.LTE, 0); }
@@ -171,9 +172,10 @@ public partial class JPathParser : Parser {
 			EnterOuterAlt(_localctx, 1);
 			{
 			State = 16;
+			_localctx.Token = TokenStream.LT(1);
 			_la = TokenStream.LA(1);
 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << GTE) | (1L << LTE) | (1L << GT) | (1L << LT) | (1L << EQ) | (1L << NEQ) | (1L << MATCH) | (1L << NMATCH))) != 0)) ) {
-			ErrorHandler.RecoverInline(this);
+				_localctx.Token = ErrorHandler.RecoverInline(this);
 			}
 			else {
 				ErrorHandler.ReportMatch(this);
@@ -193,6 +195,7 @@ public partial class JPathParser : Parser {
 	}
 
 	public partial class LogicBinaryOpContext : ParserRuleContext {
+		public IToken Token;
 		public ITerminalNode AND() { return GetToken(JPathParser.AND, 0); }
 		public ITerminalNode OR() { return GetToken(JPathParser.OR, 0); }
 		public ITerminalNode XOR() { return GetToken(JPathParser.XOR, 0); }
@@ -226,9 +229,10 @@ public partial class JPathParser : Parser {
 			EnterOuterAlt(_localctx, 1);
 			{
 			State = 18;
+			_localctx.Token = TokenStream.LT(1);
 			_la = TokenStream.LA(1);
 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << AND) | (1L << OR) | (1L << XOR) | (1L << IFF))) != 0)) ) {
-			ErrorHandler.RecoverInline(this);
+				_localctx.Token = ErrorHandler.RecoverInline(this);
 			}
 			else {
 				ErrorHandler.ReportMatch(this);

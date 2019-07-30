@@ -48,10 +48,10 @@ unaryOp
     : MINUS ;
 
 binaryOp
-    : GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH ;
+    : Token=(GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH) ;
     
 logicBinaryOp
-    : AND | OR | XOR | IFF ; 
+    : Token=(AND | OR | XOR | IFF) ; 
 
 logicUnaryOp
     : NOT ;
