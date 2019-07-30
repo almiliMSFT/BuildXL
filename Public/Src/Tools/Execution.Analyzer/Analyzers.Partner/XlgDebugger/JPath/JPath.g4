@@ -44,7 +44,14 @@ RegExLit
     | '!' ~[!]+ '!'
     ;
 
-ID  : [a-zA-Z][a-zA-Z0-9_]* ;
+fragment IdFragment
+    : [a-zA-Z][a-zA-Z0-9_]* ;
+
+VarID
+    : IdFragment ;
+
+FuncID
+    : '$' IdFragment ;
 
 ESC_ID
     : '`' ~[`]+ '`' ;
@@ -84,8 +91,16 @@ logicExpr
     ;
 
 selector
-    : PropertyName=ID                                 #IdSelector
+    : PropertyName=VarID                              #IdSelector
     | PropertyName=ESC_ID                             #EscIdSelector
+    ;
+
+argList
+    : First=expr (Rest=argList)? 
+    ;
+
+func
+    : FuncID ('(' Args=argList ')')?
     ;
 
 expr
@@ -99,5 +114,7 @@ expr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
     | '(' Sub=expr ')'                                #SubExpr
+    | Input=expr '|' Func=func                        #PipeExpr
+    | Func=func                                       #FuncExpr
     ;
 
