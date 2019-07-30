@@ -33,17 +33,23 @@ using IToken = Antlr4.Runtime.IToken;
 [System.CLSCompliant(false)]
 public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="JPathParser.unaryOp"/>.
+	/// Visit a parse tree produced by <see cref="JPathParser.intBinaryOp"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitUnaryOp([NotNull] JPathParser.UnaryOpContext context);
+	Result VisitIntBinaryOp([NotNull] JPathParser.IntBinaryOpContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="JPathParser.binaryOp"/>.
+	/// Visit a parse tree produced by <see cref="JPathParser.intUnaryOp"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitBinaryOp([NotNull] JPathParser.BinaryOpContext context);
+	Result VisitIntUnaryOp([NotNull] JPathParser.IntUnaryOpContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JPathParser.boolBinaryOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitBoolBinaryOp([NotNull] JPathParser.BoolBinaryOpContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="JPathParser.logicBinaryOp"/>.
 	/// </summary>
@@ -57,12 +63,33 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitLogicUnaryOp([NotNull] JPathParser.LogicUnaryOpContext context);
 	/// <summary>
-	/// Visit a parse tree produced by the <c>ExprBoolExpr</c>
-	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// Visit a parse tree produced by the <c>BinaryIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitExprBoolExpr([NotNull] JPathParser.ExprBoolExprContext context);
+	Result VisitBinaryIntExpr([NotNull] JPathParser.BinaryIntExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ExprIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitExprIntExpr([NotNull] JPathParser.ExprIntExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>UnaryIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitUnaryIntExpr([NotNull] JPathParser.UnaryIntExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>SubIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitSubIntExpr([NotNull] JPathParser.SubIntExprContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>BinaryBoolExpr</c>
 	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
@@ -70,13 +97,6 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitBinaryBoolExpr([NotNull] JPathParser.BinaryBoolExprContext context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>UnaryBoolExpr</c>
-	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitUnaryBoolExpr([NotNull] JPathParser.UnaryBoolExprContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>SubBoolExpr</c>
 	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.

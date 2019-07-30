@@ -32,25 +32,35 @@ using IToken = Antlr4.Runtime.IToken;
 [System.CLSCompliant(false)]
 public interface IJPathListener : IParseTreeListener {
 	/// <summary>
-	/// Enter a parse tree produced by <see cref="JPathParser.unaryOp"/>.
+	/// Enter a parse tree produced by <see cref="JPathParser.intBinaryOp"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void EnterUnaryOp([NotNull] JPathParser.UnaryOpContext context);
+	void EnterIntBinaryOp([NotNull] JPathParser.IntBinaryOpContext context);
 	/// <summary>
-	/// Exit a parse tree produced by <see cref="JPathParser.unaryOp"/>.
+	/// Exit a parse tree produced by <see cref="JPathParser.intBinaryOp"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void ExitUnaryOp([NotNull] JPathParser.UnaryOpContext context);
+	void ExitIntBinaryOp([NotNull] JPathParser.IntBinaryOpContext context);
 	/// <summary>
-	/// Enter a parse tree produced by <see cref="JPathParser.binaryOp"/>.
+	/// Enter a parse tree produced by <see cref="JPathParser.intUnaryOp"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void EnterBinaryOp([NotNull] JPathParser.BinaryOpContext context);
+	void EnterIntUnaryOp([NotNull] JPathParser.IntUnaryOpContext context);
 	/// <summary>
-	/// Exit a parse tree produced by <see cref="JPathParser.binaryOp"/>.
+	/// Exit a parse tree produced by <see cref="JPathParser.intUnaryOp"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void ExitBinaryOp([NotNull] JPathParser.BinaryOpContext context);
+	void ExitIntUnaryOp([NotNull] JPathParser.IntUnaryOpContext context);
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="JPathParser.boolBinaryOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterBoolBinaryOp([NotNull] JPathParser.BoolBinaryOpContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JPathParser.boolBinaryOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitBoolBinaryOp([NotNull] JPathParser.BoolBinaryOpContext context);
 	/// <summary>
 	/// Enter a parse tree produced by <see cref="JPathParser.logicBinaryOp"/>.
 	/// </summary>
@@ -72,17 +82,53 @@ public interface IJPathListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitLogicUnaryOp([NotNull] JPathParser.LogicUnaryOpContext context);
 	/// <summary>
-	/// Enter a parse tree produced by the <c>ExprBoolExpr</c>
-	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// Enter a parse tree produced by the <c>BinaryIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void EnterExprBoolExpr([NotNull] JPathParser.ExprBoolExprContext context);
+	void EnterBinaryIntExpr([NotNull] JPathParser.BinaryIntExprContext context);
 	/// <summary>
-	/// Exit a parse tree produced by the <c>ExprBoolExpr</c>
-	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
+	/// Exit a parse tree produced by the <c>BinaryIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void ExitExprBoolExpr([NotNull] JPathParser.ExprBoolExprContext context);
+	void ExitBinaryIntExpr([NotNull] JPathParser.BinaryIntExprContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>ExprIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterExprIntExpr([NotNull] JPathParser.ExprIntExprContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>ExprIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitExprIntExpr([NotNull] JPathParser.ExprIntExprContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>UnaryIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterUnaryIntExpr([NotNull] JPathParser.UnaryIntExprContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>UnaryIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitUnaryIntExpr([NotNull] JPathParser.UnaryIntExprContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>SubIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterSubIntExpr([NotNull] JPathParser.SubIntExprContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>SubIntExpr</c>
+	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitSubIntExpr([NotNull] JPathParser.SubIntExprContext context);
 	/// <summary>
 	/// Enter a parse tree produced by the <c>BinaryBoolExpr</c>
 	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
@@ -95,18 +141,6 @@ public interface IJPathListener : IParseTreeListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void ExitBinaryBoolExpr([NotNull] JPathParser.BinaryBoolExprContext context);
-	/// <summary>
-	/// Enter a parse tree produced by the <c>UnaryBoolExpr</c>
-	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterUnaryBoolExpr([NotNull] JPathParser.UnaryBoolExprContext context);
-	/// <summary>
-	/// Exit a parse tree produced by the <c>UnaryBoolExpr</c>
-	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitUnaryBoolExpr([NotNull] JPathParser.UnaryBoolExprContext context);
 	/// <summary>
 	/// Enter a parse tree produced by the <c>SubBoolExpr</c>
 	/// labeled alternative in <see cref="JPathParser.boolExpr"/>.
