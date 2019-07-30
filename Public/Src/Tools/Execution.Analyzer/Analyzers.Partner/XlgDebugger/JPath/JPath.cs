@@ -7,8 +7,10 @@ using Antlr4.Runtime;
 using BuildXL.FrontEnd.Script.Debugger;
 using BuildXL.Utilities;
 
+[assembly: CLSCompliant(false)]
+
 namespace BuildXL.Execution.Analyzer.JPath
-{
+{ 
     class JPathListener : IAntlrErrorListener<IToken>
     {
         public string FirstError { get; private set; }

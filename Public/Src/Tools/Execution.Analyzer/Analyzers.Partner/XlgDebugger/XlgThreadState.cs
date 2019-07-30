@@ -75,10 +75,16 @@ namespace BuildXL.Execution.Analyzer
             {
                 new ObjectInfo(preview: "Global", properties: new[]
                 {
-                    new Property("Pips",          new PipsScope()),
-                    new Property("Files",         () => GroupFiles(PipGraph.AllFiles)),
-                    new Property("Directories",   () => GroupDirs(PipGraph.AllSealDirectories)),
-                    new Property("CriticalPath",  new AnalyzeCricialPath())
+                    new Property("Pips",          () => PipGraph.RetrieveAllPips()),
+                    new Property("Files",         () => PipGraph.AllFiles),
+                    new Property("Directories",   () => PipGraph.AllSealDirectories),
+                    new Property("CriticalPath",  new AnalyzeCricialPath()),
+                    new Property("GroupedBy",     new ObjectInfo(new[]
+                    {
+                        new Property("Pips",          new PipsScope()),
+                        new Property("Files",         () => GroupFiles(PipGraph.AllFiles)),
+                        new Property("Directories",   () => GroupDirs(PipGraph.AllSealDirectories))
+                    }))
                 })
             };
         }
@@ -121,8 +127,7 @@ namespace BuildXL.Execution.Analyzer
                 .Concat(SupportedScopes.SelectMany(obj => obj.Properties));
             var root = new ObjectInfo(preview: "$", properties: rootVars);
             var env = new Evaluator.Env(
-                (obj) => 
-                    Analyzer.Session.Renderer.GetObjectInfo(context: this, obj), 
+                (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj), 
                 root);
             var maybeResult = JPath.JPath.TryEval(env, expr);
             if (maybeResult.Succeeded)

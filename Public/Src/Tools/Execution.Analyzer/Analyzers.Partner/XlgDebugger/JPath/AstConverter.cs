@@ -38,31 +38,30 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitMapExpr([NotNull] JPathParser.MapExprContext context)
         {
-            return new MapExpr(context.Lhs.Accept(this), context.PropertyName.Text);
+            return new MapExpr(context.Lhs.Accept(this), (Selector)context.Selector.Accept(this));
         }
 
         public override Expr VisitRangeExpr([NotNull] JPathParser.RangeExprContext context)
         {
             return new RangeExpr(
                 array: context.Lhs.Accept(this),
-                begin: int.Parse(context.Begin.Text),
-                end: int.Parse(context.End.Text));
+                begin: context.Begin.Accept(this),
+                end: context.End.Accept(this));
         }
 
         public override Expr VisitIndexExpr([NotNull] JPathParser.IndexExprContext context)
         {
-            var idx = int.Parse(context.Index.Text);
             return new RangeExpr(
                 array: context.Lhs.Accept(this),
-                begin: idx,
-                end: idx);
+                begin: context.Index.Accept(this),
+                end: null);
         }
 
         public override Expr VisitRegExLitExpr([NotNull] JPathParser.RegExLitExprContext context)
         {
             try
             {
-                var regex = new Regex(context.Value.Text);
+                var regex = new Regex(context.Value.Text.Trim('/', '!'));
                 return new RegexLit(regex);
             }
             catch (ArgumentException e)
@@ -78,7 +77,17 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitSelectorExpr([NotNull] JPathParser.SelectorExprContext context)
         {
-            return new Selector(context.PropertyName.Text);
+            return context.Sub.Accept(this);
+        }
+
+        public override Expr VisitIdSelector([NotNull] JPathParser.IdSelectorContext context)
+        {
+            return new Selector(context.PropertyName.Text); 
+        }
+
+        public override Expr VisitEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context)
+        {
+            return new Selector(context.PropertyName.Text.Trim('`'));
         }
 
         public override Expr VisitStrLitExpr([NotNull] JPathParser.StrLitExprContext context)
@@ -91,19 +100,29 @@ namespace BuildXL.Execution.Analyzer.JPath
             return context.Sub.Accept(this);
         }
 
-        public override Expr VisitExprBoolExpr([NotNull] JPathParser.ExprBoolExprContext context)
+        public override Expr VisitExprIntExpr([NotNull] JPathParser.ExprIntExprContext context)
         {
             return context.Expr.Accept(this);
+        }
+
+        public override Expr VisitUnaryIntExpr([NotNull] JPathParser.UnaryIntExprContext context)
+        {
+            return new UnaryExpr(context.Op.Token.Type, context.Sub.Accept(this));
+        }
+
+        public override Expr VisitBinaryIntExpr([NotNull] JPathParser.BinaryIntExprContext context)
+        {
+            return new BinaryExpr(context.Op.Token.Type, context.Lhs.Accept(this), context.Rhs.Accept(this));
+        }
+
+        public override Expr VisitSubIntExpr([NotNull] JPathParser.SubIntExprContext context)
+        {
+            return context.Sub.Accept(this);
         }
 
         public override Expr VisitBinaryBoolExpr([NotNull] JPathParser.BinaryBoolExprContext context)
         {
             return new BinaryExpr(context.Op.Token.Type, context.Lhs.Accept(this), context.Rhs.Accept(this));
-        }
-
-        public override Expr VisitUnaryBoolExpr([NotNull] JPathParser.UnaryBoolExprContext context)
-        {
-            return new UnaryExpr(context.Op.Token.Type, context.Sub.Accept(this));
         }
 
         public override Expr VisitSubBoolExpr([NotNull] JPathParser.SubBoolExprContext context)

@@ -183,7 +183,6 @@ namespace BuildXL.FrontEnd.Script.Debugger
                     Case<ModuleBinding>(binding => GetObjectInfo(context, binding.Body)),
                     Case<ErrorValue>(error => ErrorValueInfo()),
                     Case<object>(o => GenericObjectInfo(o, o?.ToString()))
-                    //Case<object>(o => new ObjectInfo(o?.ToString()))
                 },
                 defaultResult: s_nullObj);
         }
