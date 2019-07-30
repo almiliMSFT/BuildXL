@@ -226,16 +226,6 @@ public interface IJPathListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context);
 	/// <summary>
-	/// Enter a parse tree produced by <see cref="JPathParser.argList"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterArgList([NotNull] JPathParser.ArgListContext context);
-	/// <summary>
-	/// Exit a parse tree produced by <see cref="JPathParser.argList"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitArgList([NotNull] JPathParser.ArgListContext context);
-	/// <summary>
 	/// Enter a parse tree produced by <see cref="JPathParser.func"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

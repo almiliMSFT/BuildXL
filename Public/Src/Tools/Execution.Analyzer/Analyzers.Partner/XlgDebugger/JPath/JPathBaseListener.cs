@@ -264,18 +264,6 @@ public partial class JPathBaseListener : IJPathListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context) { }
 	/// <summary>
-	/// Enter a parse tree produced by <see cref="JPathParser.argList"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void EnterArgList([NotNull] JPathParser.ArgListContext context) { }
-	/// <summary>
-	/// Exit a parse tree produced by <see cref="JPathParser.argList"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void ExitArgList([NotNull] JPathParser.ArgListContext context) { }
-	/// <summary>
 	/// Enter a parse tree produced by <see cref="JPathParser.func"/>.
 	/// <para>The default implementation does nothing.</para>
 	/// </summary>

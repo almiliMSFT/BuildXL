@@ -147,12 +147,6 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="JPathParser.argList"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitArgList([NotNull] JPathParser.ArgListContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="JPathParser.func"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

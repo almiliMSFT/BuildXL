@@ -95,12 +95,8 @@ selector
     | PropertyName=ESC_ID                             #EscIdSelector
     ;
 
-argList
-    : First=expr (Rest=argList)? 
-    ;
-
 func
-    : FuncID ('(' Args=argList ')')?
+    : Name=FuncID ('(' Arg1=expr (',' ArgN=expr)* ')')?
     ;
 
 expr
