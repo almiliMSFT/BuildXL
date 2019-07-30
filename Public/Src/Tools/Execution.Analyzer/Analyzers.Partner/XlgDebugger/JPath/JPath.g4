@@ -83,10 +83,14 @@ logicExpr
     | '(' Sub=logicExpr ')'                           #SubLogicExpr
     ;
 
+selectorExpr
+    : PropertyName=ID                                 #IdSelectorExpr
+    | PropertyName=ESC_ID                             #EscIdSelectorExpr
+    ;
+
 expr
     : '$'                                             #RootExpr
-    | PropertyName=ID                                 #SelectorExpr
-    | PropertyName=ESC_ID                             #EscSelectorExpr
+    | Sub=selectorExpr                                #SelectorExpression
     | Value=StrLit                                    #StrLitExpr
     | Value=RegExLit                                  #RegExLitExpr
     | Value=IntLit                                    #IntLitExpr

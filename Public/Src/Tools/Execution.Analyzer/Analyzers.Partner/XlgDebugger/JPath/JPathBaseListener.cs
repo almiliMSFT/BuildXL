@@ -236,6 +236,34 @@ public partial class JPathBaseListener : IJPathListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitBinaryLogicExpr([NotNull] JPathParser.BinaryLogicExprContext context) { }
 	/// <summary>
+	/// Enter a parse tree produced by the <c>IdSelectorExpr</c>
+	/// labeled alternative in <see cref="JPathParser.selectorExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterIdSelectorExpr([NotNull] JPathParser.IdSelectorExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>IdSelectorExpr</c>
+	/// labeled alternative in <see cref="JPathParser.selectorExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitIdSelectorExpr([NotNull] JPathParser.IdSelectorExprContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>EscIdSelectorExpr</c>
+	/// labeled alternative in <see cref="JPathParser.selectorExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterEscIdSelectorExpr([NotNull] JPathParser.EscIdSelectorExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>EscIdSelectorExpr</c>
+	/// labeled alternative in <see cref="JPathParser.selectorExpr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitEscIdSelectorExpr([NotNull] JPathParser.EscIdSelectorExprContext context) { }
+	/// <summary>
 	/// Enter a parse tree produced by the <c>MapExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// <para>The default implementation does nothing.</para>
@@ -250,20 +278,6 @@ public partial class JPathBaseListener : IJPathListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitMapExpr([NotNull] JPathParser.MapExprContext context) { }
 	/// <summary>
-	/// Enter a parse tree produced by the <c>EscSelectorExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void EnterEscSelectorExpr([NotNull] JPathParser.EscSelectorExprContext context) { }
-	/// <summary>
-	/// Exit a parse tree produced by the <c>EscSelectorExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void ExitEscSelectorExpr([NotNull] JPathParser.EscSelectorExprContext context) { }
-	/// <summary>
 	/// Enter a parse tree produced by the <c>RegExLitExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// <para>The default implementation does nothing.</para>
@@ -277,20 +291,6 @@ public partial class JPathBaseListener : IJPathListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitRegExLitExpr([NotNull] JPathParser.RegExLitExprContext context) { }
-	/// <summary>
-	/// Enter a parse tree produced by the <c>SelectorExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void EnterSelectorExpr([NotNull] JPathParser.SelectorExprContext context) { }
-	/// <summary>
-	/// Exit a parse tree produced by the <c>SelectorExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void ExitSelectorExpr([NotNull] JPathParser.SelectorExprContext context) { }
 	/// <summary>
 	/// Enter a parse tree produced by the <c>FilterExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
@@ -361,6 +361,20 @@ public partial class JPathBaseListener : IJPathListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitStrLitExpr([NotNull] JPathParser.StrLitExprContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>SelectorExpression</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterSelectorExpression([NotNull] JPathParser.SelectorExpressionContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>SelectorExpression</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitSelectorExpression([NotNull] JPathParser.SelectorExpressionContext context) { }
 	/// <summary>
 	/// Enter a parse tree produced by the <c>RangeExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
