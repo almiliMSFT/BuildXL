@@ -82,10 +82,12 @@ namespace BuildXL.Execution.Analyzer.JPath
                             .SelectMany(obj => obj.Properties.Where(p => p.Name == selector.PropertyName))
                             .SelectMany(prop =>
                             {
+                                // automatically flatten non-scalar results
                                 switch (prop.Value)
                                 {
-                                    case IEnumerable<object> ie:
-                                        return ie; // automatically flatten all non-scalar results
+                                    case IEnumerable<object> ie: return ie;
+                                    case string str:             return new[] { str }; // string is IEnumerable, so exclude it here
+                                    case IEnumerable ie2:        return ie2.Cast<object>();
                                     default:
                                         return new[] { prop.Value };
                                 }
@@ -94,14 +96,18 @@ namespace BuildXL.Execution.Analyzer.JPath
 
                     case RangeExpr rangeExpr:
                         var array = Eval(env, rangeExpr.Array);
-
                         if (array.Count == 0)
                         {
                             return array;
                         }
 
-                        var beginNormalized = NormalizeArrayIndex(rangeExpr.Begin, array.Count);
-                        var endNormalized = NormalizeArrayIndex(rangeExpr.End, array.Count);
+                        var beginIdx = ToInt(Eval(env, rangeExpr.Begin));
+                        var endIdx = rangeExpr.End != null
+                            ? ToInt(Eval(env, rangeExpr.End))
+                            : beginIdx;
+
+                        var beginNormalized = NormalizeArrayIndex(beginIdx, array.Count);
+                        var endNormalized = NormalizeArrayIndex(endIdx, array.Count);
 
                         return array
                             .ToList()
@@ -109,7 +115,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
                     case MapExpr mapExpr:
                         var lhs = Eval(env, mapExpr.Lhs);
-                        return Eval(env.WithCurrent(lhs), new Selector(mapExpr.PropertyName));
+                        return Eval(env.WithCurrent(lhs), mapExpr.PropertySelector);
 
                     case FilterExpr filterExpr:
                         return Eval(env, filterExpr.Lhs)
@@ -176,6 +182,12 @@ namespace BuildXL.Execution.Analyzer.JPath
                 case JPathLexer.XOR: return ToBool(lhs) != ToBool(rhs);
                 case JPathLexer.IFF: return ToBool(lhs) == ToBool(rhs);
 
+                case JPathLexer.PLUS:  return ToInt(lhs) + ToInt(rhs);
+                case JPathLexer.MINUS: return ToInt(lhs) - ToInt(rhs);
+                case JPathLexer.TIMES: return ToInt(lhs) * ToInt(rhs);
+                case JPathLexer.DIV:   return ToInt(lhs) / ToInt(rhs);
+                case JPathLexer.MOD:   return ToInt(lhs) % ToInt(rhs);
+
                 case JPathLexer.MATCH:  return Matches();
                 case JPathLexer.NMATCH: return !Matches();
 
@@ -185,12 +197,16 @@ namespace BuildXL.Execution.Analyzer.JPath
 
             bool Matches()
             {
-                var lhsVal = ToScalar(lhs);
+                if (lhs.Count != 1)
+                {
+                    return false;
+                }
+                var lhsStr = TopEnv.GetObjectInfo(ToScalar(lhs)).Preview;
                 var rhsVal = ToScalar(rhs);
                 switch (rhsVal)
                 {
-                    case string str: return lhsVal.ToString().Contains(str);
-                    case Regex regex: return regex.Match(lhsVal.ToString()).Success;
+                    case string str: return lhsStr.Contains(str);
+                    case Regex regex: return regex.Match(lhsStr).Success;
                     default:
                         throw TypeError(rhsVal, "string | Regex");
                 }

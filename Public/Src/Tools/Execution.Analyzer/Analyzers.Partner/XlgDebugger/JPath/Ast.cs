@@ -64,10 +64,10 @@ namespace BuildXL.Execution.Analyzer.JPath
     public sealed class RangeExpr : Expr
     {
         public Expr Array { get; }
-        public int Begin { get; } // inclusive, can be negative
-        public int End { get; }   // inclusive, can be negative
+        public Expr Begin { get; } // inclusive, can be negative
+        public Expr End { get; }   // inclusive, can be negative
 
-        public RangeExpr(Expr array, int begin, int end)
+        public RangeExpr(Expr array, Expr begin, Expr end)
         {
             Array = array;
             Begin = begin;
@@ -82,15 +82,15 @@ namespace BuildXL.Execution.Analyzer.JPath
     public sealed class MapExpr : Expr
     {
         public Expr Lhs { get; }
-        public string PropertyName { get; }
+        public Selector PropertySelector { get; }
 
-        public MapExpr(Expr lhs, string propertyName)
+        public MapExpr(Expr lhs, Selector propertyName)
         {
             Lhs = lhs;
-            PropertyName = propertyName;
+            PropertySelector = propertyName;
         }
 
-        public override string Print() => $"{Lhs.Print()}.{PropertyName}";
+        public override string Print() => $"{Lhs.Print()}.{PropertySelector}";
     }
 
     public class FilterExpr : Expr
