@@ -94,7 +94,7 @@ expr
     | Value=StrLit                                    #StrLitExpr
     | Value=RegExLit                                  #RegExLitExpr
     | Value=IntLit                                    #IntLitExpr
-    | Lhs=expr '.' PropertyName=ID                    #MapExpr
+    | Lhs=expr '.' Selector=selectorExpr              #MapExpr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr

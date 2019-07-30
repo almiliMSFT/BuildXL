@@ -939,11 +939,13 @@ public partial class JPathParser : Parser {
 	}
 	public partial class MapExprContext : ExprContext {
 		public ExprContext Lhs;
-		public IToken PropertyName;
+		public SelectorExprContext Selector;
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
-		public ITerminalNode ID() { return GetToken(JPathParser.ID, 0); }
+		public SelectorExprContext selectorExpr() {
+			return GetRuleContext<SelectorExprContext>(0);
+		}
 		public MapExprContext(ExprContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
 			IJPathListener typedListener = listener as IJPathListener;
@@ -1241,7 +1243,7 @@ public partial class JPathParser : Parser {
 						State = 96;
 						if (!(Precpred(Context, 5))) throw new FailedPredicateException(this, "Precpred(Context, 5)");
 						State = 97; Match(T__3);
-						State = 98; ((MapExprContext)_localctx).PropertyName = Match(ID);
+						State = 98; ((MapExprContext)_localctx).Selector = selectorExpr();
 						}
 						break;
 					case 2:
@@ -1416,7 +1418,7 @@ public partial class JPathParser : Parser {
 		'\x2', '`', '[', '\x3', '\x2', '\x2', '\x2', '`', '\\', '\x3', '\x2', 
 		'\x2', '\x2', '\x61', 'x', '\x3', '\x2', '\x2', '\x2', '\x62', '\x63', 
 		'\f', '\a', '\x2', '\x2', '\x63', '\x64', '\a', '\x6', '\x2', '\x2', '\x64', 
-		'w', '\a', ' ', '\x2', '\x2', '\x65', '\x66', '\f', '\x6', '\x2', '\x2', 
+		'w', '\x5', '\x12', '\n', '\x2', '\x65', '\x66', '\f', '\x6', '\x2', '\x2', 
 		'\x66', 'g', '\a', '\a', '\x2', '\x2', 'g', 'h', '\x5', '\f', '\a', '\x2', 
 		'h', 'i', '\a', '\b', '\x2', '\x2', 'i', 'w', '\x3', '\x2', '\x2', '\x2', 
 		'j', 'k', '\f', '\x5', '\x2', '\x2', 'k', 'l', '\a', '\a', '\x2', '\x2', 
