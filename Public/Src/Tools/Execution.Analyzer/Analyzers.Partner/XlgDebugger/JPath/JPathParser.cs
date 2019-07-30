@@ -44,10 +44,10 @@ public partial class JPathParser : Parser {
 	public const int
 		RULE_intBinaryOp = 0, RULE_intUnaryOp = 1, RULE_boolBinaryOp = 2, RULE_logicBinaryOp = 3, 
 		RULE_logicUnaryOp = 4, RULE_intExpr = 5, RULE_boolExpr = 6, RULE_logicExpr = 7, 
-		RULE_selectorExpr = 8, RULE_expr = 9;
+		RULE_selector = 8, RULE_expr = 9;
 	public static readonly string[] ruleNames = {
 		"intBinaryOp", "intUnaryOp", "boolBinaryOp", "logicBinaryOp", "logicUnaryOp", 
-		"intExpr", "boolExpr", "logicExpr", "selectorExpr", "expr"
+		"intExpr", "boolExpr", "logicExpr", "selector", "expr"
 	};
 
 	private static readonly string[] _LiteralNames = {
@@ -839,75 +839,75 @@ public partial class JPathParser : Parser {
 		return _localctx;
 	}
 
-	public partial class SelectorExprContext : ParserRuleContext {
-		public SelectorExprContext(ParserRuleContext parent, int invokingState)
+	public partial class SelectorContext : ParserRuleContext {
+		public SelectorContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
-		public override int RuleIndex { get { return RULE_selectorExpr; } }
+		public override int RuleIndex { get { return RULE_selector; } }
 	 
-		public SelectorExprContext() { }
-		public virtual void CopyFrom(SelectorExprContext context) {
+		public SelectorContext() { }
+		public virtual void CopyFrom(SelectorContext context) {
 			base.CopyFrom(context);
 		}
 	}
-	public partial class EscIdSelectorExprContext : SelectorExprContext {
+	public partial class EscIdSelectorContext : SelectorContext {
 		public IToken PropertyName;
 		public ITerminalNode ESC_ID() { return GetToken(JPathParser.ESC_ID, 0); }
-		public EscIdSelectorExprContext(SelectorExprContext context) { CopyFrom(context); }
+		public EscIdSelectorContext(SelectorContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
 			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.EnterEscIdSelectorExpr(this);
+			if (typedListener != null) typedListener.EnterEscIdSelector(this);
 		}
 		public override void ExitRule(IParseTreeListener listener) {
 			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.ExitEscIdSelectorExpr(this);
+			if (typedListener != null) typedListener.ExitEscIdSelector(this);
 		}
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitEscIdSelectorExpr(this);
+			if (typedVisitor != null) return typedVisitor.VisitEscIdSelector(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
-	public partial class IdSelectorExprContext : SelectorExprContext {
+	public partial class IdSelectorContext : SelectorContext {
 		public IToken PropertyName;
 		public ITerminalNode ID() { return GetToken(JPathParser.ID, 0); }
-		public IdSelectorExprContext(SelectorExprContext context) { CopyFrom(context); }
+		public IdSelectorContext(SelectorContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
 			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.EnterIdSelectorExpr(this);
+			if (typedListener != null) typedListener.EnterIdSelector(this);
 		}
 		public override void ExitRule(IParseTreeListener listener) {
 			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.ExitIdSelectorExpr(this);
+			if (typedListener != null) typedListener.ExitIdSelector(this);
 		}
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitIdSelectorExpr(this);
+			if (typedVisitor != null) return typedVisitor.VisitIdSelector(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 
 	[RuleVersion(0)]
-	public SelectorExprContext selectorExpr() {
-		SelectorExprContext _localctx = new SelectorExprContext(Context, State);
-		EnterRule(_localctx, 16, RULE_selectorExpr);
+	public SelectorContext selector() {
+		SelectorContext _localctx = new SelectorContext(Context, State);
+		EnterRule(_localctx, 16, RULE_selector);
 		try {
 			State = 82;
 			ErrorHandler.Sync(this);
 			switch (TokenStream.LA(1)) {
 			case ID:
-				_localctx = new IdSelectorExprContext(_localctx);
+				_localctx = new IdSelectorContext(_localctx);
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 80; ((IdSelectorExprContext)_localctx).PropertyName = Match(ID);
+				State = 80; ((IdSelectorContext)_localctx).PropertyName = Match(ID);
 				}
 				break;
 			case ESC_ID:
-				_localctx = new EscIdSelectorExprContext(_localctx);
+				_localctx = new EscIdSelectorContext(_localctx);
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 81; ((EscIdSelectorExprContext)_localctx).PropertyName = Match(ESC_ID);
+				State = 81; ((EscIdSelectorContext)_localctx).PropertyName = Match(ESC_ID);
 				}
 				break;
 			default:
@@ -939,12 +939,12 @@ public partial class JPathParser : Parser {
 	}
 	public partial class MapExprContext : ExprContext {
 		public ExprContext Lhs;
-		public SelectorExprContext Selector;
+		public SelectorContext Selector;
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
-		public SelectorExprContext selectorExpr() {
-			return GetRuleContext<SelectorExprContext>(0);
+		public SelectorContext selector() {
+			return GetRuleContext<SelectorContext>(0);
 		}
 		public MapExprContext(ExprContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
@@ -976,6 +976,26 @@ public partial class JPathParser : Parser {
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitRegExLitExpr(this);
+			else return visitor.VisitChildren(this);
+		}
+	}
+	public partial class SelectorExprContext : ExprContext {
+		public SelectorContext Sub;
+		public SelectorContext selector() {
+			return GetRuleContext<SelectorContext>(0);
+		}
+		public SelectorExprContext(ExprContext context) { CopyFrom(context); }
+		public override void EnterRule(IParseTreeListener listener) {
+			IJPathListener typedListener = listener as IJPathListener;
+			if (typedListener != null) typedListener.EnterSelectorExpr(this);
+		}
+		public override void ExitRule(IParseTreeListener listener) {
+			IJPathListener typedListener = listener as IJPathListener;
+			if (typedListener != null) typedListener.ExitSelectorExpr(this);
+		}
+		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
+			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
+			if (typedVisitor != null) return typedVisitor.VisitSelectorExpr(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
@@ -1075,26 +1095,6 @@ public partial class JPathParser : Parser {
 			else return visitor.VisitChildren(this);
 		}
 	}
-	public partial class SelectorExpressionContext : ExprContext {
-		public SelectorExprContext Sub;
-		public SelectorExprContext selectorExpr() {
-			return GetRuleContext<SelectorExprContext>(0);
-		}
-		public SelectorExpressionContext(ExprContext context) { CopyFrom(context); }
-		public override void EnterRule(IParseTreeListener listener) {
-			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.EnterSelectorExpression(this);
-		}
-		public override void ExitRule(IParseTreeListener listener) {
-			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.ExitSelectorExpression(this);
-		}
-		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitSelectorExpression(this);
-			else return visitor.VisitChildren(this);
-		}
-	}
 	public partial class RangeExprContext : ExprContext {
 		public ExprContext Lhs;
 		public IntExprContext Begin;
@@ -1179,10 +1179,10 @@ public partial class JPathParser : Parser {
 			case ID:
 			case ESC_ID:
 				{
-				_localctx = new SelectorExpressionContext(_localctx);
+				_localctx = new SelectorExprContext(_localctx);
 				Context = _localctx;
 				_prevctx = _localctx;
-				State = 86; ((SelectorExpressionContext)_localctx).Sub = selectorExpr();
+				State = 86; ((SelectorExprContext)_localctx).Sub = selector();
 				}
 				break;
 			case StrLit:
@@ -1243,7 +1243,7 @@ public partial class JPathParser : Parser {
 						State = 96;
 						if (!(Precpred(Context, 5))) throw new FailedPredicateException(this, "Precpred(Context, 5)");
 						State = 97; Match(T__3);
-						State = 98; ((MapExprContext)_localctx).Selector = selectorExpr();
+						State = 98; ((MapExprContext)_localctx).Selector = selector();
 						}
 						break;
 					case 2:

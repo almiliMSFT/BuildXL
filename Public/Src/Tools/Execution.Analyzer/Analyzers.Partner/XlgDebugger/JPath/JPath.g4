@@ -83,18 +83,18 @@ logicExpr
     | '(' Sub=logicExpr ')'                           #SubLogicExpr
     ;
 
-selectorExpr
-    : PropertyName=ID                                 #IdSelectorExpr
-    | PropertyName=ESC_ID                             #EscIdSelectorExpr
+selector
+    : PropertyName=ID                                 #IdSelector
+    | PropertyName=ESC_ID                             #EscIdSelector
     ;
 
 expr
     : '$'                                             #RootExpr
-    | Sub=selectorExpr                                #SelectorExpression
+    | Sub=selector                                    #SelectorExpr
     | Value=StrLit                                    #StrLitExpr
     | Value=RegExLit                                  #RegExLitExpr
     | Value=IntLit                                    #IntLitExpr
-    | Lhs=expr '.' Selector=selectorExpr              #MapExpr
+    | Lhs=expr '.' Selector=selector                  #MapExpr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
