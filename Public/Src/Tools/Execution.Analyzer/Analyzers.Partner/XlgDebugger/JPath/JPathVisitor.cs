@@ -147,11 +147,12 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="JPathParser.func"/>.
+	/// Visit a parse tree produced by the <c>RootIdSelector</c>
+	/// labeled alternative in <see cref="JPathParser.selector"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitFunc([NotNull] JPathParser.FuncContext context);
+	Result VisitRootIdSelector([NotNull] JPathParser.RootIdSelectorContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>MapExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
@@ -195,6 +196,13 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitIntLitExpr([NotNull] JPathParser.IntLitExprContext context);
 	/// <summary>
+	/// Visit a parse tree produced by the <c>FuncAppExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFuncAppExpr([NotNull] JPathParser.FuncAppExprContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>SubExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
@@ -222,13 +230,6 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitRangeExpr([NotNull] JPathParser.RangeExprContext context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>FuncExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitFuncExpr([NotNull] JPathParser.FuncExprContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>IndexExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.

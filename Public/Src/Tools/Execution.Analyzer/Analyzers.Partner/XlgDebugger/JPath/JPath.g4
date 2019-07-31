@@ -93,10 +93,7 @@ logicExpr
 selector
     : PropertyName=VarID                              #IdSelector
     | PropertyName=ESC_ID                             #EscIdSelector
-    ;
-
-func
-    : Name=FuncID ('(' Args+=expr (',' Args+=expr)* ')')?
+    | RootPropertyName=FuncID                         #RootIdSelector
     ;
 
 expr
@@ -109,8 +106,8 @@ expr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
+    | Input=expr '|' Func=expr                        #PipeExpr
+    | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExpr
     | '(' Sub=expr ')'                                #SubExpr
-    | Input=expr '|' Func=func                        #PipeExpr
-    | Func=func                                       #FuncExpr
     ;
 
