@@ -9,12 +9,21 @@ using Antlr4.Runtime.Misc;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
+    /// <summary>
+    /// Used for errors created by the <see cref="AstConverter"/>.
+    /// </summary>
     public class AstException : Exception
     {
         public AstException(string message) : base(message) { }
     }
 
-    class AstConverter : JPathBaseVisitor<Expr>
+    /// <summary>
+    /// Converts from CST to AST (<see cref="Expr"/>).
+    /// 
+    /// Throws <see cref="AstException"/> in case of an error
+    /// (e.g., when a regular expression literal is an invalid regular expression)
+    /// </summary>
+    public class AstConverter : JPathBaseVisitor<Expr>
     {
         private AstException AstError(IToken token, string message)
         {
@@ -28,13 +37,8 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitIntLitExpr([NotNull] JPathParser.IntLitExprContext context)
         {
-            if (!int.TryParse(context.GetText(), out var value))
-            {
-                var token = context.Value;
-                throw AstError(context.Value, $"Value '{context.GetText()}' is not a valid integer literal");
-            }
-
-            return new IntLit(value);
+            // the grammar ensures that this is a valid integer literal so int.Parse won't fail
+            return new IntLit(int.Parse(context.Value.Text));
         }
 
         public override Expr VisitMapExpr([NotNull] JPathParser.MapExprContext context)

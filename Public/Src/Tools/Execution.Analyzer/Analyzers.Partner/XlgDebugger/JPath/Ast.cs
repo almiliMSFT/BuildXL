@@ -23,7 +23,8 @@ namespace BuildXL.Execution.Analyzer.JPath
     /// <summary>
     /// Contains a property name to be resolved against the current environment.
     /// 
-    /// Syntax example: Key
+    /// Syntax example 1: Key
+    /// Syntax example 2: `Key with spaces`
     /// </summary>
     public sealed class Selector : Expr
     {
