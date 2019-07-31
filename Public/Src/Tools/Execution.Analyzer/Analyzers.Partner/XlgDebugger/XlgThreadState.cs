@@ -16,6 +16,7 @@ using BuildXL.Execution.Analyzer.JPath;
 using static BuildXL.FrontEnd.Script.Debugger.Renderer;
 
 using ProcessMonitoringData = BuildXL.Scheduler.Tracing.ProcessExecutionMonitoringReportedEventData;
+using static BuildXL.Execution.Analyzer.JPath.Evaluator;
 
 namespace BuildXL.Execution.Analyzer
 {
@@ -42,6 +43,8 @@ namespace BuildXL.Execution.Analyzer
         private ObjectInfo PipsByStatus { get; }
 
         private ObjectInfo[] SupportedScopes { get; }
+
+        public Dictionary<string, LibraryFunc> LibraryFunctions { get; }
 
         /// <inheritdoc />
         public override IReadOnlyList<DisplayStackTraceEntry> StackTrace { get; }
@@ -87,6 +90,21 @@ namespace BuildXL.Execution.Analyzer
                     }))
                 })
             };
+
+            LibraryFunctions = new Dictionary<string, LibraryFunc>
+            {
+                ["$count"] = (args) => args[0].Count,
+                ["$sum"]   = (args) => args[0].Select(obj => args.Eval.ToInt(obj)).Sum(),
+                ["$uniq"]  = (args) => args[0].GroupBy(obj => args.Eval.PreviewObj(obj)).Select(grp => grp.First()).ToArray(),
+                ["$sort"]  = (args) => args[0].OrderBy(obj => args.Eval.PreviewObj(obj)).ToArray(),
+                ["$grep"]  = (args) => args[1].Select(obj => args.Eval.PreviewObj(obj)).Where(str => args.Eval.Matches(str, args[0])).ToArray(),
+                ["$join"]  = (args) =>
+                {
+                    var separator = args.Count > 1 ? args.Eval.ToString(args[0]) : Environment.NewLine;
+                    var arrayArgsIdx = args.Count > 1 ? 1 : 0;
+                    return string.Join(separator, args[arrayArgsIdx].Select(obj => args.Eval.PreviewObj(obj)));
+                },
+            };
         }
 
         private PipReference[] GetPipsForExecutionLevel(string level)
@@ -127,7 +145,8 @@ namespace BuildXL.Execution.Analyzer
                 .Concat(SupportedScopes.SelectMany(obj => obj.Properties));
             var root = new ObjectInfo(preview: "$", properties: rootVars);
             var env = new Evaluator.Env(
-                (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj), 
+                objectResolver: (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj),
+                funcResolver: (name) => LibraryFunctions.TryGetValue(name, out var func) ? func : null,
                 root);
             var maybeResult = JPath.JPath.TryEval(env, expr);
             if (maybeResult.Succeeded)
@@ -173,6 +192,7 @@ namespace BuildXL.Execution.Analyzer
                 case Pip pip:                      return GenericObjectInfo(pip, preview: PipPreview(pip));
                 case FileArtifactWithAttributes f: return GenericObjectInfo(f, preview: FileArtifactPreview(f.ToFileArtifact()));
                 case ProcessMonitoringData m:      return ProcessMonitoringInfo(m);
+                case string s:                     return new ObjectInfo(s);
                 default:
                     return null;
             }

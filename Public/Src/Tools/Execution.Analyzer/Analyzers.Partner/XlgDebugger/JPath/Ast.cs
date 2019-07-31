@@ -1,8 +1,12 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.RegularExpressions;
+using JetBrains.Annotations;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
@@ -106,6 +110,41 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override string Print() => $"{Lhs.Print()}[{Filter.Print()}]";
     }
+
+    public class FuncExpr : Expr
+    {
+        public string Name { get; }
+        public IReadOnlyList<Expr> Args { get; }
+
+        public FuncExpr(string name, IEnumerable<Expr> args)
+        {
+            Name = name;
+            Args = args.ToList();
+        }
+
+        public override string Print()
+        {
+            var args = string.Join(", ", Args.Select(a => a.Print()));
+            return $"{Name}({args})";
+        }
+    }
+
+    public class PipeExpr : Expr
+    {
+        public Expr Input { get; }
+        public FuncExpr Func { get; }
+
+        public PipeExpr(Expr input, FuncExpr func)
+        {
+            Input = input;
+            Func = func;
+        }
+
+        public override string Print() => $"{Input.Print()} | {Func.Print()}";
+
+        internal IEnumerable<Expr> ConcatArgs() => Func.Args.Concat(new[] { Input });
+    }
+
 
     public class UnaryExpr : Expr
     {

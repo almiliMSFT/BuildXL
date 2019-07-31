@@ -40,25 +40,66 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         }
 
+        public class Args
+        {
+            public Evaluator Eval { get; }
+            private readonly string m_funcName;
+            private readonly Result[] m_args;
+
+            public Args(Evaluator eval, string funcName, Result[] args)
+            {
+                Eval = eval;
+                m_funcName = funcName;
+                m_args = args;
+            }
+
+            public int Count => m_args.Length;
+
+            public Result this[int i]
+            {
+                get
+                {
+                    if (i < 0 || i >= m_args.Length)
+                    {
+                        throw Eval.Error($"Function '{m_funcName}' received {m_args.Length} arguments but needs at least {i+1}");
+                    }
+
+                    return m_args[i];
+                }
+            }
+
+        }
+
+        public delegate Result LibraryFunc(Args args);
+        public delegate ObjectInfo ObjectResolver(object obj);
+        public delegate LibraryFunc FuncResolver(string name);
+
         public class Env
         {
-            public Func<object, ObjectInfo> GetObjectInfo { get; }
+            public ObjectResolver ResolveObject { get; }
+            public FuncResolver ResolveFunc { get; }
+
             public object Root { get; }
             public Result Current { get; }
 
-            public Env(Func<object, ObjectInfo> getObjectInfo, object root, Result current)
+            public Env(
+                ObjectResolver resolveObject,
+                FuncResolver resolveFunc,
+                object root, 
+                Result current)
             {
-                GetObjectInfo = getObjectInfo;
+                ResolveObject = resolveObject;
+                ResolveFunc = resolveFunc;
                 Root = root;
                 Current = current;
             }
 
-            public Env(Func<object, ObjectInfo> getObjectInfo, object root)
-                : this(getObjectInfo, root, Result.Scalar(root)) { }
+            public Env(ObjectResolver objectResolver, FuncResolver funcResolver, object root)
+                : this(objectResolver, funcResolver, root, Result.Scalar(root)) { }
 
             internal Env WithCurrent(Result newCurrent)
             {
-                return new Env(GetObjectInfo, Root, newCurrent);
+                return new Env(ResolveObject, ResolveFunc, Root, newCurrent);
             }
         }
 
@@ -78,7 +119,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
                     case Selector selector:
                         return env.Current
-                            .Select(env.GetObjectInfo)
+                            .Select(obj => env.ResolveObject(obj))
                             .SelectMany(obj => obj.Properties.Where(p => p.Name == selector.PropertyName))
                             .SelectMany(prop =>
                             {
@@ -126,6 +167,12 @@ namespace BuildXL.Execution.Analyzer.JPath
                             })
                             .ToList();
 
+                    case FuncExpr funcExpr:
+                        return ResolveAndInvokeFunction(env, funcExpr.Name, funcExpr.Args);
+
+                    case PipeExpr pipeExpr:
+                        return ResolveAndInvokeFunction(env, pipeExpr.Func.Name, pipeExpr.ConcatArgs());
+
                     case IntLit intLit:
                         return intLit.Value;
 
@@ -152,6 +199,12 @@ namespace BuildXL.Execution.Analyzer.JPath
             {
                 m_evalStack.Pop();
             }
+        }
+
+        private Result ResolveAndInvokeFunction(Env env, string name, IEnumerable<Expr> args)
+        {
+            var func = env.ResolveFunc(name);
+            return func.Invoke(new Args(this, name, args.Select(a => Eval(env, a)).ToArray()));
         }
 
         private Result ApplyUnaryExpr(int op, Result value)
@@ -188,28 +241,33 @@ namespace BuildXL.Execution.Analyzer.JPath
                 case JPathLexer.DIV:   return ToInt(lhs) / ToInt(rhs);
                 case JPathLexer.MOD:   return ToInt(lhs) % ToInt(rhs);
 
-                case JPathLexer.MATCH:  return Matches();
-                case JPathLexer.NMATCH: return !Matches();
+                case JPathLexer.MATCH:  return Matches(lhs, rhs);
+                case JPathLexer.NMATCH: return !Matches(lhs, rhs);
 
                 default:
                     throw ApplyError(op, lhs, rhs);
             }
+        }
 
-            bool Matches()
+        public bool Matches(Result lhs, Result rhs)
+        {
+            if (lhs.Count != 1)
             {
-                if (lhs.Count != 1)
-                {
-                    return false;
-                }
-                var lhsStr = TopEnv.GetObjectInfo(ToScalar(lhs)).Preview;
-                var rhsVal = ToScalar(rhs);
-                switch (rhsVal)
-                {
-                    case string str: return lhsStr.Contains(str);
-                    case Regex regex: return regex.Match(lhsStr).Success;
-                    default:
-                        throw TypeError(rhsVal, "string | Regex");
-                }
+                return false;
+            }
+            var lhsStr = PreviewObj(ToScalar(lhs));
+            return Matches(lhsStr, rhs);
+        }
+
+        public bool Matches(string lhsStr, Result rhs)
+        {
+            var rhsVal = ToScalar(rhs);
+            switch (rhsVal)
+            {
+                case string str: return lhsStr.Contains(str);
+                case Regex regex: return regex.Match(lhsStr).Success;
+                default:
+                    throw TypeError(rhsVal, "string | Regex");
             }
         }
 
@@ -218,7 +276,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             return JPathLexer.DefaultVocabulary.GetSymbolicName(tokenType);
         }
 
-        private string PreviewObj(object obj)
+        public string PreviewObj(object obj)
         {
             var env = TopEnv;
             if (env == null)
@@ -226,7 +284,7 @@ namespace BuildXL.Execution.Analyzer.JPath
                 return obj?.ToString() ?? "<null>";
             }
 
-            var objInfo = env.GetObjectInfo(obj);
+            var objInfo = env.ResolveObject(obj);
             return objInfo.Preview;
         }
 
@@ -255,10 +313,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             return new Exception(message);
         }
 
-        private bool ToBool(Result value) => ToBool(ToScalar(value));
-        private int ToInt(Result value) => ToInt(ToScalar(value));
-
-        private object ToScalar(Result value)
+        public object ToScalar(Result value)
         {
             if (value.Count != 1)
             {
@@ -268,16 +323,28 @@ namespace BuildXL.Execution.Analyzer.JPath
             return value.Value.First();
         }
 
-        private int ToInt(object obj)
+        public int ToInt(object obj)
         {
             switch (obj)
             {
-                case int i: return i;
-                case long l: return (int)l;
-                case byte b: return (int)b;
-                case short s: return (int)s;
+                case Result r: return ToInt(ToScalar(r));
+                case int i:    return i;
+                case long l:   return (int)l;
+                case byte b:   return (int)b;
+                case short s:  return (int)s;
                 default:
                     throw TypeError(obj, "int");
+            }
+        }
+
+        public string ToString(object obj)
+        {
+            switch (obj)
+            {
+                case Result r: return ToString(ToScalar(r));
+                case string s: return s;
+                default:
+                    throw TypeError(obj, "string");
             }
         }
 
@@ -290,14 +357,11 @@ namespace BuildXL.Execution.Analyzer.JPath
 
             switch (obj)
             {
-                case IEnumerable<object> arr:
-                    return arr.Any();
-                case string str:
-                    return !string.IsNullOrEmpty(str);
-                case bool b:
-                    return b;
-                case int i:
-                    return i != 0;
+                case Result r:                 return ToBool(ToScalar(r));
+                case IEnumerable<object> arr:  return arr.Any();
+                case string str:               return !string.IsNullOrEmpty(str);
+                case bool b:                   return b;
+                case int i:                    return i != 0;
                 default:
                     throw TypeError(obj, "bool");
             }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
@@ -148,6 +149,21 @@ namespace BuildXL.Execution.Analyzer.JPath
         public override Expr VisitSubLogicExpr([NotNull] JPathParser.SubLogicExprContext context)
         {
             return context.Sub.Accept(this);
+        }
+
+        public override Expr VisitFuncExpr([NotNull] JPathParser.FuncExprContext context)
+        {
+            return context.Func.Accept(this);
+        }
+
+        public override Expr VisitPipeExpr([NotNull] JPathParser.PipeExprContext context)
+        {
+            return new PipeExpr(context.Input.Accept(this), (FuncExpr)context.Func.Accept(this));
+        }
+
+        public override Expr VisitFunc([NotNull] JPathParser.FuncContext context)
+        {
+            return new FuncExpr(context.Name.Text, context._Args.Select(arg => arg.Accept(this)));
         }
     }
 }
