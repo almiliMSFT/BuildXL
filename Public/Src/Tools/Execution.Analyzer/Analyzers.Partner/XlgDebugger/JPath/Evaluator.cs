@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics.ContractsLight;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Antlr4.Runtime;
 using BuildXL.FrontEnd.Script.Debugger;
 using BuildXL.Utilities.Collections;
 
@@ -26,6 +27,11 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// </summary>
         public sealed class Result : IEnumerable<object>
         {
+            /// <summary>
+            /// Empty result
+            /// </summary>
+            public static readonly Result Empty = new Result(new object[0]);
+
             private readonly Lazy<IReadOnlyList<object>> m_value;
 
             /// <summary>
@@ -239,7 +245,7 @@ namespace BuildXL.Execution.Analyzer.JPath
                     case Selector selector:
                         return env.Current
                             .Select(obj => env.ResolveObject(obj))
-                            .SelectMany(obj => obj.Properties.Where(p => p.Name == selector.PropertyName))
+                            .SelectMany(obj => obj.Properties.Where(p => selector.PropertyNames.Contains(p.Name)))
                             .SelectMany(prop =>
                             {
                                 // automatically flatten non-scalar results
@@ -261,17 +267,27 @@ namespace BuildXL.Execution.Analyzer.JPath
                             return array;
                         }
 
-                        var beginIdx = ToInt(Eval(env, rangeExpr.Begin));
-                        var endIdx = rangeExpr.End != null
-                            ? ToInt(Eval(env, rangeExpr.End))
-                            : beginIdx;
+                        var begin = IEval(env, rangeExpr.Begin);
+                        var end = rangeExpr.End != null
+                            ? IEval(env, rangeExpr.End)
+                            : begin;
 
-                        var beginNormalized = NormalizeArrayIndex(beginIdx, array.Count);
-                        var endNormalized = NormalizeArrayIndex(endIdx, array.Count);
+                        if (begin < 0)
+                        {
+                            begin += array.Count;
+                        }
 
-                        return array
-                            .ToList()
-                            .GetRange(index: beginNormalized, count: endNormalized - beginNormalized + 1);
+                        if (end < 0)
+                        {
+                            end += array.Count;
+                        }
+
+                        if (begin > end || begin < 0 || begin >= array.Count || end < 0 || end >= array.Count)
+                        {
+                            return Result.Empty;
+                        }
+
+                        return array.ToList().GetRange(index: begin, count: end - begin + 1);
 
                     case MapExpr mapExpr:
                         var lhs = Eval(env, mapExpr.Lhs);
@@ -304,13 +320,10 @@ namespace BuildXL.Execution.Analyzer.JPath
                         return regexLit.Value;
 
                     case UnaryExpr ue:
-                        var sub = Eval(env, ue.Sub);
-                        return ApplyUnaryExpr(ue.Op, sub);
+                        return EvalUnaryExpr(env, ue);
 
                     case BinaryExpr be:
-                        var lhsVal = Eval(env, be.Lhs);
-                        var rhsVal = Eval(env, be.Rhs);
-                        return ApplyBinaryExpr(be.Op, lhsVal, rhsVal);
+                        return EvalBinaryExpr(env, be);
 
                     default:
                         throw new Exception("Evaluation not implemented for type: " + expr?.GetType().FullName);
@@ -322,46 +335,56 @@ namespace BuildXL.Execution.Analyzer.JPath
             }
         }
 
-        private Result ApplyUnaryExpr(int op, Result value)
+        private int IEval(Env env, Expr expr) => ToInt(Eval(env, expr), source: expr);
+        private bool BEval(Env env, Expr expr) => ToBool(Eval(env, expr), source: expr);
+
+        private Result EvalUnaryExpr(Env env, UnaryExpr expr)
         {
-            switch (op)
+            var result = Eval(env, expr);
+            switch (expr.Op.Type)
             {
-                case JPathLexer.NOT:   return !ToBool(value);
-                case JPathLexer.MINUS: return -ToInt(value);
+                case JPathLexer.NOT:   return !ToBool(result, expr);
+                case JPathLexer.MINUS: return -ToInt(result, expr);
 
                 default:
-                    throw ApplyError(op, value);
+                    throw ApplyError(expr.Op);
             }
         }
 
-        private Result ApplyBinaryExpr(int op, Result lhs, Result rhs)
+        private Result EvalBinaryExpr(Env env, BinaryExpr expr)
         {
-            switch (op)
+            var lhs = expr.Lhs;
+            var rhs = expr.Rhs;
+            switch (expr.Op.Type)
             {
-                case JPathLexer.GTE: return ToInt(lhs) >= ToInt(rhs);
-                case JPathLexer.GT:  return ToInt(lhs) >  ToInt(rhs);
-                case JPathLexer.LTE: return ToInt(lhs) <= ToInt(rhs);
-                case JPathLexer.LT:  return ToInt(lhs) <  ToInt(rhs);
-                case JPathLexer.EQ:  return lhs.ToHashSet().SetEquals(rhs);
-                case JPathLexer.NEQ: return !lhs.ToHashSet().SetEquals(rhs);
+                case JPathLexer.GTE: return IEval(lhs) >= IEval(rhs);
+                case JPathLexer.GT:  return IEval(lhs) >  IEval(rhs);
+                case JPathLexer.LTE: return IEval(lhs) <= IEval(rhs);
+                case JPathLexer.LT:  return IEval(lhs) <  IEval(rhs);
+                case JPathLexer.EQ:  return Eval(lhs).Equals(Eval(rhs));
+                case JPathLexer.NEQ: return !Eval(lhs).Equals(Eval(rhs));
 
-                case JPathLexer.AND: return ToBool(lhs) && ToBool(rhs);
-                case JPathLexer.OR:  return ToBool(lhs) || ToBool(rhs);
-                case JPathLexer.XOR: return ToBool(lhs) != ToBool(rhs);
-                case JPathLexer.IFF: return ToBool(lhs) == ToBool(rhs);
+                case JPathLexer.AND: return BEval(lhs) && BEval(rhs);
+                case JPathLexer.OR:  return BEval(lhs) || BEval(rhs);
+                case JPathLexer.XOR: return BEval(lhs) != BEval(rhs);
+                case JPathLexer.IFF: return BEval(lhs) == BEval(rhs);
 
-                case JPathLexer.PLUS:  return ToInt(lhs) + ToInt(rhs);
-                case JPathLexer.MINUS: return ToInt(lhs) - ToInt(rhs);
-                case JPathLexer.TIMES: return ToInt(lhs) * ToInt(rhs);
-                case JPathLexer.DIV:   return ToInt(lhs) / ToInt(rhs);
-                case JPathLexer.MOD:   return ToInt(lhs) % ToInt(rhs);
+                case JPathLexer.PLUS:  return IEval(lhs) + IEval(rhs);
+                case JPathLexer.MINUS: return IEval(lhs) - IEval(rhs);
+                case JPathLexer.TIMES: return IEval(lhs) * IEval(rhs);
+                case JPathLexer.DIV:   return IEval(lhs) / IEval(rhs);
+                case JPathLexer.MOD:   return IEval(lhs) % IEval(rhs);
 
-                case JPathLexer.MATCH:  return Matches(lhs, rhs);
-                case JPathLexer.NMATCH: return !Matches(lhs, rhs);
+                case JPathLexer.MATCH:  return Matches(Eval(lhs), Eval(rhs));
+                case JPathLexer.NMATCH: return !Matches(Eval(lhs), Eval(rhs));
 
                 default:
-                    throw ApplyError(op, lhs, rhs);
+                    throw ApplyError(expr.Op);
             }
+
+            int IEval(Expr e) => this.IEval(env, e);
+            bool BEval(Expr e) => this.BEval(env, e);
+            Result Eval(Expr e) => this.Eval(env, e);
         }
 
         /// <summary>
@@ -491,7 +514,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         ///   - a non-empty collection
         ///   - the <code>true</code> boolean constant
         /// </summary>
-        public bool ToBool(object obj)
+        public bool ToBool(object obj, Expr source = null)
         {
             if (obj == null)
             {
@@ -500,13 +523,13 @@ namespace BuildXL.Execution.Analyzer.JPath
 
             switch (obj)
             {
-                case Result r: return ToBool(ToScalar(r));
-                case IEnumerable<object> arr: return arr.Any();
-                case string str: return !string.IsNullOrEmpty(str);
-                case bool b: return b;
-                case int i: return i != 0;
+                case Result r when r.IsScalar: return ToBool(ToScalar(r), source);
+                case IEnumerable<object> arr:  return arr.Any();
+                case string str:               return !string.IsNullOrEmpty(str);
+                case bool b:                   return b;
+                case int i:                    return i != 0;
                 default:
-                    throw TypeError(obj, "bool");
+                    throw TypeError(obj, "bool", source);
             }
         }
 
@@ -517,42 +540,26 @@ namespace BuildXL.Execution.Analyzer.JPath
                     Environment.NewLine + "]";
         }
 
-        private Exception ApplyError(int op, params Result[] values)
+        private Exception ApplyError(IToken op)
         {
-            var valuesStr = string.Join(string.Empty, values
-                .Select(PreviewArray)
-                .Select(str => Environment.NewLine + str));
-            return Error($"Cannot apply operation '{JPathLexer.DefaultVocabulary.GetSymbolicName(op)}', to values {valuesStr}");
+            return Error($"Cannot apply operator '{op.Text}' (token: {op})");
         }
 
         private Exception TypeError(object obj, string expectedType, Expr source = null)
         {
+            var objPreview = PreviewObj(obj);
+            var message = $"Cannot convert '{objPreview}' of type {obj?.GetType().Name} to {expectedType}.";
             if (source != null)
             {
-                return Error($"The result of expression '{source.Print()}' is of type {obj?.GetType().Name} and cannot be converted to '{expectedType}'");
+                message += $"  This value was obtained by evaluating expression: {source.Print()}";
             }
-            else
-            {
-                return Error($"Cannot convert an object of type {obj?.GetType().Name} to {expectedType}");
-            }
+
+            return Error(message);
         }
 
         private Exception Error(string message)
         {
             return new Exception(message);
-        }
-
-        private static int NormalizeArrayIndex(int idx, int arrayLength)
-        {
-            if (idx < 0)
-            {
-                idx = arrayLength + idx;
-            }
-
-            return
-                idx < 0            ? 0 :
-                idx >= arrayLength ? arrayLength - 1 :
-                idx;
         }
     }
 }

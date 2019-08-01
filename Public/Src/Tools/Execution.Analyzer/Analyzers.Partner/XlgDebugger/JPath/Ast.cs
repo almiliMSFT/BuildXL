@@ -3,8 +3,10 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.ContractsLight;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Antlr4.Runtime;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
@@ -29,17 +31,21 @@ namespace BuildXL.Execution.Analyzer.JPath
     public sealed class Selector : Expr
     {
         /// <nodoc />
-        public string PropertyName { get; }
+        public IReadOnlyCollection<string> PropertyNames { get; }
 
         /// <nodoc />
-        public Selector(string propertyName)
+        public Selector(params string[] propertyNames)
         {
-            PropertyName = propertyName;
+            Contract.Requires(propertyNames != null);
+            Contract.Requires(propertyNames.Length >= 1);
+
+            PropertyNames = propertyNames;
         }
 
         /// <inheritdoc />
-        public override string Print() => PropertyName;
-
+        public override string Print() => PropertyNames.Count == 1
+            ? PropertyNames.First()
+            : "(" + string.Join(" + ", PropertyNames) + ")";
     }
 
     /// <summary>
@@ -231,20 +237,20 @@ namespace BuildXL.Execution.Analyzer.JPath
     public class UnaryExpr : Expr
     {
         /// <summary>Unary operator.</summary>
-        public int Op { get; }
+        public IToken Op { get; }
 
         /// <summary>Operand</summary>
         public Expr Sub { get; }
 
         /// <nodoc />
-        public UnaryExpr(int op, Expr sub)
+        public UnaryExpr(IToken op, Expr sub)
         {
             Op = op;
             Sub = sub;
         }
 
         /// <inheritdoc />
-        public override string Print() => $"({Op} {Sub.Print()})";
+        public override string Print() => $"({Op.Text} {Sub.Print()})";
     }
 
     /// <summary>
@@ -256,7 +262,7 @@ namespace BuildXL.Execution.Analyzer.JPath
     public class BinaryExpr : Expr
     {
         /// <summary>Operator</summary>
-        public int Op { get; }
+        public IToken Op { get; }
 
         /// <summary>Left-hand side operand</summary>
         public Expr Lhs { get; }
@@ -265,7 +271,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         public Expr Rhs { get; }
 
         /// <nodoc />
-        public BinaryExpr(int op, Expr lhs, Expr rhs)
+        public BinaryExpr(IToken op, Expr lhs, Expr rhs)
         {
             Op = op;
             Lhs = lhs;
@@ -273,7 +279,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         /// <inheritdoc />
-        public override string Print() => $"({Lhs.Print()} {Op} {Rhs.Print()})";
+        public override string Print() => $"({Lhs.Print()} {Op.Text} {Rhs.Print()})";
     }
 
     /// <summary>

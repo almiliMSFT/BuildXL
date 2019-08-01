@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
+using Antlr4.Runtime.Tree;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
@@ -95,9 +96,21 @@ namespace BuildXL.Execution.Analyzer.JPath
             return new Selector(context.PropertyName.Text.Trim('`'));
         }
 
+        public override Expr VisitNameSelector([NotNull] JPathParser.NameSelectorContext context)
+        {
+            return context.Name.Accept(this);
+        }
+
         public override Expr VisitRootIdSelector([NotNull] JPathParser.RootIdSelectorContext context)
         {
             return new MapExpr(RootExpr.Instance, new Selector(context.RootPropertyName.Text.TrimStart('$')));
+        }
+
+        public override Expr VisitUnionSelector([NotNull] JPathParser.UnionSelectorContext context)
+        {
+            return new Selector(context._Names
+                .Select(n => (n.Accept(this) as Selector).PropertyNames.First())
+                .ToArray());
         }
 
         public override Expr VisitStrLitExpr([NotNull] JPathParser.StrLitExprContext context)
@@ -117,12 +130,12 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitUnaryIntExpr([NotNull] JPathParser.UnaryIntExprContext context)
         {
-            return new UnaryExpr(context.Op.Token.Type, context.Sub.Accept(this));
+            return new UnaryExpr(context.Op.Token, context.Sub.Accept(this));
         }
 
         public override Expr VisitBinaryIntExpr([NotNull] JPathParser.BinaryIntExprContext context)
         {
-            return new BinaryExpr(context.Op.Token.Type, context.Lhs.Accept(this), context.Rhs.Accept(this));
+            return new BinaryExpr(context.Op.Token, context.Lhs.Accept(this), context.Rhs.Accept(this));
         }
 
         public override Expr VisitSubIntExpr([NotNull] JPathParser.SubIntExprContext context)
@@ -132,7 +145,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitBinaryBoolExpr([NotNull] JPathParser.BinaryBoolExprContext context)
         {
-            return new BinaryExpr(context.Op.Token.Type, context.Lhs.Accept(this), context.Rhs.Accept(this));
+            return new BinaryExpr(context.Op.Token, context.Lhs.Accept(this), context.Rhs.Accept(this));
         }
 
         public override Expr VisitSubBoolExpr([NotNull] JPathParser.SubBoolExprContext context)
@@ -147,12 +160,12 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitBinaryLogicExpr([NotNull] JPathParser.BinaryLogicExprContext context)
         {
-            return new BinaryExpr(context.Op.Token.Type, context.Lhs.Accept(this), context.Rhs.Accept(this));
+            return new BinaryExpr(context.Op.Token, context.Lhs.Accept(this), context.Rhs.Accept(this));
         }
 
         public override Expr VisitUnaryLogicExpr([NotNull] JPathParser.UnaryLogicExprContext context)
         {
-            return new UnaryExpr(context.Op.Token.Type, context.Sub.Accept(this));
+            return new UnaryExpr(context.Op.Token, context.Sub.Accept(this));
         }
 
         public override Expr VisitSubLogicExpr([NotNull] JPathParser.SubLogicExprContext context)
@@ -172,6 +185,14 @@ namespace BuildXL.Execution.Analyzer.JPath
             return new FuncAppExpr(
                 func: context.Func.Accept(this),
                 args: new[] { context.Input.Accept(this) });
+        }
+
+        public override Expr VisitBinExpr([NotNull] JPathParser.BinExprContext context)
+        {
+            return new BinaryExpr(
+                op: (context.Op.GetChild(0).GetChild(0) as ITerminalNode).Symbol,
+                lhs: context.Lhs.Accept(this),
+                rhs: context.Rhs.Accept(this));
         }
     }
 }
