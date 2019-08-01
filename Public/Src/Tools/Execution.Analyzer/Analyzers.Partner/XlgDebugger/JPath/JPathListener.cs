@@ -203,28 +203,40 @@ public interface IJPathListener : IParseTreeListener {
 	void ExitBinaryLogicExpr([NotNull] JPathParser.BinaryLogicExprContext context);
 	/// <summary>
 	/// Enter a parse tree produced by the <c>IdSelector</c>
-	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// labeled alternative in <see cref="JPathParser.id"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void EnterIdSelector([NotNull] JPathParser.IdSelectorContext context);
 	/// <summary>
 	/// Exit a parse tree produced by the <c>IdSelector</c>
-	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// labeled alternative in <see cref="JPathParser.id"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void ExitIdSelector([NotNull] JPathParser.IdSelectorContext context);
 	/// <summary>
 	/// Enter a parse tree produced by the <c>EscIdSelector</c>
-	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// labeled alternative in <see cref="JPathParser.id"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void EnterEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context);
 	/// <summary>
 	/// Exit a parse tree produced by the <c>EscIdSelector</c>
-	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// labeled alternative in <see cref="JPathParser.id"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void ExitEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>NameSelector</c>
+	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterNameSelector([NotNull] JPathParser.NameSelectorContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>NameSelector</c>
+	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitNameSelector([NotNull] JPathParser.NameSelectorContext context);
 	/// <summary>
 	/// Enter a parse tree produced by the <c>RootIdSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.
@@ -237,6 +249,18 @@ public interface IJPathListener : IParseTreeListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void ExitRootIdSelector([NotNull] JPathParser.RootIdSelectorContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>UnionSelector</c>
+	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterUnionSelector([NotNull] JPathParser.UnionSelectorContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>UnionSelector</c>
+	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitUnionSelector([NotNull] JPathParser.UnionSelectorContext context);
 	/// <summary>
 	/// Enter a parse tree produced by the <c>MapExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.

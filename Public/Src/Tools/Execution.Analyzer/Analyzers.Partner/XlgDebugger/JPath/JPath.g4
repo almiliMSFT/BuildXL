@@ -50,7 +50,7 @@ fragment IdFragment
 VarID
     : IdFragment ;
 
-FuncID
+RootID
     : '$' IdFragment ;
 
 ESC_ID
@@ -90,10 +90,14 @@ logicExpr
     | '(' Sub=logicExpr ')'                           #SubLogicExpr
     ;
 
-selector
-    : PropertyName=VarID                              #IdSelector
+id  : PropertyName=VarID                              #IdSelector
     | PropertyName=ESC_ID                             #EscIdSelector
-    | RootPropertyName=FuncID                         #RootIdSelector
+    ;
+
+selector
+    : id                                              #NameSelector
+    | RootPropertyName=RootID                         #RootIdSelector
+    | '(' Names+=id ('+' Names+=id)+ ')'              #UnionSelector
     ;
 
 expr

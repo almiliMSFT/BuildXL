@@ -134,18 +134,25 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	Result VisitBinaryLogicExpr([NotNull] JPathParser.BinaryLogicExprContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>IdSelector</c>
-	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// labeled alternative in <see cref="JPathParser.id"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitIdSelector([NotNull] JPathParser.IdSelectorContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>EscIdSelector</c>
-	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// labeled alternative in <see cref="JPathParser.id"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>NameSelector</c>
+	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitNameSelector([NotNull] JPathParser.NameSelectorContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>RootIdSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.
@@ -153,6 +160,13 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitRootIdSelector([NotNull] JPathParser.RootIdSelectorContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>UnionSelector</c>
+	/// labeled alternative in <see cref="JPathParser.selector"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitUnionSelector([NotNull] JPathParser.UnionSelectorContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>MapExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
