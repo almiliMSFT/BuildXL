@@ -33,36 +33,6 @@ using IToken = Antlr4.Runtime.IToken;
 [System.CLSCompliant(false)]
 public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="JPathParser.intBinaryOp"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitIntBinaryOp([NotNull] JPathParser.IntBinaryOpContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="JPathParser.intUnaryOp"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitIntUnaryOp([NotNull] JPathParser.IntUnaryOpContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="JPathParser.boolBinaryOp"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitBoolBinaryOp([NotNull] JPathParser.BoolBinaryOpContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="JPathParser.logicBinaryOp"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitLogicBinaryOp([NotNull] JPathParser.LogicBinaryOpContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="JPathParser.logicUnaryOp"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitLogicUnaryOp([NotNull] JPathParser.LogicUnaryOpContext context);
-	/// <summary>
 	/// Visit a parse tree produced by the <c>BinaryIntExpr</c>
 	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
 	/// </summary>
@@ -175,6 +145,41 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitMapExpr([NotNull] JPathParser.MapExprContext context);
 	/// <summary>
+	/// Visit a parse tree produced by the <c>FuncAppExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFuncAppExpr([NotNull] JPathParser.FuncAppExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>SubExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitSubExpr([NotNull] JPathParser.SubExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>BinExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitBinExpr([NotNull] JPathParser.BinExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>RangeExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitRangeExpr([NotNull] JPathParser.RangeExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>IndexExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitIndexExpr([NotNull] JPathParser.IndexExprContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>RegExLitExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
@@ -210,20 +215,6 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitIntLitExpr([NotNull] JPathParser.IntLitExprContext context);
 	/// <summary>
-	/// Visit a parse tree produced by the <c>FuncAppExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitFuncAppExpr([NotNull] JPathParser.FuncAppExprContext context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>SubExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitSubExpr([NotNull] JPathParser.SubExprContext context);
-	/// <summary>
 	/// Visit a parse tree produced by the <c>PipeExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
@@ -237,19 +228,5 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitStrLitExpr([NotNull] JPathParser.StrLitExprContext context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>RangeExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitRangeExpr([NotNull] JPathParser.RangeExprContext context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>IndexExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitIndexExpr([NotNull] JPathParser.IndexExprContext context);
 }
 } // namespace BuildXL.Execution.Analyzer.JPath

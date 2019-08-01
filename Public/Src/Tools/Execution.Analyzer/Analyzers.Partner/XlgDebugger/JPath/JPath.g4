@@ -11,12 +11,14 @@ grammar JPath;
 
 WS      : [ \t\r\n]+ -> skip    ; // skip spaces, tabs, newlines
 
+// logic operators
 NOT     : 'not';
 AND     : 'and';
 OR      : 'or' ;
 XOR     : 'xor';
 IFF     : 'iff';
 
+// bool operators
 GTE     : '>=' ;
 LTE     : '<=' ;
 GT      : '>'  ;
@@ -25,11 +27,17 @@ EQ      : '='  ;
 NEQ     : '!=' ;
 MATCH   : '~'  ;
 NMATCH  : '!~' ;
+
+// arithmetic operators
 MINUS   : '-'  ;
 PLUS    : '+'  ;
 TIMES   : '*'  ;
 DIV     : '/'  ;
 MOD     : '%'  ;
+
+// array operators
+CONCAT    : '++' ;
+INTERSECT : '&'  ;
 
 IntLit
     : [0-9]+ ;
@@ -56,37 +64,43 @@ RootID
 ESC_ID
     : '`' ~[`]+ '`' ;
 
-intBinaryOp
-    : Token=(PLUS | MINUS | TIMES | DIV | MOD) ;
+IntBinaryOp
+    : PLUS | MINUS | TIMES | DIV | MOD ;
 
-intUnaryOp
-    : Token=MINUS ;
+IntUnaryOp
+    : MINUS ;
 
-boolBinaryOp
-    : Token=(GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH) ;
+BoolBinaryOp
+    : GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH ;
     
-logicBinaryOp
-    : Token=(AND | OR | XOR | IFF) ; 
+LogicBinaryOp
+    : AND | OR | XOR | IFF ; 
 
-logicUnaryOp
-    : Token=NOT ;
+LogicUnaryOp
+    : NOT ;
 
+ArrayBinaryOp
+    : CONCAT | INTERSECT ;
+
+AnyBinaryOp
+    : IntBinaryOp | BoolBinaryOp | LogicBinaryOp | ArrayBinaryOp ;
+    
 intExpr
     : Expr=expr                                       #ExprIntExpr
-    | Op=intUnaryOp Sub=intExpr                       #UnaryIntExpr
-    | Lhs=intExpr Op=intBinaryOp Rhs=intExpr          #BinaryIntExpr
+    | Op=IntUnaryOp Sub=intExpr                       #UnaryIntExpr
+    | Lhs=intExpr Op=IntBinaryOp Rhs=intExpr          #BinaryIntExpr
     | '(' Sub=intExpr ')'                             #SubIntExpr
     ;
 
 boolExpr
-    : Lhs=intExpr Op=boolBinaryOp Rhs=intExpr         #BinaryBoolExpr
+    : Lhs=intExpr Op=BoolBinaryOp Rhs=intExpr         #BinaryBoolExpr
     | '(' Sub=boolExpr ')'                            #SubBoolExpr
     ;
 
 logicExpr
     : Expr=boolExpr                                   #BoolLogicExpr
-    | Lhs=logicExpr Op=logicBinaryOp Rhs=logicExpr    #BinaryLogicExpr
-    | Op=logicUnaryOp Sub=logicExpr                   #UnaryLogicExpr
+    | Lhs=logicExpr Op=LogicBinaryOp Rhs=logicExpr    #BinaryLogicExpr
+    | Op=LogicUnaryOp Sub=logicExpr                   #UnaryLogicExpr
     | '(' Sub=logicExpr ')'                           #SubLogicExpr
     ;
 
@@ -106,6 +120,7 @@ expr
     | Value=StrLit                                    #StrLitExpr
     | Value=RegExLit                                  #RegExLitExpr
     | Value=IntLit                                    #IntLitExpr
+    | Lhs=expr Op=AnyBinaryOp Rhs=expr                #BinExpr
     | Lhs=expr '.' Selector=selector                  #MapExpr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
