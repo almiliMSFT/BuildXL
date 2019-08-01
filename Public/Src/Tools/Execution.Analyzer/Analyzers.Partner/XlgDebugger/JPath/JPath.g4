@@ -95,7 +95,7 @@ id  : PropertyName=VarID                              #IdSelector
     ;
 
 selector
-    : id                                              #NameSelector
+    : Name=id                                         #NameSelector
     | RootPropertyName=RootID                         #RootIdSelector
     | '(' Names+=id ('+' Names+=id)+ ')'              #UnionSelector
     ;

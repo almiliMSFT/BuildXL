@@ -956,6 +956,7 @@ public partial class JPathParser : Parser {
 		}
 	}
 	public partial class NameSelectorContext : SelectorContext {
+		public IdContext Name;
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
 		}
@@ -1017,7 +1018,7 @@ public partial class JPathParser : Parser {
 				_localctx = new NameSelectorContext(_localctx);
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 86; id();
+				State = 86; ((NameSelectorContext)_localctx).Name = id();
 				}
 				break;
 			case RootID:
