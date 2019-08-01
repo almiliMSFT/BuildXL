@@ -125,9 +125,9 @@ expr
     | Value=RegExLit                                  #RegExLitExpr
     | Value=IntLit                                    #IntLitExpr
     | Lhs=expr '.' Selector=selector                  #MapExpr
+    | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
-    | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
     | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExpr
     | Input=expr '|' Func=expr                        #PipeExpr
     | Lhs=expr Op=anyBinaryOp Rhs=expr                #BinExpr
