@@ -44,7 +44,7 @@ namespace BuildXL.Execution.Analyzer
 
         private ObjectInfo[] SupportedScopes { get; }
 
-        public Dictionary<string, LibraryFunc> LibraryFunctions { get; }
+        private Function[] LibraryFunctions { get; }
 
         /// <inheritdoc />
         public override IReadOnlyList<DisplayStackTraceEntry> StackTrace { get; }
@@ -74,6 +74,23 @@ namespace BuildXL.Execution.Analyzer
                 .Concat(new[] { ExeLevelNotCompleted })
                 .Select(levelStr => new Property(levelStr, () => GetPipsForExecutionLevel(levelStr))));
 
+            LibraryFunctions = new[]
+            {
+                new Function(name: "sum",   minArity: 1, maxArity: 1, func: (args) => args[0].Select(obj => args.Eval.ToInt(obj)).Sum()),
+                new Function(name: "count", minArity: 1, maxArity: 1, func: (args) => args[0].Count),
+                //new Function(name: "uniq",  minArity: 1, maxArity: 1, func: (args) => args[0].Count),
+                //["count"] = (args) => args[0].Count,
+                //["uniq"] = (args) => args[0].GroupBy(obj => args.Eval.PreviewObj(obj)).Select(grp => grp.First()).ToArray(),
+                //["sort"] = (args) => args[0].OrderBy(obj => args.Eval.PreviewObj(obj)).ToArray(),
+                //["grep"] = (args) => args[1].Select(obj => args.Eval.PreviewObj(obj)).Where(str => args.Eval.Matches(str, args[0])).ToArray(),
+                //["join"] = (args) =>
+                //{
+                //    var separator = args.Count > 1 ? args.Eval.ToString(args[0]) : Environment.NewLine;
+                //    var arrayArgsIdx = args.Count > 1 ? 1 : 0;
+                //    return string.Join(separator, args[arrayArgsIdx].Select(obj => args.Eval.PreviewObj(obj)));
+                //},
+            };
+
             SupportedScopes = new[]
             {
                 new ObjectInfo(preview: "Global", properties: new[]
@@ -89,21 +106,6 @@ namespace BuildXL.Execution.Analyzer
                         new Property("Directories",   () => GroupDirs(PipGraph.AllSealDirectories))
                     }))
                 })
-            };
-
-            LibraryFunctions = new Dictionary<string, LibraryFunc>
-            {
-                ["$count"] = (args) => args[0].Count,
-                ["$sum"]   = (args) => args[0].Select(obj => args.Eval.ToInt(obj)).Sum(),
-                ["$uniq"]  = (args) => args[0].GroupBy(obj => args.Eval.PreviewObj(obj)).Select(grp => grp.First()).ToArray(),
-                ["$sort"]  = (args) => args[0].OrderBy(obj => args.Eval.PreviewObj(obj)).ToArray(),
-                ["$grep"]  = (args) => args[1].Select(obj => args.Eval.PreviewObj(obj)).Where(str => args.Eval.Matches(str, args[0])).ToArray(),
-                ["$join"]  = (args) =>
-                {
-                    var separator = args.Count > 1 ? args.Eval.ToString(args[0]) : Environment.NewLine;
-                    var arrayArgsIdx = args.Count > 1 ? 1 : 0;
-                    return string.Join(separator, args[arrayArgsIdx].Select(obj => args.Eval.PreviewObj(obj)));
-                },
             };
         }
 
@@ -144,7 +146,7 @@ namespace BuildXL.Execution.Analyzer
                 SupportedScopes.Select(obj => new Property(obj.Preview, obj))
                 .Concat(SupportedScopes.SelectMany(obj => obj.Properties));
             var root = new ObjectInfo(preview: "$", properties: rootVars);
-            var env = new Evaluator.Env(
+            var env = new Env(
                 objectResolver: (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj),
                 funcResolver: (name) => LibraryFunctions.TryGetValue(name, out var func) ? func : null,
                 root);

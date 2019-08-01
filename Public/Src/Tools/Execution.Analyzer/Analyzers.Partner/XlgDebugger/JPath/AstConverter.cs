@@ -77,7 +77,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitRootExpr([NotNull] JPathParser.RootExprContext context)
         {
-            return new RootExpr();
+            return RootExpr.Instance;
         }
 
         public override Expr VisitSelectorExpr([NotNull] JPathParser.SelectorExprContext context)
@@ -93,6 +93,11 @@ namespace BuildXL.Execution.Analyzer.JPath
         public override Expr VisitEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context)
         {
             return new Selector(context.PropertyName.Text.Trim('`'));
+        }
+
+        public override Expr VisitRootIdSelector([NotNull] JPathParser.RootIdSelectorContext context)
+        {
+            return new MapExpr(RootExpr.Instance, new Selector(context.RootPropertyName.Text.TrimStart('$')));
         }
 
         public override Expr VisitStrLitExpr([NotNull] JPathParser.StrLitExprContext context)
@@ -155,19 +160,18 @@ namespace BuildXL.Execution.Analyzer.JPath
             return context.Sub.Accept(this);
         }
 
-        public override Expr VisitFuncExpr([NotNull] JPathParser.FuncExprContext context)
+        public override Expr VisitFuncAppExpr([NotNull] JPathParser.FuncAppExprContext context)
         {
-            return context.Func.Accept(this);
+            return new FuncAppExpr(
+                func: context.Func.Accept(this), 
+                args: context._Args.Select(arg => arg.Accept(this)));
         }
 
         public override Expr VisitPipeExpr([NotNull] JPathParser.PipeExprContext context)
         {
-            return new PipeExpr(context.Input.Accept(this), (FuncExpr)context.Func.Accept(this));
-        }
-
-        public override Expr VisitFunc([NotNull] JPathParser.FuncContext context)
-        {
-            return new FuncExpr(context.Name.Text, context._Args.Select(arg => arg.Accept(this)));
+            return new FuncAppExpr(
+                func: context.Func.Accept(this),
+                args: new[] { context.Input.Accept(this) });
         }
     }
 }

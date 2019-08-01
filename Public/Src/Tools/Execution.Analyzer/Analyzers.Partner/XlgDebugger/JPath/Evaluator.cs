@@ -4,9 +4,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.ContractsLight;
 using System.Linq;
 using System.Text.RegularExpressions;
 using BuildXL.FrontEnd.Script.Debugger;
+using BuildXL.Utilities.Collections;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
@@ -20,22 +22,30 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// <summary>
         /// The result of an evaluation.
         /// 
-        /// Every expression evaluates to a list of values, which is accessibly via the <see cref="Value"/> property.
+        /// Every expression evaluates to a vector, which is accessible via the <see cref="Value"/> property.
         /// </summary>
         public sealed class Result : IEnumerable<object>
         {
             private readonly Lazy<IReadOnlyList<object>> m_value;
 
-            /// <summary>The result of evaluation.</summary>
+            /// <summary>
+            /// The result of evaluation.  Every expression evaluates to a vector, hence the type.
+            /// </summary>
             public IReadOnlyList<object> Value => m_value.Value;
 
-            /// <summary>Number of values in this result (<see cref="Value"/>)</summary>
+            /// <summary>
+            /// Number of values in this vector (<see cref="Value"/>)
+            /// </summary>
             public int Count => Value.Count;
 
-            /// <summary>Whether this is a scalar result (the value contains exactly one element)</summary>
+            /// <summary>
+            /// Whether this is a scalar result (the vector contains exactly one element)
+            /// </summary>
             public bool IsScalar => Count == 1;
 
-            /// <summary>Whether this value is empty.</summary>
+            /// <summary>
+            /// Whether this vector is empty.
+            /// </summary>
             public bool IsEmpty => Count == 0;
 
             private Result(IEnumerable<object> arr)
@@ -56,11 +66,12 @@ namespace BuildXL.Execution.Analyzer.JPath
 
             // implicit conversions
 
-            public static implicit operator Result(int scalar) => Scalar(scalar);
-            public static implicit operator Result(bool scalar) => Scalar(scalar);
-            public static implicit operator Result(string scalar) => Scalar(scalar);
-            public static implicit operator Result(Regex scalar) => Scalar(scalar);
-            public static implicit operator Result(object[] arr) => Array(arr);
+            public static implicit operator Result(int scalar)       => Scalar(scalar);
+            public static implicit operator Result(bool scalar)      => Scalar(scalar);
+            public static implicit operator Result(string scalar)    => Scalar(scalar);
+            public static implicit operator Result(Regex scalar)     => Scalar(scalar);
+            public static implicit operator Result(Function scalar)  => Scalar(scalar);
+            public static implicit operator Result(object[] arr)     => Array(arr);
             public static implicit operator Result(List<object> arr) => Array(arr);
         }
 
@@ -78,13 +89,6 @@ namespace BuildXL.Execution.Analyzer.JPath
             public ObjectResolver ResolveObject { get; }
 
             /// <summary>
-            /// A callerprovided function resolver.
-            /// 
-            /// Takes a function name and returns a library-defined function.
-            /// </summary>
-            public FuncResolver ResolveFunc { get; }
-
-            /// <summary>
             /// The root object (<see cref="RootExpr"/>).
             /// </summary>
             public object Root { get; }
@@ -95,24 +99,23 @@ namespace BuildXL.Execution.Analyzer.JPath
             public Result Current { get; }
 
             /// <nodoc />
-            public Env(ObjectResolver resolveObject, FuncResolver resolveFunc, object root, Result current)
+            public Env(ObjectResolver resolveObject, object root, Result current)
             {
                 ResolveObject = resolveObject;
-                ResolveFunc = resolveFunc;
                 Root = root;
                 Current = current;
             }
 
             /// <nodoc />
-            public Env(ObjectResolver objectResolver, FuncResolver funcResolver, object root)
-                : this(objectResolver, funcResolver, root, Result.Scalar(root)) { }
+            public Env(ObjectResolver objectResolver, object root)
+                : this(objectResolver, root, Result.Scalar(root)) { }
 
             /// <summary>
             /// Returns a new environment in which only the <see cref="Current"/> property is updated to <paramref name="newCurrent"/>.
             /// </summary>
             internal Env WithCurrent(Result newCurrent)
             {
-                return new Env(ResolveObject, ResolveFunc, Root, newCurrent);
+                return new Env(ResolveObject, Root, newCurrent);
             }
         }
 
@@ -167,14 +170,59 @@ namespace BuildXL.Execution.Analyzer.JPath
         public delegate Result LibraryFunc(Args args);
 
         /// <summary>
+        /// A function value.
+        /// </summary>
+        public sealed class Function
+        {
+            private readonly LibraryFunc m_func;
+            private readonly Result[] m_curriedArgs;
+
+            /// <nodoc />
+            public string Name { get; }
+
+            /// <nodoc />
+            public int MinArity { get; }
+
+            /// <nodoc />
+            public int? MaxArity { get; }
+
+            /// <nodoc />
+            public Function(LibraryFunc func, string name = "<lambda>", int minArity = 0, int? maxArity = null, IEnumerable<Result> curriedArgs = null)
+            {
+                Contract.Requires(func != null);
+
+                m_func = func;
+                Name = name;
+                MinArity = minArity;
+                MaxArity = maxArity;
+                m_curriedArgs = (curriedArgs ?? CollectionUtilities.EmptyArray<Result>()).ToArray();
+            }
+
+            /// <nodoc />
+            public Result Apply(Evaluator eval, IEnumerable<Result> args) => Apply(eval, args.ToArray());
+
+            /// <nodoc />
+            public Result Apply(Evaluator eval, Result[] args)
+            {
+                var argCount = args.Length;
+                if (argCount < MinArity)
+                {
+                    return new Function(
+                        m_func, 
+                        Name,
+                        minArity: MinArity - argCount,
+                        maxArity: MaxArity != null ? MaxArity.Value - argCount : MaxArity,
+                        curriedArgs: m_curriedArgs.Concat(args));
+                }
+
+                return m_func(new Args(eval, Name, m_curriedArgs.Concat(args).ToArray()));
+            }
+        }
+
+        /// <summary>
         /// Object resolver delegate type.
         /// </summary>
         public delegate ObjectInfo ObjectResolver(object obj);
-
-        /// <summary>
-        /// Function resolver delegate type.
-        /// </summary>
-        public delegate LibraryFunc FuncResolver(string functionName);
 
         private readonly Stack<(Env, Expr)> m_evalStack = new Stack<(Env, Expr)>();
 
@@ -238,11 +286,10 @@ namespace BuildXL.Execution.Analyzer.JPath
                             })
                             .ToList();
 
-                    case FuncExpr funcExpr:
-                        return ResolveAndInvokeFunction(env, funcExpr.Name, funcExpr.Args);
-
-                    case PipeExpr pipeExpr:
-                        return ResolveAndInvokeFunction(env, pipeExpr.Func.Name, pipeExpr.ConcatArgs());
+                    case FuncAppExpr funcExpr:
+                        var funcResult = Eval(env, funcExpr.Func);
+                        var function = ToFunc(funcResult);
+                        return function.Apply(this, funcExpr.Args.Select(arg => Eval(env, arg)));
 
                     case RootExpr rootExpr:
                         return Result.Scalar(env.Root);
@@ -273,12 +320,6 @@ namespace BuildXL.Execution.Analyzer.JPath
             {
                 m_evalStack.Pop();
             }
-        }
-
-        private Result ResolveAndInvokeFunction(Env env, string name, IEnumerable<Expr> args)
-        {
-            var func = env.ResolveFunc(name);
-            return func.Invoke(new Args(this, name, args.Select(a => Eval(env, a)).ToArray()));
         }
 
         private Result ApplyUnaryExpr(int op, Result value)
@@ -380,7 +421,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         {
             if (!value.IsScalar)
             {
-                throw Error("Expected a scalar value, got a list of size " + value.Count);
+                throw Error("Expected a scalar value, got a vector of size " + value.Count);
             }
 
             return value.Value.First();
@@ -403,6 +444,23 @@ namespace BuildXL.Execution.Analyzer.JPath
                 case short s: return (int)s;
                 default:
                     throw TypeError(obj, "int");
+            }
+        }
+
+        /// <summary>
+        /// Converts <paramref name="obj"/> to <see cref="Function"/> if possible; otherwise throws.
+        /// 
+        /// A <see cref="Result"/> can be converted only if it is a scalar value.
+        /// Other than that, only a <see cref="Function"/> object can be converted to string.
+        /// </summary>
+        public Function ToFunc(object obj)
+        {
+            switch (obj)
+            {
+                case Result r:   return ToFunc(ToScalar(r));
+                case Function f: return f;
+                default:
+                    throw TypeError(obj, "function");
             }
         }
 

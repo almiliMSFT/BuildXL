@@ -193,24 +193,24 @@ namespace BuildXL.Execution.Analyzer.JPath
     }
 
     /// <summary>
-    /// A function invocation.
+    /// A function application.
     /// 
     /// All function names start with '$'.
     /// 
     /// Syntax example: $join(' ', someExpr)
     /// </summary>
-    public class FuncExpr : Expr
+    public class FuncAppExpr : Expr
     {
         /// <summary>Name of the function.</summary>
-        public string Name { get; }
+        public Expr Func { get; }
 
         /// <summary>Function arguments</summary>
         public IReadOnlyList<Expr> Args { get; }
 
         /// <nodoc />
-        public FuncExpr(string name, IEnumerable<Expr> args)
+        public FuncAppExpr(Expr func, IEnumerable<Expr> args)
         {
-            Name = name;
+            Func = func;
             Args = args.ToList();
         }
 
@@ -218,38 +218,8 @@ namespace BuildXL.Execution.Analyzer.JPath
         public override string Print()
         {
             var args = string.Join(", ", Args.Select(a => a.Print()));
-            return $"{Name}({args})";
+            return $"{Func.Print()}({args})";
         }
-    }
-
-    /// <summary>
-    /// A different form of the function invocation expression.
-    /// 
-    /// Function <see cref="Func"/> is invoked for the arguments obtained by appending the
-    /// value of <see cref="Input"/> to the list of arguments of <see cref="Func"/> (<see cref="FuncExpr.Args"/>).
-    /// 
-    /// Syntax example: someExpr | $join(' ')
-    /// </summary>
-    public class PipeExpr : Expr
-    {
-        /// <summary>Value to be passed as the last argument to <see cref="Func"/></summary>
-        public Expr Input { get; }
-
-        /// <summary>Functin to invoke</summary>
-        public FuncExpr Func { get; }
-
-        /// <nodoc />
-        public PipeExpr(Expr input, FuncExpr func)
-        {
-            Input = input;
-            Func = func;
-        }
-
-        /// <inheritdoc />
-        public override string Print() => $"{Input.Print()} | {Func.Print()}";
-
-        /// <nodoc />
-        internal IEnumerable<Expr> ConcatArgs() => Func.Args.Concat(new[] { Input });
     }
 
     /// <summary>
@@ -311,7 +281,11 @@ namespace BuildXL.Execution.Analyzer.JPath
     /// </summary>
     public class RootExpr : Expr
     {
+        public static readonly RootExpr Instance= new RootExpr();
+
         /// <inheritdoc />
         public override string Print() => "$";
+
+        private RootExpr() { }
     }
 }
