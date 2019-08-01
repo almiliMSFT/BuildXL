@@ -106,8 +106,8 @@ expr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
-    | Input=expr '|' Func=expr                        #PipeExpr
     | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExpr
+    | Input=expr '|' Func=expr                        #PipeExpr
     | '(' Sub=expr ')'                                #SubExpr
     ;
 
