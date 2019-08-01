@@ -36,6 +36,90 @@ using ParserRuleContext = Antlr4.Runtime.ParserRuleContext;
 [System.CLSCompliant(false)]
 public partial class JPathBaseListener : IJPathListener {
 	/// <summary>
+	/// Enter a parse tree produced by <see cref="JPathParser.intBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterIntBinaryOp([NotNull] JPathParser.IntBinaryOpContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JPathParser.intBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitIntBinaryOp([NotNull] JPathParser.IntBinaryOpContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="JPathParser.intUnaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterIntUnaryOp([NotNull] JPathParser.IntUnaryOpContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JPathParser.intUnaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitIntUnaryOp([NotNull] JPathParser.IntUnaryOpContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="JPathParser.boolBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterBoolBinaryOp([NotNull] JPathParser.BoolBinaryOpContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JPathParser.boolBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitBoolBinaryOp([NotNull] JPathParser.BoolBinaryOpContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="JPathParser.logicBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterLogicBinaryOp([NotNull] JPathParser.LogicBinaryOpContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JPathParser.logicBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitLogicBinaryOp([NotNull] JPathParser.LogicBinaryOpContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="JPathParser.logicUnaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterLogicUnaryOp([NotNull] JPathParser.LogicUnaryOpContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JPathParser.logicUnaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitLogicUnaryOp([NotNull] JPathParser.LogicUnaryOpContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="JPathParser.arrayBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterArrayBinaryOp([NotNull] JPathParser.ArrayBinaryOpContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JPathParser.arrayBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitArrayBinaryOp([NotNull] JPathParser.ArrayBinaryOpContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="JPathParser.anyBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterAnyBinaryOp([NotNull] JPathParser.AnyBinaryOpContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JPathParser.anyBinaryOp"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitAnyBinaryOp([NotNull] JPathParser.AnyBinaryOpContext context) { }
+	/// <summary>
 	/// Enter a parse tree produced by the <c>BinaryIntExpr</c>
 	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
 	/// <para>The default implementation does nothing.</para>

@@ -64,43 +64,47 @@ RootID
 ESC_ID
     : '`' ~[`]+ '`' ;
 
-IntBinaryOp
-    : PLUS | MINUS | TIMES | DIV | MOD ;
+intBinaryOp
+    : Token=(PLUS | MINUS | TIMES | DIV | MOD) ;
 
-IntUnaryOp
-    : MINUS ;
+intUnaryOp
+    : Token=MINUS ;
 
-BoolBinaryOp
-    : GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH ;
+boolBinaryOp
+    : Token=(GTE | GT | LTE | LT | EQ | NEQ | MATCH | NMATCH) ;
     
-LogicBinaryOp
-    : AND | OR | XOR | IFF ; 
+logicBinaryOp
+    : Token=(AND | OR | XOR | IFF) ; 
 
-LogicUnaryOp
-    : NOT ;
+logicUnaryOp
+    : Token=NOT ;
 
-ArrayBinaryOp
-    : CONCAT | INTERSECT ;
+arrayBinaryOp
+    : Token=(CONCAT | INTERSECT) ;
 
-AnyBinaryOp
-    : IntBinaryOp | BoolBinaryOp | LogicBinaryOp | ArrayBinaryOp ;
-    
+anyBinaryOp
+    : intBinaryOp
+    | boolBinaryOp
+    | logicBinaryOp
+    | arrayBinaryOp
+    ;
+
 intExpr
     : Expr=expr                                       #ExprIntExpr
-    | Op=IntUnaryOp Sub=intExpr                       #UnaryIntExpr
-    | Lhs=intExpr Op=IntBinaryOp Rhs=intExpr          #BinaryIntExpr
+    | Op=intUnaryOp Sub=intExpr                       #UnaryIntExpr
+    | Lhs=intExpr Op=intBinaryOp Rhs=intExpr          #BinaryIntExpr
     | '(' Sub=intExpr ')'                             #SubIntExpr
     ;
 
 boolExpr
-    : Lhs=intExpr Op=BoolBinaryOp Rhs=intExpr         #BinaryBoolExpr
+    : Lhs=intExpr Op=boolBinaryOp Rhs=intExpr         #BinaryBoolExpr
     | '(' Sub=boolExpr ')'                            #SubBoolExpr
     ;
 
 logicExpr
     : Expr=boolExpr                                   #BoolLogicExpr
-    | Lhs=logicExpr Op=LogicBinaryOp Rhs=logicExpr    #BinaryLogicExpr
-    | Op=LogicUnaryOp Sub=logicExpr                   #UnaryLogicExpr
+    | Lhs=logicExpr Op=logicBinaryOp Rhs=logicExpr    #BinaryLogicExpr
+    | Op=logicUnaryOp Sub=logicExpr                   #UnaryLogicExpr
     | '(' Sub=logicExpr ')'                           #SubLogicExpr
     ;
 
@@ -120,7 +124,7 @@ expr
     | Value=StrLit                                    #StrLitExpr
     | Value=RegExLit                                  #RegExLitExpr
     | Value=IntLit                                    #IntLitExpr
-    | Lhs=expr Op=AnyBinaryOp Rhs=expr                #BinExpr
+    | Lhs=expr Op=anyBinaryOp Rhs=expr                #BinExpr
     | Lhs=expr '.' Selector=selector                  #MapExpr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr

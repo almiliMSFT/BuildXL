@@ -33,6 +33,48 @@ using IToken = Antlr4.Runtime.IToken;
 [System.CLSCompliant(false)]
 public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="JPathParser.intBinaryOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitIntBinaryOp([NotNull] JPathParser.IntBinaryOpContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JPathParser.intUnaryOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitIntUnaryOp([NotNull] JPathParser.IntUnaryOpContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JPathParser.boolBinaryOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitBoolBinaryOp([NotNull] JPathParser.BoolBinaryOpContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JPathParser.logicBinaryOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLogicBinaryOp([NotNull] JPathParser.LogicBinaryOpContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JPathParser.logicUnaryOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLogicUnaryOp([NotNull] JPathParser.LogicUnaryOpContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JPathParser.arrayBinaryOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitArrayBinaryOp([NotNull] JPathParser.ArrayBinaryOpContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JPathParser.anyBinaryOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAnyBinaryOp([NotNull] JPathParser.AnyBinaryOpContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>BinaryIntExpr</c>
 	/// labeled alternative in <see cref="JPathParser.intExpr"/>.
 	/// </summary>
