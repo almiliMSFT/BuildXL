@@ -187,7 +187,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             public int? MaxArity { get; }
 
             /// <nodoc />
-            public Function(LibraryFunc func, string name = "<lambda>", int minArity = 0, int? maxArity = null, IEnumerable<Result> curriedArgs = null)
+            public Function(LibraryFunc func, string name = "<lambda>", int minArity = 1, int? maxArity = null, IEnumerable<Result> curriedArgs = null)
             {
                 Contract.Requires(func != null);
 
@@ -288,7 +288,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
                     case FuncAppExpr funcExpr:
                         var funcResult = Eval(env, funcExpr.Func);
-                        var function = ToFunc(funcResult);
+                        var function = ToFunc(funcResult, funcExpr.Func);
                         return function.Apply(this, funcExpr.Args.Select(arg => Eval(env, arg)));
 
                     case RootExpr rootExpr:
@@ -433,17 +433,17 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// A <see cref="Result"/> can be converted only if it is a scalar value.
         /// Other than that, only numeric values can be converted to int.
         /// </summary>
-        public int ToInt(object obj)
+        public int ToInt(object obj, Expr source = null)
         {
             switch (obj)
             {
-                case Result r: return ToInt(ToScalar(r));
-                case int i: return i;
-                case long l: return (int)l;
-                case byte b: return (int)b;
-                case short s: return (int)s;
+                case Result r when r.IsScalar: return ToInt(ToScalar(r), source);
+                case int i:                    return i;
+                case long l:                   return (int)l;
+                case byte b:                   return b;
+                case short s:                  return s;
                 default:
-                    throw TypeError(obj, "int");
+                    throw TypeError(obj, "int", source);
             }
         }
 
@@ -453,14 +453,14 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// A <see cref="Result"/> can be converted only if it is a scalar value.
         /// Other than that, only a <see cref="Function"/> object can be converted to string.
         /// </summary>
-        public Function ToFunc(object obj)
+        public Function ToFunc(object obj, Expr source = null)
         {
             switch (obj)
             {
-                case Result r:   return ToFunc(ToScalar(r));
-                case Function f: return f;
+                case Result r when r.IsScalar: return ToFunc(ToScalar(r), source);
+                case Function f:               return f;
                 default:
-                    throw TypeError(obj, "function");
+                    throw TypeError(obj, "function", source);
             }
         }
 
@@ -470,14 +470,14 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// A <see cref="Result"/> can be converted only if it is a scalar value.
         /// Other than that, only a string can be converted to string.
         /// </summary>
-        public string ToString(object obj)
+        public string ToString(object obj, Expr source = null)
         {
             switch (obj)
             {
-                case Result r: return ToString(ToScalar(r));
-                case string s: return s;
+                case Result r when r.IsScalar: return ToString(ToScalar(r), source);
+                case string s:                 return s;
                 default:
-                    throw TypeError(obj, "string");
+                    throw TypeError(obj, "string", source);
             }
         }
 
@@ -525,9 +525,16 @@ namespace BuildXL.Execution.Analyzer.JPath
             return Error($"Cannot apply operation '{JPathLexer.DefaultVocabulary.GetSymbolicName(op)}', to values {valuesStr}");
         }
 
-        private Exception TypeError(object obj, string expectedType)
+        private Exception TypeError(object obj, string expectedType, Expr source = null)
         {
-            return Error($"Cannot convert an object of type {obj?.GetType().Name} to {expectedType}");
+            if (source != null)
+            {
+                return Error($"The result of expression '{source.Print()}' is of type {obj?.GetType().Name} and cannot be converted to '{expectedType}'");
+            }
+            else
+            {
+                return Error($"Cannot convert an object of type {obj?.GetType().Name} to {expectedType}");
+            }
         }
 
         private Exception Error(string message)

@@ -78,17 +78,13 @@ namespace BuildXL.Execution.Analyzer
             {
                 new Function(name: "sum",   minArity: 1, maxArity: 1, func: (args) => args[0].Select(obj => args.Eval.ToInt(obj)).Sum()),
                 new Function(name: "count", minArity: 1, maxArity: 1, func: (args) => args[0].Count),
-                //new Function(name: "uniq",  minArity: 1, maxArity: 1, func: (args) => args[0].Count),
-                //["count"] = (args) => args[0].Count,
-                //["uniq"] = (args) => args[0].GroupBy(obj => args.Eval.PreviewObj(obj)).Select(grp => grp.First()).ToArray(),
-                //["sort"] = (args) => args[0].OrderBy(obj => args.Eval.PreviewObj(obj)).ToArray(),
-                //["grep"] = (args) => args[1].Select(obj => args.Eval.PreviewObj(obj)).Where(str => args.Eval.Matches(str, args[0])).ToArray(),
-                //["join"] = (args) =>
-                //{
-                //    var separator = args.Count > 1 ? args.Eval.ToString(args[0]) : Environment.NewLine;
-                //    var arrayArgsIdx = args.Count > 1 ? 1 : 0;
-                //    return string.Join(separator, args[arrayArgsIdx].Select(obj => args.Eval.PreviewObj(obj)));
-                //},
+                new Function(name: "uniq",  minArity: 1, maxArity: 1, func: (args) => args[0].GroupBy(obj => args.Eval.PreviewObj(obj)).Select(grp => grp.First()).ToArray()),
+                new Function(name: "sort",  minArity: 1, maxArity: 1, func: (args) => args[0].OrderBy(obj => args.Eval.PreviewObj(obj)).ToArray()),
+                new Function(name: "grep",  minArity: 2, maxArity: 2, func: (args) => args[1].Select(obj => args.Eval.PreviewObj(obj)).Where(str => args.Eval.Matches(str, args[0])).ToArray()),
+                new Function(name: "join",  minArity: 1, maxArity: 1, func: (args) =>
+                {
+                    return string.Join(Environment.NewLine, args[0].Select(obj => args.Eval.PreviewObj(obj)));
+                }),
             };
 
             SupportedScopes = new[]
@@ -144,11 +140,11 @@ namespace BuildXL.Execution.Analyzer
 
             var rootVars =
                 SupportedScopes.Select(obj => new Property(obj.Preview, obj))
-                .Concat(SupportedScopes.SelectMany(obj => obj.Properties));
+                .Concat(SupportedScopes.SelectMany(obj => obj.Properties))
+                .Concat(LibraryFunctions.Select(func => new Property(func.Name, func)));
             var root = new ObjectInfo(preview: "$", properties: rootVars);
             var env = new Env(
                 objectResolver: (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj),
-                funcResolver: (name) => LibraryFunctions.TryGetValue(name, out var func) ? func : null,
                 root);
             var maybeResult = JPath.JPath.TryEval(env, expr);
             if (maybeResult.Succeeded)

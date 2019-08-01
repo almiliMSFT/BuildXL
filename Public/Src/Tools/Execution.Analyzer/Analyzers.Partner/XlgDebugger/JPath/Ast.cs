@@ -165,7 +165,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         /// <inheritdoc />
-        public override string Print() => $"{Lhs.Print()}.{PropertySelector}";
+        public override string Print() => $"{Lhs.Print()}.{PropertySelector.Print()}";
     }
 
     /// <summary>
