@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildXL.FrontEnd.Script.Evaluator;
-using BuildXL.FrontEnd.Script.Values;
 using BuildXL.Utilities;
 using BuildXL.Utilities.Tasks;
 using BuildXL.Utilities.Tracing;
@@ -278,25 +277,23 @@ namespace BuildXL.FrontEnd.Script.Debugger
                 return;
             }
 
-            //var frameRef = m_scopeHandles.Get(cmd.FrameId.Value, null);
-            //var ans = ExpressionEvaluator.EvaluateExpression(State.GetThreadState(frameRef.ThreadId), frameRef.FrameIndex, GetCompletionTextToEvaluate(cmd));
+            var frameRef = m_scopeHandles.Get(cmd.FrameId.Value, null);
+            var ans = ExpressionEvaluator.EvaluateExpression(State.GetThreadState(frameRef.ThreadId), frameRef.FrameIndex, GetCompletionTextToEvaluate(cmd));
 
-            //List<ICompletionItem> items;
-            //if (!ans.Succeeded)
-            //{
-            //    items = new List<ICompletionItem>(0);
-            //}
-            //else
-            //{
-            //    var resultAsObjLiteral = ans.Result.Object as ObjectLiteral;
-            //    items = Renderer
-            //        .GetObjectInfo(ans.Result.Context, resultAsObjLiteral)
-            //        .Properties
-            //        .Select(p => (ICompletionItem)new CompletionItem(p.Name, p.Name, p.Kind))
-            //        .ToList();
-            //}
+            List<ICompletionItem> items;
+            if (!ans.Succeeded)
+            {
+                items = new List<ICompletionItem>(0);
+            }
+            else
+            {
+                items = Renderer
+                    .GetObjectInfo(ans.Result.Context, ans.Result.Object)
+                    .Properties
+                    .Select(p => (ICompletionItem)new CompletionItem(p.Name, p.Name, p.Kind))
+                    .ToList();
+            }
 
-            var items = new List<ICompletionItem>(0);
             cmd.SendResult(new CompletionsResult(items));
         }
 

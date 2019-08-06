@@ -12,11 +12,10 @@ using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Scheduler.Graph;
 using BuildXL.Utilities;
-using BuildXL.Execution.Analyzer.JPath;
+using static BuildXL.Execution.Analyzer.JPath.Evaluator;
 using static BuildXL.FrontEnd.Script.Debugger.Renderer;
 
 using ProcessMonitoringData = BuildXL.Scheduler.Tracing.ProcessExecutionMonitoringReportedEventData;
-using static BuildXL.Execution.Analyzer.JPath.Evaluator;
 
 namespace BuildXL.Execution.Analyzer
 {
@@ -160,6 +159,20 @@ namespace BuildXL.Execution.Analyzer
             {
                 return maybeResult.Failure;
             }
+        }
+
+        /// <inheritdoc />
+        public Possible<string[], Failure> GetCompletions(string expr)
+        {
+            var rootVars =
+                SupportedScopes.Select(obj => new Property(obj.Preview, obj))
+                .Concat(SupportedScopes.SelectMany(obj => obj.Properties))
+                .Concat(LibraryFunctions.Select(func => new Property(func.Name, func)));
+            var root = new ObjectInfo(preview: "$", properties: rootVars);
+            var env = new Env(
+                objectResolver: (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj),
+                root);
+            return JPath.JPath.GetCompletions(env, expr);
         }
 
         #endregion

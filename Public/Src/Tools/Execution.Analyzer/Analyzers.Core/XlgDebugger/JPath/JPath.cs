@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Antlr4.Runtime;
+using Antlr4.Runtime.Misc;
 using BuildXL.Utilities;
 
 [assembly: CLSCompliant(false)]
@@ -15,7 +17,7 @@ namespace BuildXL.Execution.Analyzer.JPath
     /// </summary>
     public static class JPath
     {
-        class JPathListener : IAntlrErrorListener<IToken>
+        class JPathListener : JPathBaseListener, IAntlrErrorListener<IToken>
         {
             /// <nodoc />
             public string FirstError { get; private set; }
@@ -30,6 +32,18 @@ namespace BuildXL.Execution.Analyzer.JPath
                 {
                     FirstError = msg;
                 }
+            }
+
+            private readonly Stack<ParserRuleContext> m_ruleStack = new Stack<ParserRuleContext>();
+
+            public override void EnterEveryRule([NotNull] ParserRuleContext context)
+            {
+                m_ruleStack.Push(context);
+            }
+
+            public override void ExitEveryRule([NotNull] ParserRuleContext context)
+            {
+                m_ruleStack.Pop();
             }
         }
 
@@ -56,6 +70,25 @@ namespace BuildXL.Execution.Analyzer.JPath
         public static Possible<Evaluator.Result> TryEval(Evaluator.Env env, string expr)
         {
             return TryParse(expr).Then(e => TryEval(env, e));
+        }
+
+        internal static Possible<string[]> GetCompletions(Evaluator.Env env, string str)
+        {
+            var lexer = new JPathLexer(new AntlrInputStream(str));
+            var parser = new JPathParser(new CommonTokenStream(lexer));
+            var listener = new JPathListener();
+            parser.AddErrorListener(listener);
+            var exprCst = parser.expr();
+
+            if (listener.HasErrors)
+            {
+                return new Failure<string>("Syntex error: " + listener.FirstError);
+            }
+
+            var exprAst = exprCst.Accept(new AstConverter());
+            var value = new Evaluator().Eval(env, exprAst);
+
+            return new[] { "hi", exprAst.Print(), value.Value.ToString() };
         }
 
         /// <nodoc />
