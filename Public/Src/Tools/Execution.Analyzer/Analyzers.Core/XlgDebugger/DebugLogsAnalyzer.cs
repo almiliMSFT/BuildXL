@@ -112,14 +112,6 @@ namespace BuildXL.Execution.Analyzer
 
         private async Task<int> AnalyzeAsync()
         {
-            while (true)
-            {
-                string line = Console.ReadLine();
-                if (string.IsNullOrWhiteSpace(line)) break;
-
-                XlgState.GetCompletions(line);
-            }
-
             var debugServer = new DebugServer(LoggingContext, m_port, (d) => new DebugSession(m_state, m_pathTanslator, d));
             Debugger = await debugServer.StartAsync();
             Session = (DebugSession)Debugger.Session;

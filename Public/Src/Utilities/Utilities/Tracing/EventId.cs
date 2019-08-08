@@ -570,6 +570,7 @@ namespace BuildXL.Utilities.Tracing
         ConfigUnsafeAllowMissingOutput = 928,
         ConfigIgnoreValidateExistingFileAccessesForOutputs = 929,
         ConfigUnsafeIgnoreUndeclaredAccessesUnderSharedOpaques = 930,
+        ConfigUnsafeOptimizedAstConversion = 931,
 
         // Elsewhere  = 932,
 
@@ -581,8 +582,8 @@ namespace BuildXL.Utilities.Tracing
         WarnToNotUsePackagesButModules = 937,
         WarnToNotUseProjectsField = 938,
 
-        // FREE SLOT
-        // FREE SLOT
+        // RESERVED TO [950, 960] (BuildXL.Frontend.Sdk)
+
         // Reserved = 1005,
         // Reserved = 1006,
 
@@ -1011,7 +1012,6 @@ namespace BuildXL.Utilities.Tracing
         // reserved 11200 .. 11300 for the FrontEndHost
         // reserved 11300 .. 11400 for the Nuget FrontEnd
         // reserved 11400 .. 11500 for the MsBuild FrontEnd
-        // reserved 11600 .. 11700 for the Download FrontEnd
 
         // CloudBuild events
         DominoCompletedEvent = 11500,
@@ -1023,6 +1023,9 @@ namespace BuildXL.Utilities.Tracing
         DropCreationEvent = 11506,
         DropFinalizationEvent = 11507,
         DominoContinuousStatisticsEvent = 11508,
+
+        // reserved 11550 .. 11600 for ninja
+        // reserved 11600 .. 11700 for the Download FrontEnd
 
         // Service pip scheduling
         ServicePipStarting = 12000,
@@ -1037,9 +1040,10 @@ namespace BuildXL.Utilities.Tracing
         ApiServerForwarderIpcServerMessage = 12100,
         ApiServerInvalidOperation = 12101,
         ApiServerOperationReceived = 12102,
-        ApiServerMaterializeFileExecuted = 12103,
+        ApiServerMaterializeFileSucceeded = 12103,
         ApiServerReportStatisticsExecuted = 12104,
         ApiServerGetSealedDirectoryContentExecuted = 12105,
+        ErrorApiServerMaterializeFileFailed = 12106,
 
         // Copy file cont'd.
         PipCopyFileSourceFileDoesNotExist = 12201,

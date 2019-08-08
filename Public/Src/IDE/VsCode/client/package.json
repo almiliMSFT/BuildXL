@@ -22,8 +22,8 @@
     "onLanguage:DScript",
     "onCommand:DScript.reloadWorkspace",
     "onCommand:XLG.Render.Status",
-    "onLanguage:xlg",
-    "onLanguage:xlg-status"
+    "onLanguage:xlg-status",
+    "workspaceContains:config.dsc"
   ],
   "contributes": {
     "commands": [
@@ -229,18 +229,6 @@
         "language": "DScript",
         "scopeName": "source.dsc",
         "path": "./syntaxes/DScript.json"
-      }
-    ],
-    "themes": [
-      {
-        "label": "BuildXL DScript Dark",
-        "uiTheme": "vs-dark",
-        "path": "./themes/dark_dscript.json"
-      },
-      {
-        "label": "BuildXL DScript Light",
-        "uiTheme": "vs",
-        "path": "./themes/light_dscript.json"
       }
     ],
     "configuration": {

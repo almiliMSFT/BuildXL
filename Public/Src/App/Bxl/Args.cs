@@ -309,11 +309,11 @@ namespace BuildXL
                             opt => loggingConfiguration.Diagnostic |= CommandLineUtilities.ParseEnumOption<DiagnosticLevels>(opt)),
                         OptionHandlerFactory.CreateBoolOption(
                             "earlyWorkerRelease",
-                            sign => schedulingConfiguration.EarlyWorkerRelease = sign),
+                            sign => distributionConfiguration.EarlyWorkerRelease = sign),
                         OptionHandlerFactory.CreateOption(
                             "earlyWorkerReleaseMultiplier",
                             opt =>
-                            schedulingConfiguration.EarlyWorkerReleaseMultiplier = CommandLineUtilities.ParseDoubleOption(opt, 0, 5)),
+                            distributionConfiguration.EarlyWorkerReleaseMultiplier = CommandLineUtilities.ParseDoubleOption(opt, 0, 5)),
                         OptionHandlerFactory.CreateBoolOption(
                             "enforceAccessPoliciesOnDirectoryCreation",
                             sign => sandboxConfiguration.EnforceAccessPoliciesOnDirectoryCreation = sign),
@@ -524,6 +524,9 @@ namespace BuildXL
                         OptionHandlerFactory.CreateOption(
                             "injectCacheMisses",
                             opt => HandleArtificialCacheMissOption(opt, cacheConfiguration)),
+                        OptionHandlerFactory.CreateBoolOption(
+                            "interactive",
+                            sign => configuration.Interactive = sign),
                         OptionHandlerFactory.CreateBoolOption(
                             "historicMetadataCache",
                             sign => cacheConfiguration.HistoricMetadataCache = sign),
@@ -861,6 +864,10 @@ namespace BuildXL
                         OptionHandlerFactory.CreateOption(
                             "tempDirectory",
                             opt => layoutConfiguration.TempDirectory = CommandLineUtilities.ParsePathOption(opt, pathTable)),
+                        OptionHandlerFactory.CreateBoolOption(
+                            "temporary_PreserveOutputsForIncrementalTool",
+                            sign =>
+                            sandboxConfiguration.PreserveOutputsForIncrementalTool = sign),
                         OptionHandlerFactory.CreateOption(
                             "traceInfo",
                             opt => ParsePropertyOption(opt, loggingConfiguration.TraceInfo)),
@@ -988,6 +995,11 @@ namespace BuildXL
                             sign => sandboxConfiguration.UnsafeSandboxConfigurationMutable.IgnoreSetFileInformationByHandle = sign,
                             isUnsafe: true),
                         OptionHandlerFactory.CreateBoolOption(
+                            "unsafe_IgnoreUndeclaredAccessesUnderSharedOpaques",
+                            sign =>
+                            sandboxConfiguration.UnsafeSandboxConfigurationMutable.IgnoreUndeclaredAccessesUnderSharedOpaques = sign,
+                            isUnsafe: true),
+                        OptionHandlerFactory.CreateBoolOption(
                             "unsafe_IgnoreValidateExistingFileAccessesForOutputs",
                             sign => { /* Do nothing Office and WDG are still passing this flag even though it is deprecated. */ }),
                         OptionHandlerFactory.CreateBoolOption(
@@ -1011,6 +1023,11 @@ namespace BuildXL
                             sign =>
                             sandboxConfiguration.UnsafeSandboxConfigurationMutable.MonitorFileAccesses = sign,
                             isUnsafe: true),
+                        OptionHandlerFactory.CreateBoolOption(
+                            "unsafe_OptimizedAstConversion",
+                            sign =>
+                            frontEndConfiguration.UnsafeOptimizedAstConversion = sign,
+                            isUnsafe: true),
                         OptionHandlerFactory.CreateBoolOptionWithValue(
                             "unsafe_PreserveOutputs",
                             (opt, sign) =>
@@ -1033,11 +1050,6 @@ namespace BuildXL
                                     unsafeUnexpectedFileAccessesAreErrorsSet = true;
                                 }
                             },
-                            isUnsafe: true),
-                        OptionHandlerFactory.CreateBoolOption(
-                            "unsafe_IgnoreUndeclaredAccessesUnderSharedOpaques",
-                            sign =>
-                            sandboxConfiguration.UnsafeSandboxConfigurationMutable.IgnoreUndeclaredAccessesUnderSharedOpaques = sign,
                             isUnsafe: true),
                         // </ end unsafe options>
                          OptionHandlerFactory.CreateBoolOption(
