@@ -93,7 +93,7 @@ namespace BuildXL.Execution.Analyzer
                     new Property("Pips",          () => PipGraph.RetrieveAllPips()),
                     new Property("Files",         () => PipGraph.AllFiles),
                     new Property("Directories",   () => PipGraph.AllSealDirectories),
-                    new Property("CriticalPath",  new AnalyzeCricialPath()),
+                    //new Property("CriticalPath",  new AnalyzeCricialPath()),
                     new Property("GroupedBy",     new ObjectInfo(new[]
                     {
                         new Property("Pips",          new PipsScope()),
@@ -148,7 +148,6 @@ namespace BuildXL.Execution.Analyzer
             var maybeResult = JPath.JPath.TryEval(env, expr);
             if (maybeResult.Succeeded)
             {
-
                 return new ObjectContext(
                     this, 
                     maybeResult.Result.Count == 1 

@@ -59,7 +59,7 @@ namespace BuildXL.Execution.Analyzer
 
         private readonly Lazy<Dictionary<PipId, PipExecutionPerformance>> m_lazyPipPerfDict;
         private readonly Lazy<Dictionary<long, PipId>> m_lazyPipsBySemiStableHash;
-        private readonly Lazy<CriticalPathData> m_lazyCricialPath;
+        private readonly Lazy<CriticalPathData> m_lazyCriticalPath;
 
         private string[] m_workers;
         private PathTranslator m_pathTanslator;
@@ -82,7 +82,7 @@ namespace BuildXL.Execution.Analyzer
         {
             XlgState = new XlgDebuggerState(this);
             m_criticalPathAnalyzer = new CriticalPathAnalyzer(input, outputFilePath: null);
-            m_lazyCricialPath = Lazy.Create(() =>
+            m_lazyCriticalPath = Lazy.Create(() =>
             {
                 m_criticalPathAnalyzer.Analyze();
                 return m_criticalPathAnalyzer.criticalPathData;
@@ -144,7 +144,7 @@ namespace BuildXL.Execution.Analyzer
         public IReadOnlyDictionary<long, PipId> SemiStableHash2Pip => m_lazyPipsBySemiStableHash.Value;
 
         /// <nodoc />
-        public CriticalPathData CriticalPath => m_lazyCricialPath.Value;
+        public CriticalPathData CriticalPath => m_lazyCriticalPath.Value;
 
         /// <nodoc />
         public FileContentInfo? TryGetFileContentInfo(FileArtifact f)

@@ -235,7 +235,12 @@ namespace BuildXL.Execution.Analyzer.JPath
         private Env TopEnv => m_evalStack.Any() ? m_evalStack.Peek().Item1 : null;
 
         /// <nodoc />
-        public Result Eval(Env env, Expr expr, string context = null)
+        public Result Eval(Env env, Expr expr)
+        {
+            return EvalInternal(env, expr);
+        }
+
+        private Result EvalInternal(Env env, Expr expr)
         {
             m_evalStack.Push((env, expr));
             try
@@ -395,12 +400,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// <returns></returns>
         public bool Matches(Result lhs, Result rhs)
         {
-            if (!lhs.IsScalar)
-            {
-                return false;
-            }
-            var lhsStr = PreviewObj(ToScalar(lhs));
-            return Matches(lhsStr, rhs);
+            return lhs.Any(obj => Matches(PreviewObj(obj), rhs));
         }
 
         /// <summary>
