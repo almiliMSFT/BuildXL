@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Antlr4.Runtime;
 using BuildXL.FrontEnd.Script.Debugger;
+using BuildXL.Utilities;
 using BuildXL.Utilities.Collections;
 
 namespace BuildXL.Execution.Analyzer.JPath
@@ -25,7 +26,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// 
         /// Every expression evaluates to a vector, which is accessible via the <see cref="Value"/> property.
         /// </summary>
-        public sealed class Result : IEnumerable<object>
+        public sealed class Result : IEnumerable<object>, IEquatable<Result>
         {
             /// <summary>
             /// Empty result
@@ -70,6 +71,24 @@ namespace BuildXL.Execution.Analyzer.JPath
             public IEnumerator<object> GetEnumerator() => Value.GetEnumerator();
             IEnumerator IEnumerable.GetEnumerator() => Value.GetEnumerator();
 
+            // hash code / equality 
+
+            public bool Equals(Result other)
+            {
+                return ReferenceEquals(this, other) ||
+                    (other != null && Count == other.Count && Value.Equals(other.Value));
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is Result res && Equals(res);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCodeHelper.Combine(Count, Value.GetHashCode());
+            }
+
             // implicit conversions
 
             public static implicit operator Result(int scalar)       => Scalar(scalar);
@@ -84,7 +103,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// <summary>
         /// An environment against which expressions are evaluated
         /// </summary>
-        public class Env
+        public class Env : IEquatable<Env>
         {
             /// <summary>
             /// A caller-provided object resolver.
@@ -107,6 +126,10 @@ namespace BuildXL.Execution.Analyzer.JPath
             /// <nodoc />
             public Env(ObjectResolver resolveObject, object root, Result current)
             {
+                Contract.Requires(resolveObject != null);
+                Contract.Requires(root != null);
+                Contract.Requires(current != null);
+
                 ResolveObject = resolveObject;
                 Root = root;
                 Current = current;
@@ -122,6 +145,27 @@ namespace BuildXL.Execution.Analyzer.JPath
             internal Env WithCurrent(Result newCurrent)
             {
                 return new Env(ResolveObject, Root, newCurrent);
+            }
+
+            /// <inheritdoc />
+            public bool Equals(Env other)
+            {
+                return ReferenceEquals(this, other) || 
+                    (other != null &&
+                     other.Root.Equals(Root) &&
+                     other.Current.Equals(Current));
+            }
+
+            /// <inheritdoc />
+            public override int GetHashCode()
+            {
+                return HashCodeHelper.Combine(Root.GetHashCode(), Current.GetHashCode());
+            }
+
+            /// <inheritdoc />
+            public override bool Equals(object obj)
+            {
+                return obj is Env env && Equals(env);
             }
         }
 
@@ -231,13 +275,21 @@ namespace BuildXL.Execution.Analyzer.JPath
         public delegate ObjectInfo ObjectResolver(object obj);
 
         private readonly Stack<(Env, Expr)> m_evalStack = new Stack<(Env, Expr)>();
+        private readonly Dictionary<(Env, Expr), Result> m_evalCache = new Dictionary<(Env, Expr), Result>();
 
         private Env TopEnv => m_evalStack.Any() ? m_evalStack.Peek().Item1 : null;
 
         /// <nodoc />
         public Result Eval(Env env, Expr expr)
         {
-            return EvalInternal(env, expr);
+            var key = (env, expr);
+            if (m_evalCache.TryGetValue(key, out var result))
+            {
+                Console.WriteLine("=============== cached " + expr.Print());
+                return result;
+            }
+
+            return m_evalCache[key] = EvalInternal(env, expr);
         }
 
         private Result EvalInternal(Env env, Expr expr)

@@ -54,11 +54,11 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         /// <nodoc />
-        public static Possible<Evaluator.Result> TryEval(Evaluator.Env env, Expr expr)
+        public static Possible<Evaluator.Result> TryEval(Evaluator.Env env, Expr expr, Evaluator evaluator = null)
         {
             try
             {
-                return Eval(env, expr);
+                return (evaluator ?? new Evaluator()).Eval(env, expr);
             }
             catch (Exception e)
             {
@@ -67,9 +67,9 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         /// <nodoc />
-        public static Possible<Evaluator.Result> TryEval(Evaluator.Env env, string expr)
+        public static Possible<Evaluator.Result> TryEval(Evaluator.Env env, string expr, Evaluator evaluator = null)
         {
-            return TryParse(expr).Then(e => TryEval(env, e));
+            return TryParse(expr).Then(e => TryEval(env, e, evaluator));
         }
 
         internal static Possible<string[]> GetCompletions(Evaluator.Env env, string str)
@@ -89,12 +89,6 @@ namespace BuildXL.Execution.Analyzer.JPath
             var value = new Evaluator().Eval(env, exprAst);
 
             return new[] { "hi", exprAst.Print(), value.Value.ToString() };
-        }
-
-        /// <nodoc />
-        private static Evaluator.Result Eval(Evaluator.Env env, Expr expr)
-        {
-            return new Evaluator().Eval(env, expr);
         }
 
         private static Possible<JPathParser.ExprContext> TryParseInternal(string str)

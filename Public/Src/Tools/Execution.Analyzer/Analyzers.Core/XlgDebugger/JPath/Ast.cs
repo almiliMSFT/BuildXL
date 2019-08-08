@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.ContractsLight;
@@ -14,8 +15,26 @@ namespace BuildXL.Execution.Analyzer.JPath
     /// Abstract expression.
     /// </summary>
     [DebuggerDisplay("{Print(),nq}")]
-    public abstract class Expr
+    public abstract class Expr : IEquatable<Expr>
     {
+        /// <inheritdoc />
+        public bool Equals(Expr other)
+        {
+            return other != null && Print() == other.Print();
+        }
+
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            return Print().GetHashCode();
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(object obj)
+        {
+            return obj is Expr e && Equals(e);
+        }
+
         /// <summary>
         /// Textual representation of the expression (not necessarily the same as the text it was parsed from).
         /// </summary>

@@ -6,12 +6,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BuildXL.Engine;
+using BuildXL.Execution.Analyzer.JPath;
 using BuildXL.FrontEnd.Script;
 using BuildXL.FrontEnd.Script.Debugger;
 using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Scheduler.Graph;
 using BuildXL.Utilities;
+using BuildXL.Utilities.Collections;
 using static BuildXL.Execution.Analyzer.JPath.Evaluator;
 using static BuildXL.FrontEnd.Script.Debugger.Renderer;
 
@@ -26,6 +28,8 @@ namespace BuildXL.Execution.Analyzer
     {
         private const string ExeLevelNotCompleted = "NotCompleted";
         private const int XlgThreadId = 1;
+
+        private readonly Evaluator m_evaluator = new Evaluator();
 
         private DebugLogsAnalyzer Analyzer { get; }
 
@@ -44,6 +48,8 @@ namespace BuildXL.Execution.Analyzer
         private ObjectInfo[] SupportedScopes { get; }
 
         private Function[] LibraryFunctions { get; }
+
+        private Env RootEnv { get; }
 
         /// <inheritdoc />
         public override IReadOnlyList<DisplayStackTraceEntry> StackTrace { get; }
@@ -102,6 +108,20 @@ namespace BuildXL.Execution.Analyzer
                     }))
                 })
             };
+
+            RootEnv = new Env(
+                objectResolver: (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj),
+                root: new ObjectInfo(
+                    preview: "$", 
+                    properties: Concat(
+                        SupportedScopes.Select(obj => new Property(obj.Preview, obj)),
+                        SupportedScopes.SelectMany(obj => obj.Properties),
+                        LibraryFunctions.Select(func => new Property(func.Name, func)))));
+        }
+
+        private IEnumerable<T> Concat<T>(params IEnumerable<T>[] list)
+        {
+            return list.Aggregate((acc, current) => acc != null ? acc.Concat(current) : current);
         }
 
         private PipReference[] GetPipsForExecutionLevel(string level)
@@ -137,15 +157,8 @@ namespace BuildXL.Execution.Analyzer
                 return new ObjectContext(context: this, new AnalyzePath(path));
             }
 
-            var rootVars =
-                SupportedScopes.Select(obj => new Property(obj.Preview, obj))
-                .Concat(SupportedScopes.SelectMany(obj => obj.Properties))
-                .Concat(LibraryFunctions.Select(func => new Property(func.Name, func)));
-            var root = new ObjectInfo(preview: "$", properties: rootVars);
-            var env = new Env(
-                objectResolver: (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj),
-                root);
-            var maybeResult = JPath.JPath.TryEval(env, expr);
+            
+            var maybeResult = JPath.JPath.TryEval(RootEnv, expr, m_evaluator);
             if (maybeResult.Succeeded)
             {
                 return new ObjectContext(
