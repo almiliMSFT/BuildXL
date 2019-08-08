@@ -15,7 +15,6 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand(CmdRenderStatus, () => {
         return renderActiveBxlStatusCsv();
     }));
-    vscode.window.showInformationMessage("Registered command: " + CmdRenderStatus);
 }
 
 function range(start: number, count: number): number[] {

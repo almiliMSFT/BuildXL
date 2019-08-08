@@ -35,7 +35,6 @@ const enum ClientType
 
 export function activate(context: ExtensionContext) {
     xlgstatus.activate(context);
-    return;
 
     extensionContext = context;
 
