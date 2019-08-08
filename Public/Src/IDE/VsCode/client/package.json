@@ -22,7 +22,6 @@
     "onLanguage:DScript",
     "onCommand:DScript.reloadWorkspace",
     "onCommand:XLG.Render.Status",
-    "onLanguage:xlg-status",
     "workspaceContains:config.dsc"
   ],
   "contributes": {
@@ -119,15 +118,6 @@
         ],
         "filenames": [
           "BuildXL.log"
-        ]
-      },
-      {
-        "id": "xlg-status",
-        "aliases": [
-          "BuildXLStatus"
-        ],
-        "filenames": [
-          "BuildXL.status.csv"
         ]
       }
     ],

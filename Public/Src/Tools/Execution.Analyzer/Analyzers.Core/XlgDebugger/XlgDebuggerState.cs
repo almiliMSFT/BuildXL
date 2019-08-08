@@ -22,7 +22,7 @@ namespace BuildXL.Execution.Analyzer
     /// <summary>
     /// Global XLG state (where all pips, artifacts, etc. are displayed)
     /// </summary>
-    public class XlgState : ThreadState, IExpressionEvaluator
+    public class XlgDebuggerState : ThreadState, IExpressionEvaluator
     {
         private const string ExeLevelNotCompleted = "NotCompleted";
         private const int XlgThreadId = 1;
@@ -49,7 +49,7 @@ namespace BuildXL.Execution.Analyzer
         public override IReadOnlyList<DisplayStackTraceEntry> StackTrace { get; }
 
         /// <nodoc />
-        public XlgState(DebugLogsAnalyzer analyzer)
+        public XlgDebuggerState(DebugLogsAnalyzer analyzer)
             : base(XlgThreadId)
         {
             Analyzer = analyzer;
@@ -159,20 +159,6 @@ namespace BuildXL.Execution.Analyzer
             {
                 return maybeResult.Failure;
             }
-        }
-
-        /// <inheritdoc />
-        public Possible<string[], Failure> GetCompletions(string expr)
-        {
-            var rootVars =
-                SupportedScopes.Select(obj => new Property(obj.Preview, obj))
-                .Concat(SupportedScopes.SelectMany(obj => obj.Properties))
-                .Concat(LibraryFunctions.Select(func => new Property(func.Name, func)));
-            var root = new ObjectInfo(preview: "$", properties: rootVars);
-            var env = new Env(
-                objectResolver: (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj),
-                root);
-            return JPath.JPath.GetCompletions(env, expr);
         }
 
         #endregion

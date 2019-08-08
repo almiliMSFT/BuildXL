@@ -67,7 +67,7 @@ namespace BuildXL.Execution.Analyzer
         private readonly int m_port;
         private readonly DebuggerState m_state;
 
-        private XlgState XlgState { get; }
+        private XlgDebuggerState XlgState { get; }
 
         private IDebugger Debugger { get; set; }
 
@@ -80,7 +80,7 @@ namespace BuildXL.Execution.Analyzer
         internal DebugLogsAnalyzer(AnalysisInput input, int port)
             : base(input)
         {
-            XlgState = new XlgState(this);
+            XlgState = new XlgDebuggerState(this);
             m_criticalPathAnalyzer = new CriticalPathAnalyzer(input, outputFilePath: null);
             m_lazyCricialPath = Lazy.Create(() =>
             {
