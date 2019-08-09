@@ -1117,23 +1117,23 @@ public partial class JPathParser : Parser {
 			base.CopyFrom(context);
 		}
 	}
-	public partial class NameSelectorContext : SelectorContext {
+	public partial class IdSelectorContext : SelectorContext {
 		public IdContext Name;
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
 		}
-		public NameSelectorContext(SelectorContext context) { CopyFrom(context); }
+		public IdSelectorContext(SelectorContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
 			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.EnterNameSelector(this);
+			if (typedListener != null) typedListener.EnterIdSelector(this);
 		}
 		public override void ExitRule(IParseTreeListener listener) {
 			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.ExitNameSelector(this);
+			if (typedListener != null) typedListener.ExitIdSelector(this);
 		}
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitNameSelector(this);
+			if (typedVisitor != null) return typedVisitor.VisitIdSelector(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
@@ -1178,10 +1178,10 @@ public partial class JPathParser : Parser {
 			case VarID:
 			case RootID:
 			case EscID:
-				_localctx = new NameSelectorContext(_localctx);
+				_localctx = new IdSelectorContext(_localctx);
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 101; ((NameSelectorContext)_localctx).Name = id();
+				State = 101; ((IdSelectorContext)_localctx).Name = id();
 				}
 				break;
 			case T__0:

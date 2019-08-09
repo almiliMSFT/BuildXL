@@ -302,19 +302,19 @@ public partial class JPathBaseListener : IJPathListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitRootId([NotNull] JPathParser.RootIdContext context) { }
 	/// <summary>
-	/// Enter a parse tree produced by the <c>NameSelector</c>
+	/// Enter a parse tree produced by the <c>IdSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.
 	/// <para>The default implementation does nothing.</para>
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	public virtual void EnterNameSelector([NotNull] JPathParser.NameSelectorContext context) { }
+	public virtual void EnterIdSelector([NotNull] JPathParser.IdSelectorContext context) { }
 	/// <summary>
-	/// Exit a parse tree produced by the <c>NameSelector</c>
+	/// Exit a parse tree produced by the <c>IdSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.
 	/// <para>The default implementation does nothing.</para>
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	public virtual void ExitNameSelector([NotNull] JPathParser.NameSelectorContext context) { }
+	public virtual void ExitIdSelector([NotNull] JPathParser.IdSelectorContext context) { }
 	/// <summary>
 	/// Enter a parse tree produced by the <c>UnionSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.

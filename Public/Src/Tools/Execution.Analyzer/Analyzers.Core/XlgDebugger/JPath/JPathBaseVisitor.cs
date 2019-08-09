@@ -248,7 +248,7 @@ public partial class JPathBaseVisitor<Result> : AbstractParseTreeVisitor<Result>
 	/// <return>The visitor result.</return>
 	public virtual Result VisitRootId([NotNull] JPathParser.RootIdContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by the <c>NameSelector</c>
+	/// Visit a parse tree produced by the <c>IdSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
@@ -257,7 +257,7 @@ public partial class JPathBaseVisitor<Result> : AbstractParseTreeVisitor<Result>
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitNameSelector([NotNull] JPathParser.NameSelectorContext context) { return VisitChildren(context); }
+	public virtual Result VisitIdSelector([NotNull] JPathParser.IdSelectorContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>UnionSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.

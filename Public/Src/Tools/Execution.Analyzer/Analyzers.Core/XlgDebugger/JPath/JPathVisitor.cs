@@ -166,12 +166,12 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitRootId([NotNull] JPathParser.RootIdContext context);
 	/// <summary>
-	/// Visit a parse tree produced by the <c>NameSelector</c>
+	/// Visit a parse tree produced by the <c>IdSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitNameSelector([NotNull] JPathParser.NameSelectorContext context);
+	Result VisitIdSelector([NotNull] JPathParser.IdSelectorContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>UnionSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.
