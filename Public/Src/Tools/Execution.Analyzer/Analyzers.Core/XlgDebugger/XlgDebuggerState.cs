@@ -189,7 +189,7 @@ namespace BuildXL.Execution.Analyzer
         {
             switch (obj)
             {
-                case AbsolutePath p:               return new ObjectInfo(Analyzer.Session.TranslateBuildXLPath(p.ToString(PathTable)));
+                case AbsolutePath p:               return new ObjectInfo(p.ToString(PathTable));
                 case PipsScope ps:                 return PipsInfo(ps);
                 case FileArtifact f:               return FileArtifactInfo(f);
                 case DirectoryArtifact d:          return DirectoryArtifactInfo(d);

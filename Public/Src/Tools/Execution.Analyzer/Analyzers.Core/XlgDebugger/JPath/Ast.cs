@@ -146,27 +146,29 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// Start index of the range.  Inclusive.  
         /// When negative, counts back from the end of the array.
         /// </summary>
-        public Expr Begin { get; } // inclusive, can be negative
+        public Expr Begin { get; }
 
         /// <summary>
         /// End index of the range.  Inclusive.
         /// When negative, counts back from the end of the array.
         /// When null, assumed to be the same as <see cref="Begin"/>.
         /// </summary>
-        public Expr End { get; } 
+        public Expr End { get; }
 
         /// <nodoc />
         public RangeExpr(Expr array, Expr begin, Expr end)
         {
+            Contract.Requires(begin != null);
+
             Array = array;
             Begin = begin;
             End = end;
         }
 
         /// <inheritdoc />
-        public override string Print() => Begin == End
-            ? $"{Array.Print()}[{Begin}]"
-            : $"{Array.Print()}[{Begin}..{End}]";
+        public override string Print() => Begin == End || End == null
+            ? $"{Array?.Print()}[{Begin.Print()}]"
+            : $"{Array?.Print()}[{Begin.Print()}..{End.Print()}]";
     }
 
     /// <summary>
@@ -209,12 +211,14 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// <nodoc />
         public FilterExpr(Expr lhs, Expr filter)
         {
+            Contract.Requires(filter != null);
+
             Lhs = lhs;
             Filter = filter;
         }
 
         /// <inheritdoc />
-        public override string Print() => $"{Lhs.Print()}[{Filter.Print()}]";
+        public override string Print() => $"{Lhs?.Print()}[{Filter.Print()}]";
     }
 
     /// <summary>

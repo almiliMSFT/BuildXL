@@ -31,9 +31,11 @@ namespace BuildXL.Execution.Analyzer.JPath
             /// <summary>
             /// Empty result
             /// </summary>
-            public static readonly Result Empty = new Result(new object[0]);
+            public static readonly Result Empty = new Result(new object(), new object[0]);
 
             private readonly Lazy<IReadOnlyList<object>> m_value;
+
+            private readonly object m_identity;
 
             /// <summary>
             /// The result of evaluation.  Every expression evaluates to a vector, hence the type.
@@ -55,16 +57,20 @@ namespace BuildXL.Execution.Analyzer.JPath
             /// </summary>
             public bool IsEmpty => Count == 0;
 
-            private Result(IEnumerable<object> arr)
+            private Result(object identity, IEnumerable<object> arr)
             {
+                Contract.Requires(identity != null);
+                Contract.Requires(arr != null);
+
+                m_identity = identity;
                 m_value = new Lazy<IReadOnlyList<object>>(() => arr.ToList());
             }
 
             /// <summary>Factory method from a scalar.</summary>
-            public static Result Scalar(object scalar) => new Result(new[] { scalar });
+            public static Result Scalar(object scalar) => new Result(scalar, new[] { scalar });
 
             /// <summary>Factory method from a vector.</summary>
-            public static Result Array(IEnumerable<object> arr) => new Result(arr);
+            public static Result Array(IEnumerable<object> arr) => new Result(arr, arr);
 
             // IEnumerable methods
 
@@ -75,8 +81,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
             public bool Equals(Result other)
             {
-                return ReferenceEquals(this, other) ||
-                    (other != null && Count == other.Count && Value.Equals(other.Value));
+                return other != null && m_identity.Equals(other.m_identity);
             }
 
             public override bool Equals(object obj)
@@ -86,7 +91,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
             public override int GetHashCode()
             {
-                return HashCodeHelper.Combine(Count, Value.GetHashCode());
+                return m_identity.GetHashCode();
             }
 
             // implicit conversions
@@ -150,10 +155,9 @@ namespace BuildXL.Execution.Analyzer.JPath
             /// <inheritdoc />
             public bool Equals(Env other)
             {
-                return ReferenceEquals(this, other) || 
-                    (other != null &&
-                     other.Root.Equals(Root) &&
-                     other.Current.Equals(Current));
+                return other != null &&
+                    other.Root.Equals(Root) &&
+                    other.Current.Equals(Current);
             }
 
             /// <inheritdoc />
@@ -271,6 +275,8 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         /// <summary>
         /// Object resolver delegate type.
+        /// 
+        /// GroupedBy.Pips.ByType.Process[Outputs.Files.Path = $.Files[RewriteCount > 0][0].Path]
         /// </summary>
         public delegate ObjectInfo ObjectResolver(object obj);
 
@@ -285,7 +291,6 @@ namespace BuildXL.Execution.Analyzer.JPath
             var key = (env, expr);
             if (m_evalCache.TryGetValue(key, out var result))
             {
-                Console.WriteLine("=============== cached " + expr.Print());
                 return result;
             }
 
@@ -318,7 +323,12 @@ namespace BuildXL.Execution.Analyzer.JPath
                             .ToList();
 
                     case RangeExpr rangeExpr:
-                        var array = Eval(env, rangeExpr.Array);
+                        if (rangeExpr.Array != null)
+                        {
+                            return InNewEnv(env, rangeExpr.Array, new RangeExpr(null, rangeExpr.Begin, rangeExpr.End));
+                        }
+
+                        var array = env.Current;
                         if (array.IsEmpty)
                         {
                             return array;
@@ -346,18 +356,19 @@ namespace BuildXL.Execution.Analyzer.JPath
 
                         return array.ToList().GetRange(index: begin, count: end - begin + 1);
 
-                    case MapExpr mapExpr:
-                        var lhs = Eval(env, mapExpr.Lhs);
-                        return Eval(env.WithCurrent(lhs), mapExpr.PropertySelector);
-
                     case FilterExpr filterExpr:
-                        return Eval(env, filterExpr.Lhs)
-                            .Where(obj =>
-                            {
-                                var filterValue = Eval(env.WithCurrent(new[] { obj }), filterExpr.Filter);
-                                return ToBool(filterValue);
-                            })
+                        if (filterExpr.Lhs != null)
+                        {
+                            return InNewEnv(env, filterExpr.Lhs, new FilterExpr(null, filterExpr.Filter));
+                        }
+
+                        return env
+                            .Current
+                            .Where(obj => ToBool(Eval(env.WithCurrent(new[] { obj }), filterExpr.Filter)))
                             .ToList();
+
+                    case MapExpr mapExpr:
+                        return InNewEnv(env, mapExpr.Lhs, mapExpr.PropertySelector);
 
                     case FuncAppExpr funcExpr:
                         var funcResult = Eval(env, funcExpr.Func);
@@ -390,6 +401,12 @@ namespace BuildXL.Execution.Analyzer.JPath
             {
                 m_evalStack.Pop();
             }
+        }
+
+        private Result InNewEnv(Env env, Expr newEnvValue, Expr inNewEnv)
+        {
+            var result = Eval(env, newEnvValue);
+            return Eval(env.WithCurrent(result), inNewEnv);
         }
 
         private int IEval(Env env, Expr expr) => ToInt(Eval(env, expr), source: expr);

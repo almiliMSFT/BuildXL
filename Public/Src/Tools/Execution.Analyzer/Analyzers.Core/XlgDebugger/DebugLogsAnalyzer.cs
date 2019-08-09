@@ -62,7 +62,7 @@ namespace BuildXL.Execution.Analyzer
         private readonly Lazy<CriticalPathData> m_lazyCriticalPath;
 
         private string[] m_workers;
-        private PathTranslator m_pathTanslator;
+        private PathTranslator m_pathTranslator;
         private readonly CriticalPathAnalyzer m_criticalPathAnalyzer;
         private readonly int m_port;
         private readonly DebuggerState m_state;
@@ -112,7 +112,7 @@ namespace BuildXL.Execution.Analyzer
 
         private async Task<int> AnalyzeAsync()
         {
-            var debugServer = new DebugServer(LoggingContext, m_port, (d) => new DebugSession(m_state, m_pathTanslator, d));
+            var debugServer = new DebugServer(LoggingContext, m_port, (d) => new DebugSession(m_state, m_pathTranslator, d));
             Debugger = await debugServer.StartAsync();
             Session = (DebugSession)Debugger.Session;
             Session.WaitSessionInitialized();
@@ -196,7 +196,7 @@ namespace BuildXL.Execution.Analyzer
         public override void DominoInvocation(DominoInvocationEventData data)
         {
             var conf = data.Configuration.Logging;
-            m_pathTanslator = GetPathTranslator(conf.SubstSource, conf.SubstTarget, PathTable);
+            m_pathTranslator = GetPathTranslator(conf.SubstSource, conf.SubstTarget, PathTable);
         }
 
         /// <inheritdoc />
