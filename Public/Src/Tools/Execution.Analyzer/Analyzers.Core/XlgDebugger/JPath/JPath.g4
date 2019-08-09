@@ -129,10 +129,11 @@ expr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
     | '#' Sub=expr                                    #CardinalityExpr
-    | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExpr
+    | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExprParen
+    | Func=expr Arg=expr                              #FuncAppExpr
     | Input=expr '|' Func=expr                        #PipeExpr
     | Lhs=expr Op=anyBinaryOp Rhs=expr                #BinExpr
     | '(' Sub=expr ')'                                #SubExpr
-    | 'let' Name=id ':=' Bnd=expr ('in' Sub=expr)?    #LetExpr 
+    | 'let' Name=id ':=' Value=expr ('in' Sub=expr)?  #LetExpr 
     ;
 

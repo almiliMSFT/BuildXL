@@ -539,6 +539,20 @@ public partial class JPathBaseListener : IJPathListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitStrLitExpr([NotNull] JPathParser.StrLitExprContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>FuncAppExprParen</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterFuncAppExprParen([NotNull] JPathParser.FuncAppExprParenContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>FuncAppExprParen</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitFuncAppExprParen([NotNull] JPathParser.FuncAppExprParenContext context) { }
 
 	/// <inheritdoc/>
 	/// <remarks>The default implementation does nothing.</remarks>
