@@ -344,6 +344,20 @@ public partial class JPathBaseListener : IJPathListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitMapExpr([NotNull] JPathParser.MapExprContext context) { }
 	/// <summary>
+	/// Enter a parse tree produced by the <c>CardinalityExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterCardinalityExpr([NotNull] JPathParser.CardinalityExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>CardinalityExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitCardinalityExpr([NotNull] JPathParser.CardinalityExprContext context) { }
+	/// <summary>
 	/// Enter a parse tree produced by the <c>FuncAppExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// <para>The default implementation does nothing.</para>

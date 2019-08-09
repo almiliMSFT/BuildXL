@@ -128,6 +128,7 @@ expr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
+    | '#' Sub=expr                                    #CardinalityExpr
     | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExpr
     | Input=expr '|' Func=expr                        #PipeExpr
     | Lhs=expr Op=anyBinaryOp Rhs=expr                #BinExpr
