@@ -11,6 +11,7 @@ using Antlr4.Runtime;
 using BuildXL.FrontEnd.Script.Debugger;
 using BuildXL.Utilities;
 using BuildXL.Utilities.Collections;
+using JetBrains.Annotations;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
@@ -174,9 +175,38 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         /// <summary>
+        /// An argument to be passed when applying a function.
+        /// 
+        /// Either <see cref="Name"/> or <see cref="Value"/> may be null.
+        /// </summary>
+        public class Arg
+        {
+            /// <summary>Name of the argument.  May be null, in which case <see cref="Value"/> must be non-null</summary>
+            [CanBeNull] public string Name { get; }
+
+            /// <summary>Value of the argument.  Maybe be null, in which case <see cref="Name"/> must be non-null</summary>
+            [CanBeNull] public Result Value { get; }
+
+            /// <nodoc />
+            public bool HasName => Name != null;
+
+            /// <nodoc />
+            public bool HasValue => Value != null;
+
+            /// <nodoc />
+            public Arg(string name, Result value)
+            {
+                Contract.Requires(name == null || name.Trim().Length > 0);
+                Contract.Requires(name != null || value != null);
+                Name = name;
+                Value = value;
+            }
+        }
+
+        /// <summary>
         /// Arguments that are passed to library-defined functions (returned by <see cref="Env.ResolveFunc"/>)
         /// </summary>
-        public class Args
+        public class Args : IEnumerable<Result>
         {
             /// <summary>Reference to the current evaluator</summary>
             public Evaluator Eval { get; }
@@ -185,20 +215,56 @@ namespace BuildXL.Execution.Analyzer.JPath
             private readonly string m_funcName;
 
             /// <summary>The arguments passed to the function</summary>
-            private readonly Result[] m_args;
+            private readonly Arg[] m_allArgs;
+
+            private readonly Arg[] m_opts;
+            private readonly Result[] m_values;
+
+            /// <summary>Number of free args</summary>
+            public int ArgCount => m_values.Length;
+
+            /// <summary>Number of named options</summary>
+            public int OptCount => m_opts.Length;
 
             /// <nodoc />
-            public Args(Evaluator eval, string funcName, Result[] args)
+            public Args(Evaluator eval, string funcName, Arg[] args)
             {
                 Eval = eval;
                 m_funcName = funcName;
-                m_args = args;
+                m_allArgs = args;
+
+                m_values = args.Where(a => !a.HasName).Select(a => a.Value).ToArray();
+                m_opts = args
+                    .Where(a => a.HasName)
+                    .SelectMany(a =>
+                    {
+                        // option starts with "--" --> it's a single option
+                        if (a.Name.StartsWith("--"))
+                        {
+                            return new[] { new Arg(a.Name.Substring(2), a.Value) };
+                        }
+                        
+                        // option starts with a single "-" --> each char is an option and the value is associated with the last char
+                        Contract.Assert(a.Name.StartsWith("-"));
+                        var chars = a.Name.Substring(1).ToCharArray();
+                        return chars.Select((c, idx) => new Arg(name: $"{c}", value: idx == chars.Length - 1 ? a.Value : null));
+                    })
+                    .ToArray();
             }
 
+            /// <summary>Whether a given switch is present</summary>
+            public bool HasSwitch(string switchName) => m_opts.Any(opt => opt.Name == switchName);
+
+            /// <summary>Switch value or null if no switch is present</summary>
+            public Result GetSwitch(string switchName) => m_opts.FirstOrDefault(opt => opt.Name == switchName)?.Value;
+
             /// <summary>
-            /// Number of arguments provided.
+            /// Returns all objects from all args
             /// </summary>
-            public int Count => m_args.Length;
+            public IEnumerable<object> Flatten()
+            {
+                return m_values.SelectMany(result => result);
+            }
 
             /// <summary>
             /// Returns the argument at position <paramref name="i"/> or throws if that index is out of bounds
@@ -207,15 +273,44 @@ namespace BuildXL.Execution.Analyzer.JPath
             {
                 get
                 {
-                    if (i < 0 || i >= m_args.Length)
+                    if (i < 0)
                     {
-                        throw Eval.Error($"Function '{m_funcName}' received {m_args.Length} arguments but needs at least {i+1}");
+                        i = i + ArgCount;
                     }
 
-                    return m_args[i];
+                    if (i < 0 || i >= ArgCount)
+                    {
+                        throw Eval.Error($"Function '{m_funcName}' received {m_values.Length} arguments but needs at least {i+1}");
+                    }
+
+                    return m_values[i];
                 }
             }
 
+            #region IEnumerable implementation
+
+            public IEnumerator<Result> GetEnumerator()
+            {
+                return ((IEnumerable<Result>)m_values).GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return ((IEnumerable<Result>)m_values).GetEnumerator();
+            }
+
+            #endregion
+
+            #region Helper methods delegating to Eval
+
+            public int ToInt(object obj) => Eval.ToInt(obj);
+            public bool ToBool(object obj) => Eval.ToBool(obj);
+            public string ToString(object obj) => Eval.ToString(obj);
+            public object ToScalar(Result res) => Eval.ToScalar(res);
+            public string Preview(object obj) => Eval.PreviewObj(obj);
+            public bool Matches(string str, Result pattern) => Eval.Matches(str, pattern);
+
+            #endregion
         }
 
         /// <summary>
@@ -229,7 +324,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         public sealed class Function
         {
             private readonly LibraryFunc m_func;
-            private readonly Result[] m_curriedArgs;
+            private readonly Arg[] m_curriedArgs;
 
             /// <nodoc />
             public string Name { get; }
@@ -241,7 +336,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             public int? MaxArity { get; }
 
             /// <nodoc />
-            public Function(LibraryFunc func, string name = "<lambda>", int minArity = 1, int? maxArity = null, IEnumerable<Result> curriedArgs = null)
+            public Function(LibraryFunc func, string name = "<lambda>", int minArity = 1, int? maxArity = null, IEnumerable<Arg> curriedArgs = null)
             {
                 Contract.Requires(func != null);
 
@@ -249,16 +344,16 @@ namespace BuildXL.Execution.Analyzer.JPath
                 Name = name;
                 MinArity = minArity;
                 MaxArity = maxArity;
-                m_curriedArgs = (curriedArgs ?? CollectionUtilities.EmptyArray<Result>()).ToArray();
+                m_curriedArgs = (curriedArgs ?? CollectionUtilities.EmptyArray<Arg>()).ToArray();
             }
 
             /// <nodoc />
-            public Result Apply(Evaluator eval, IEnumerable<Result> args) => Apply(eval, args.ToArray());
+            public Result Apply(Evaluator eval, IEnumerable<Arg> args) => Apply(eval, args.ToArray());
 
             /// <nodoc />
-            public Result Apply(Evaluator eval, Result[] args)
+            public Result Apply(Evaluator eval, Arg[] args)
             {
-                var argCount = args.Length;
+                var argCount = args.Where(a => !a.HasName).Count();
                 if (argCount < MinArity)
                 {
                     return new Function(
@@ -380,7 +475,12 @@ namespace BuildXL.Execution.Analyzer.JPath
                     case FuncAppExpr funcExpr:
                         var funcResult = Eval(funcExpr.Func);
                         var function = ToFunc(funcResult, funcExpr.Func);
-                        return function.Apply(this, funcExpr.Args.Select(Eval));
+                        var args = funcExpr
+                            .Opts
+                            .Select(opt => new Arg(
+                                name: opt.Name,
+                                value: opt.Value != null ? Eval(opt.Value) : null));
+                        return function.Apply(this, args);
 
                     //case LetExpr letExpr:
                     //    var name = letExpr.Name;

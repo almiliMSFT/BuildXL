@@ -13,7 +13,6 @@ using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Scheduler.Graph;
 using BuildXL.Utilities;
-using BuildXL.Utilities.Collections;
 using static BuildXL.Execution.Analyzer.JPath.Evaluator;
 using static BuildXL.FrontEnd.Script.Debugger.Renderer;
 
@@ -47,8 +46,6 @@ namespace BuildXL.Execution.Analyzer
 
         private ObjectInfo[] SupportedScopes { get; }
 
-        private Function[] LibraryFunctions { get; }
-
         private Env RootEnv { get; }
 
         /// <inheritdoc />
@@ -79,19 +76,6 @@ namespace BuildXL.Execution.Analyzer
                 .Concat(new[] { ExeLevelNotCompleted })
                 .Select(levelStr => new Property(levelStr, () => GetPipsForExecutionLevel(levelStr))));
 
-            LibraryFunctions = new[]
-            {
-                new Function(name: "sum",   minArity: 1, maxArity: 1, func: (args) => args[0].Select(obj => args.Eval.ToInt(obj)).Sum()),
-                new Function(name: "count", minArity: 1, maxArity: 1, func: (args) => args[0].Count),
-                new Function(name: "uniq",  minArity: 1, maxArity: 1, func: (args) => args[0].GroupBy(obj => args.Eval.PreviewObj(obj)).Select(grp => grp.First()).ToArray()),
-                new Function(name: "sort",  minArity: 1, maxArity: 1, func: (args) => args[0].OrderBy(obj => args.Eval.PreviewObj(obj)).ToArray()),
-                new Function(name: "grep",  minArity: 2, maxArity: 2, func: (args) => args[1].Select(obj => args.Eval.PreviewObj(obj)).Where(str => args.Eval.Matches(str, args[0])).ToArray()),
-                new Function(name: "join",  minArity: 1, maxArity: 1, func: (args) =>
-                {
-                    return string.Join(Environment.NewLine, args[0].Select(obj => args.Eval.PreviewObj(obj)));
-                }),
-            };
-
             SupportedScopes = new[]
             {
                 new ObjectInfo(preview: "Global", properties: new[]
@@ -116,7 +100,7 @@ namespace BuildXL.Execution.Analyzer
                     properties: Concat(
                         SupportedScopes.Select(obj => new Property(obj.Preview, obj)),
                         SupportedScopes.SelectMany(obj => obj.Properties),
-                        LibraryFunctions.Select(func => new Property(func.Name, func)))));
+                        LibraryFunctions.All.Select(func => new Property(func.Name, func)))));
 
             Evaluator = new Evaluator(RootEnv);
         }

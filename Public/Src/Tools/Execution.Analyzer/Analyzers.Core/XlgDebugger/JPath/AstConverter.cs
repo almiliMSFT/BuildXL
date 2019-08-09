@@ -86,24 +86,24 @@ namespace BuildXL.Execution.Analyzer.JPath
             return context.Sub.Accept(this);
         }
 
-        public override Expr VisitIdSelector([NotNull] JPathParser.IdSelectorContext context)
+        public override Expr VisitVarId([NotNull] JPathParser.VarIdContext context)
         {
             return new Selector(context.PropertyName.Text); 
         }
 
-        public override Expr VisitEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context)
+        public override Expr VisitEscId([NotNull] JPathParser.EscIdContext context)
         {
-            return new Selector(context.PropertyName.Text.Trim('`'));
+            return new Selector(context.PropertyName.Text.Trim('`')); 
         }
 
-        public override Expr VisitNameSelector([NotNull] JPathParser.NameSelectorContext context)
-        {
-            return context.Name.Accept(this);
-        }
-
-        public override Expr VisitRootIdSelector([NotNull] JPathParser.RootIdSelectorContext context)
+        public override Expr VisitRootId([NotNull] JPathParser.RootIdContext context)
         {
             return new MapExpr(RootExpr.Instance, new Selector(context.RootPropertyName.Text.TrimStart('$')));
+        }
+
+        public override Expr VisitIdSelector([NotNull] JPathParser.IdSelectorContext context)
+        {
+            return context.Name.Accept(this);
         }
 
         public override Expr VisitUnionSelector([NotNull] JPathParser.UnionSelectorContext context)
@@ -182,7 +182,23 @@ namespace BuildXL.Execution.Analyzer.JPath
         {
             return new FuncAppExpr(
                 func: context.Func.Accept(this), 
-                args: context._Args.Select(arg => arg.Accept(this)));
+                args: context.Arg.Accept(this));
+        }
+
+        public override Expr VisitFuncAppExprParen([NotNull] JPathParser.FuncAppExprParenContext context)
+        {
+            return new FuncAppExpr(
+                func: context.Func.Accept(this),
+                args: context._Args.Select(arg => arg.Accept(this)).ToArray());
+        }
+
+        public override Expr VisitFuncOptExpr([NotNull] JPathParser.FuncOptExprContext context)
+        {
+            return new FuncAppExpr(
+                func: context.Func.Accept(this),
+                opts: new FuncOpt(
+                    name: context.OptName.Text, 
+                    value: context.OptValue?.Accept(this)));
         }
 
         public override Expr VisitPipeExpr([NotNull] JPathParser.PipeExprContext context)

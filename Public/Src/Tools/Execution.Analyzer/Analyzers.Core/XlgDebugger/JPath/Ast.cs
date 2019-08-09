@@ -8,6 +8,7 @@ using System.Diagnostics.ContractsLight;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Antlr4.Runtime;
+using BuildXL.Utilities.Collections;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
@@ -222,6 +223,37 @@ namespace BuildXL.Execution.Analyzer.JPath
     }
 
     /// <summary>
+    /// An option for a function application.
+    /// </summary>
+    public class FuncOpt
+    {
+        /// <summary>Name of the option</summary>
+        public string Name { get; }
+
+        /// <summary>Value of the option</summary>
+        public Expr Value { get; }
+
+        /// <nodoc />
+        public FuncOpt(string name, Expr value)
+        {
+            Contract.Requires(name == null || name.Trim().Length > 0);
+            Contract.Requires(name != null || value != null);
+
+            Name = name;
+            Value = value;
+        }
+
+        /// <nodoc />
+        public string Print()
+        {
+            return
+                Name == null  ? Value.Print() :
+                Value == null ? Name :
+                $"{Name} {Value.Print()}";
+        }
+    }
+
+    /// <summary>
     /// A function application.
     /// 
     /// All function names start with '$'.
@@ -233,20 +265,25 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// <summary>Name of the function.</summary>
         public Expr Func { get; }
 
-        /// <summary>Function arguments</summary>
-        public IReadOnlyList<Expr> Args { get; }
+        /// <summary>Function options (switches)</summary>
+        public IReadOnlyList<FuncOpt> Opts { get; }
 
         /// <nodoc />
-        public FuncAppExpr(Expr func, IEnumerable<Expr> args)
+        public FuncAppExpr(Expr func, params FuncOpt[] opts)
         {
+            Contract.Requires(func != null);
             Func = func;
-            Args = args.ToList();
+            Opts = opts;
         }
+
+        /// <nodoc />
+        public FuncAppExpr(Expr func, params Expr[] args)
+            : this(func, args.Select(a => new FuncOpt(name: null, value: a)).ToArray()) { }
 
         /// <inheritdoc />
         public override string Print()
         {
-            var args = string.Join(", ", Args.Select(a => a.Print()));
+            var args = string.Join(", ", Opts.Select(a => a.Print()));
             return $"{Func.Print()}({args})";
         }
     }
