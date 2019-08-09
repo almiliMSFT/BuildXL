@@ -61,7 +61,7 @@ VarID
 RootID
     : '$' IdFragment ;
 
-ESC_ID
+EscID
     : '`' ~[`]+ '`' ;
 
 Switch
@@ -111,31 +111,34 @@ logicExpr
     | '(' Sub=logicExpr ')'                           #SubLogicExpr
     ;
 
-id  : PropertyName=VarID                              #IdSelector
-    | PropertyName=ESC_ID                             #EscIdSelector
+id  : PropertyName=VarID                              #VarId
+    | PropertyName=EscID                              #EscId
+    | RootPropertyName=RootID                         #RootId
     ;
 
 selector
     : Name=id                                         #NameSelector
-    | RootPropertyName=RootID                         #RootIdSelector
     | '(' Names+=id ('+' Names+=id)+ ')'              #UnionSelector
     ;
 
+literal
+    : Value=StrLit                                    #StrLitExpr
+    | Value=RegExLit                                  #RegExLitExpr
+    | Value=IntLit                                    #IntLitExpr
+    ;
 
 expr
     : '$'                                             #RootExpr
     | Sub=selector                                    #SelectorExpr
-    | Value=StrLit                                    #StrLitExpr
-    | Value=RegExLit                                  #RegExLitExpr
-    | Value=IntLit                                    #IntLitExpr
+    | Lit=literal                                     #LiteralExpr
     | Lhs=expr '.' Selector=selector                  #MapExpr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
     | '#' Sub=expr                                    #CardinalityExpr
     | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExprParen
-    | Func=expr OptName=Switch (OptValue=expr)?       #FuncOptExpr
     | Func=expr Arg=expr                              #FuncAppExpr
+    | Func=expr OptName=Switch (OptValue=literal)?    #FuncOptExpr
     | Input=expr '|' Func=expr                        #PipeExpr
     | Lhs=expr Op=anyBinaryOp Rhs=expr                #BinExpr
     | '(' Sub=expr ')'                                #SubExpr

@@ -2,7 +2,8 @@
 
 java \
   -cp $CLASSPATH:antlr-4.7.2-complete.jar   \
-  -Xmx500M org.antlr.v4.Tool                \
+  -Xmx500M                                  \
+  org.antlr.v4.Tool                         \
   -listener                                 \
   -visitor                                  \
   -Dlanguage=CSharp                         \

@@ -222,29 +222,41 @@ public interface IJPathListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitBinaryLogicExpr([NotNull] JPathParser.BinaryLogicExprContext context);
 	/// <summary>
-	/// Enter a parse tree produced by the <c>IdSelector</c>
+	/// Enter a parse tree produced by the <c>VarId</c>
 	/// labeled alternative in <see cref="JPathParser.id"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void EnterIdSelector([NotNull] JPathParser.IdSelectorContext context);
+	void EnterVarId([NotNull] JPathParser.VarIdContext context);
 	/// <summary>
-	/// Exit a parse tree produced by the <c>IdSelector</c>
+	/// Exit a parse tree produced by the <c>VarId</c>
 	/// labeled alternative in <see cref="JPathParser.id"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void ExitIdSelector([NotNull] JPathParser.IdSelectorContext context);
+	void ExitVarId([NotNull] JPathParser.VarIdContext context);
 	/// <summary>
-	/// Enter a parse tree produced by the <c>EscIdSelector</c>
+	/// Enter a parse tree produced by the <c>EscId</c>
 	/// labeled alternative in <see cref="JPathParser.id"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void EnterEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context);
+	void EnterEscId([NotNull] JPathParser.EscIdContext context);
 	/// <summary>
-	/// Exit a parse tree produced by the <c>EscIdSelector</c>
+	/// Exit a parse tree produced by the <c>EscId</c>
 	/// labeled alternative in <see cref="JPathParser.id"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void ExitEscIdSelector([NotNull] JPathParser.EscIdSelectorContext context);
+	void ExitEscId([NotNull] JPathParser.EscIdContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>RootId</c>
+	/// labeled alternative in <see cref="JPathParser.id"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterRootId([NotNull] JPathParser.RootIdContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>RootId</c>
+	/// labeled alternative in <see cref="JPathParser.id"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitRootId([NotNull] JPathParser.RootIdContext context);
 	/// <summary>
 	/// Enter a parse tree produced by the <c>NameSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.
@@ -258,18 +270,6 @@ public interface IJPathListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitNameSelector([NotNull] JPathParser.NameSelectorContext context);
 	/// <summary>
-	/// Enter a parse tree produced by the <c>RootIdSelector</c>
-	/// labeled alternative in <see cref="JPathParser.selector"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterRootIdSelector([NotNull] JPathParser.RootIdSelectorContext context);
-	/// <summary>
-	/// Exit a parse tree produced by the <c>RootIdSelector</c>
-	/// labeled alternative in <see cref="JPathParser.selector"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitRootIdSelector([NotNull] JPathParser.RootIdSelectorContext context);
-	/// <summary>
 	/// Enter a parse tree produced by the <c>UnionSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.
 	/// </summary>
@@ -281,6 +281,42 @@ public interface IJPathListener : IParseTreeListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void ExitUnionSelector([NotNull] JPathParser.UnionSelectorContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>StrLitExpr</c>
+	/// labeled alternative in <see cref="JPathParser.literal"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterStrLitExpr([NotNull] JPathParser.StrLitExprContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>StrLitExpr</c>
+	/// labeled alternative in <see cref="JPathParser.literal"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitStrLitExpr([NotNull] JPathParser.StrLitExprContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>RegExLitExpr</c>
+	/// labeled alternative in <see cref="JPathParser.literal"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterRegExLitExpr([NotNull] JPathParser.RegExLitExprContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>RegExLitExpr</c>
+	/// labeled alternative in <see cref="JPathParser.literal"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitRegExLitExpr([NotNull] JPathParser.RegExLitExprContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>IntLitExpr</c>
+	/// labeled alternative in <see cref="JPathParser.literal"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterIntLitExpr([NotNull] JPathParser.IntLitExprContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>IntLitExpr</c>
+	/// labeled alternative in <see cref="JPathParser.literal"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitIntLitExpr([NotNull] JPathParser.IntLitExprContext context);
 	/// <summary>
 	/// Enter a parse tree produced by the <c>MapExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
@@ -390,18 +426,6 @@ public interface IJPathListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitIndexExpr([NotNull] JPathParser.IndexExprContext context);
 	/// <summary>
-	/// Enter a parse tree produced by the <c>RegExLitExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterRegExLitExpr([NotNull] JPathParser.RegExLitExprContext context);
-	/// <summary>
-	/// Exit a parse tree produced by the <c>RegExLitExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitRegExLitExpr([NotNull] JPathParser.RegExLitExprContext context);
-	/// <summary>
 	/// Enter a parse tree produced by the <c>SelectorExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
@@ -438,18 +462,6 @@ public interface IJPathListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitRootExpr([NotNull] JPathParser.RootExprContext context);
 	/// <summary>
-	/// Enter a parse tree produced by the <c>IntLitExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterIntLitExpr([NotNull] JPathParser.IntLitExprContext context);
-	/// <summary>
-	/// Exit a parse tree produced by the <c>IntLitExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitIntLitExpr([NotNull] JPathParser.IntLitExprContext context);
-	/// <summary>
 	/// Enter a parse tree produced by the <c>PipeExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
@@ -462,17 +474,17 @@ public interface IJPathListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitPipeExpr([NotNull] JPathParser.PipeExprContext context);
 	/// <summary>
-	/// Enter a parse tree produced by the <c>StrLitExpr</c>
+	/// Enter a parse tree produced by the <c>LiteralExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void EnterStrLitExpr([NotNull] JPathParser.StrLitExprContext context);
+	void EnterLiteralExpr([NotNull] JPathParser.LiteralExprContext context);
 	/// <summary>
-	/// Exit a parse tree produced by the <c>StrLitExpr</c>
+	/// Exit a parse tree produced by the <c>LiteralExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void ExitStrLitExpr([NotNull] JPathParser.StrLitExprContext context);
+	void ExitLiteralExpr([NotNull] JPathParser.LiteralExprContext context);
 	/// <summary>
 	/// Enter a parse tree produced by the <c>FuncAppExprParen</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
