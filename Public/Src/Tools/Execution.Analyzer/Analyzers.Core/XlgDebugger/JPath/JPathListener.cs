@@ -294,6 +294,18 @@ public interface IJPathListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitMapExpr([NotNull] JPathParser.MapExprContext context);
 	/// <summary>
+	/// Enter a parse tree produced by the <c>FuncOptExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterFuncOptExpr([NotNull] JPathParser.FuncOptExprContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>FuncOptExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitFuncOptExpr([NotNull] JPathParser.FuncOptExprContext context);
+	/// <summary>
 	/// Enter a parse tree produced by the <c>CardinalityExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>

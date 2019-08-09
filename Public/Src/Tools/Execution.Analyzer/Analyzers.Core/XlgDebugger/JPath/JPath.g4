@@ -64,6 +64,9 @@ RootID
 ESC_ID
     : '`' ~[`]+ '`' ;
 
+Switch
+    : '-' [a-zA-Z0-9'-']+ ;
+
 intBinaryOp
     : Token=(PLUS | MINUS | TIMES | DIV | MOD) ;
 
@@ -118,6 +121,7 @@ selector
     | '(' Names+=id ('+' Names+=id)+ ')'              #UnionSelector
     ;
 
+
 expr
     : '$'                                             #RootExpr
     | Sub=selector                                    #SelectorExpr
@@ -130,6 +134,7 @@ expr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
     | '#' Sub=expr                                    #CardinalityExpr
     | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExprParen
+    | Func=expr OptName=Switch (OptValue=expr)?       #FuncOptExpr
     | Func=expr Arg=expr                              #FuncAppExpr
     | Input=expr '|' Func=expr                        #PipeExpr
     | Lhs=expr Op=anyBinaryOp Rhs=expr                #BinExpr
