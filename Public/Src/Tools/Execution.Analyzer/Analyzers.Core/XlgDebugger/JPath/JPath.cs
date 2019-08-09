@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.ContractsLight;
 using System.IO;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
@@ -54,11 +55,14 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         /// <nodoc />
-        public static Possible<Evaluator.Result> TryEval(Evaluator.Env env, Expr expr, Evaluator evaluator = null)
+        public static Possible<Evaluator.Result> TryEval(Evaluator evaluator, Expr expr)
         {
+            Contract.Requires(evaluator != null);
+            Contract.Requires(expr != null);
+
             try
             {
-                return (evaluator ?? new Evaluator()).Eval(env, expr);
+                return evaluator.Eval(expr);
             }
             catch (Exception e)
             {
@@ -67,12 +71,12 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         /// <nodoc />
-        public static Possible<Evaluator.Result> TryEval(Evaluator.Env env, string expr, Evaluator evaluator = null)
+        public static Possible<Evaluator.Result> TryEval(Evaluator evaluator, string expr)
         {
-            return TryParse(expr).Then(e => TryEval(env, e, evaluator));
+            return TryParse(expr).Then(e => TryEval(evaluator, e));
         }
 
-        internal static Possible<string[]> GetCompletions(Evaluator.Env env, string str)
+        internal static Possible<string[]> GetCompletions(Evaluator evaluator, string str)
         {
             var lexer = new JPathLexer(new AntlrInputStream(str));
             var parser = new JPathParser(new CommonTokenStream(lexer));
@@ -86,7 +90,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             }
 
             var exprAst = exprCst.Accept(new AstConverter());
-            var value = new Evaluator().Eval(env, exprAst);
+            var value = evaluator.Eval(exprAst);
 
             return new[] { "hi", exprAst.Print(), value.Value.ToString() };
         }

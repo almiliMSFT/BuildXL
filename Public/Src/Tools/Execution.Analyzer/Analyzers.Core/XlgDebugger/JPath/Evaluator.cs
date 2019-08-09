@@ -124,7 +124,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             public object Root { get; }
 
             /// <summary>
-            /// The result of the last evaluated expression (against which selector properties are resolved)
+            /// The result of the last evaluated expression (against which properties are resolved)
             /// </summary>
             public Result Current { get; }
 
@@ -281,32 +281,39 @@ namespace BuildXL.Execution.Analyzer.JPath
         public delegate ObjectInfo ObjectResolver(object obj);
 
         private readonly Stack<(Env, Expr)> m_evalStack = new Stack<(Env, Expr)>();
+        private readonly Stack<Env> m_envStack = new Stack<Env>();
         private readonly Dictionary<(Env, Expr), Result> m_evalCache = new Dictionary<(Env, Expr), Result>();
 
-        private Env TopEnv => m_evalStack.Any() ? m_evalStack.Peek().Item1 : null;
+        private Env TopEnv => m_envStack.Peek();
+
+        public Evaluator(Env rootEnv)
+        {
+            Contract.Requires(rootEnv != null);
+            m_envStack.Push(rootEnv);
+        }
 
         /// <nodoc />
-        public Result Eval(Env env, Expr expr)
+        public Result Eval(Expr expr)
         {
-            var key = (env, expr);
+            var key = (TopEnv, expr);
             if (m_evalCache.TryGetValue(key, out var result))
             {
                 return result;
             }
 
-            return m_evalCache[key] = EvalInternal(env, expr);
+            return m_evalCache[key] = EvalInternal(expr);
         }
 
-        private Result EvalInternal(Env env, Expr expr)
+        private Result EvalInternal(Expr expr)
         {
-            m_evalStack.Push((env, expr));
+            m_evalStack.Push((TopEnv, expr));
             try
             {
                 switch (expr)
                 {
                     case Selector selector:
-                        return env.Current
-                            .Select(obj => env.ResolveObject(obj))
+                        return TopEnv.Current
+                            .Select(obj => TopEnv.ResolveObject(obj))
                             .SelectMany(obj => obj.Properties.Where(p => selector.PropertyNames.Contains(p.Name)))
                             .SelectMany(prop =>
                             {
@@ -325,18 +332,18 @@ namespace BuildXL.Execution.Analyzer.JPath
                     case RangeExpr rangeExpr:
                         if (rangeExpr.Array != null)
                         {
-                            return InNewEnv(env, rangeExpr.Array, new RangeExpr(null, rangeExpr.Begin, rangeExpr.End));
+                            return InNewEnv(rangeExpr.Array, new RangeExpr(null, rangeExpr.Begin, rangeExpr.End));
                         }
 
-                        var array = env.Current;
+                        var array = TopEnv.Current;
                         if (array.IsEmpty)
                         {
                             return array;
                         }
 
-                        var begin = IEval(env, rangeExpr.Begin);
+                        var begin = IEval(rangeExpr.Begin);
                         var end = rangeExpr.End != null
-                            ? IEval(env, rangeExpr.End)
+                            ? IEval(rangeExpr.End)
                             : begin;
 
                         if (begin < 0)
@@ -359,24 +366,32 @@ namespace BuildXL.Execution.Analyzer.JPath
                     case FilterExpr filterExpr:
                         if (filterExpr.Lhs != null)
                         {
-                            return InNewEnv(env, filterExpr.Lhs, new FilterExpr(null, filterExpr.Filter));
+                            return InNewEnv(filterExpr.Lhs, new FilterExpr(null, filterExpr.Filter));
                         }
 
-                        return env
+                        return TopEnv
                             .Current
-                            .Where(obj => ToBool(Eval(env.WithCurrent(new[] { obj }), filterExpr.Filter)))
+                            .Where(obj => ToBool(InNewEnv(Result.Scalar(obj), filterExpr.Filter)))
                             .ToList();
 
                     case MapExpr mapExpr:
-                        return InNewEnv(env, mapExpr.Lhs, mapExpr.PropertySelector);
+                        return InNewEnv(mapExpr.Lhs, mapExpr.PropertySelector);
 
                     case FuncAppExpr funcExpr:
-                        var funcResult = Eval(env, funcExpr.Func);
+                        var funcResult = Eval(funcExpr.Func);
                         var function = ToFunc(funcResult, funcExpr.Func);
-                        return function.Apply(this, funcExpr.Args.Select(arg => Eval(env, arg)));
+                        return function.Apply(this, funcExpr.Args.Select(Eval));
+
+                    //case LetExpr letExpr:
+                    //    var name = letExpr.Name;
+                    //    var value = Eval(env, letExpr.Value);
+                    //    if 
+
+                    case CardinalityExpr cardExpr:
+                        return Eval(cardExpr.Sub).Count;
 
                     case RootExpr rootExpr:
-                        return Result.Scalar(env.Root);
+                        return Result.Scalar(TopEnv.Root);
 
                     case IntLit intLit:
                         return intLit.Value;
@@ -388,10 +403,10 @@ namespace BuildXL.Execution.Analyzer.JPath
                         return regexLit.Value;
 
                     case UnaryExpr ue:
-                        return EvalUnaryExpr(env, ue);
+                        return EvalUnaryExpr(ue);
 
                     case BinaryExpr be:
-                        return EvalBinaryExpr(env, be);
+                        return EvalBinaryExpr(be);
 
                     default:
                         throw new Exception("Evaluation not implemented for type: " + expr?.GetType().FullName);
@@ -403,18 +418,27 @@ namespace BuildXL.Execution.Analyzer.JPath
             }
         }
 
-        private Result InNewEnv(Env env, Expr newEnvValue, Expr inNewEnv)
+        private Result InNewEnv(Expr newCurrent, Expr inNewEnv) => InNewEnv(Eval(newCurrent), inNewEnv);
+
+        private Result InNewEnv(Result newCurrent, Expr inNewEnv)
         {
-            var result = Eval(env, newEnvValue);
-            return Eval(env.WithCurrent(result), inNewEnv);
+            m_envStack.Push(TopEnv.WithCurrent(newCurrent));
+            try
+            {
+                return Eval(inNewEnv);
+            }
+            finally
+            {
+                m_envStack.Pop();
+            }
         }
 
-        private int IEval(Env env, Expr expr) => ToInt(Eval(env, expr), source: expr);
-        private bool BEval(Env env, Expr expr) => ToBool(Eval(env, expr), source: expr);
+        private int IEval(Expr expr) => ToInt(Eval(expr), source: expr);
+        private bool BEval(Expr expr) => ToBool(Eval(expr), source: expr);
 
-        private Result EvalUnaryExpr(Env env, UnaryExpr expr)
+        private Result EvalUnaryExpr(UnaryExpr expr)
         {
-            var result = Eval(env, expr);
+            var result = Eval(expr);
             switch (expr.Op.Type)
             {
                 case JPathLexer.NOT:   return !ToBool(result, expr);
@@ -425,7 +449,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             }
         }
 
-        private Result EvalBinaryExpr(Env env, BinaryExpr expr)
+        private Result EvalBinaryExpr(BinaryExpr expr)
         {
             var lhs = expr.Lhs;
             var rhs = expr.Rhs;
@@ -455,10 +479,6 @@ namespace BuildXL.Execution.Analyzer.JPath
                 default:
                     throw ApplyError(expr.Op);
             }
-
-            int IEval(Expr e) => this.IEval(env, e);
-            bool BEval(Expr e) => this.BEval(env, e);
-            Result Eval(Expr e) => this.Eval(env, e);
         }
 
         /// <summary>

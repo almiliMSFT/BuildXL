@@ -317,4 +317,55 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         private RootExpr() { }
     }
+
+    /// <summary>
+    /// Cardinality expression (evaluates a sub-expression then returns the number of elements in the result)
+    /// </summary>
+    public class CardinalityExpr : Expr
+    {
+        /// <summary>The expression whose cardinality to compute</summary>
+        public Expr Sub { get; }
+
+        /// <nodoc />
+        public CardinalityExpr(Expr sub)
+        {
+            Contract.Requires(sub != null);
+            Sub = sub;
+        }
+
+        /// <inheritdoc />
+        public override string Print() => $"#{Sub.Print()}";
+    }
+
+    public class LetExpr : Expr
+    {
+        private readonly Selector m_name;
+
+        /// <summary>Name of the let binding</summary>
+        public string Name => m_name.PropertyNames.First();
+
+        /// <summary>Value of the let binding</summary>
+        public Expr Value { get; }
+
+        /// <summary>
+        /// Sub expression in which the value will be bound.
+        /// If missing, the binding is added to the current environment.
+        /// </summary>
+        public Expr Sub { get; }
+
+        /// <nodoc />
+        public LetExpr(Selector name, Expr value, Expr sub)
+        {
+            Contract.Requires(name != null);
+            Contract.Requires(name.PropertyNames.Count == 1);
+            Contract.Requires(value != null);
+
+            m_name = name;
+            Value = value;
+            Sub = sub;
+        }
+
+        /// <inheritdoc />
+        public override string Print() => $"let {m_name.Print()} := {Value.Print()}" + Sub != null ? $" in {Sub.Print()}" : "";
+    }
 }

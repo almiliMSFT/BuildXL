@@ -29,7 +29,7 @@ namespace BuildXL.Execution.Analyzer
         private const string ExeLevelNotCompleted = "NotCompleted";
         private const int XlgThreadId = 1;
 
-        private readonly Evaluator m_evaluator = new Evaluator();
+        private Evaluator Evaluator { get; }
 
         private DebugLogsAnalyzer Analyzer { get; }
 
@@ -117,6 +117,8 @@ namespace BuildXL.Execution.Analyzer
                         SupportedScopes.Select(obj => new Property(obj.Preview, obj)),
                         SupportedScopes.SelectMany(obj => obj.Properties),
                         LibraryFunctions.Select(func => new Property(func.Name, func)))));
+
+            Evaluator = new Evaluator(RootEnv);
         }
 
         private IEnumerable<T> Concat<T>(params IEnumerable<T>[] list)
@@ -158,7 +160,7 @@ namespace BuildXL.Execution.Analyzer
             }
 
             
-            var maybeResult = JPath.JPath.TryEval(RootEnv, expr, m_evaluator);
+            var maybeResult = JPath.JPath.TryEval(Evaluator, expr);
             if (maybeResult.Succeeded)
             {
                 return new ObjectContext(

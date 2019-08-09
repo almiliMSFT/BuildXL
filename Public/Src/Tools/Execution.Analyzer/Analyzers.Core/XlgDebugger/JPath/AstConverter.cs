@@ -173,6 +173,11 @@ namespace BuildXL.Execution.Analyzer.JPath
             return context.Sub.Accept(this);
         }
 
+        public override Expr VisitCardinalityExpr([NotNull] JPathParser.CardinalityExprContext context)
+        {
+            return new CardinalityExpr(context.Sub.Accept(this));
+        }
+
         public override Expr VisitFuncAppExpr([NotNull] JPathParser.FuncAppExprContext context)
         {
             return new FuncAppExpr(
@@ -193,6 +198,14 @@ namespace BuildXL.Execution.Analyzer.JPath
                 op: (context.Op.GetChild(0).GetChild(0) as ITerminalNode).Symbol,
                 lhs: context.Lhs.Accept(this),
                 rhs: context.Rhs.Accept(this));
+        }
+
+        public override Expr VisitLetExpr([NotNull] JPathParser.LetExprContext context)
+        {
+            return new LetExpr(
+                name: context.Name.Accept(this) as Selector,
+                value: context.Value.Accept(this),
+                sub: context.Sub?.Accept(this));
         }
     }
 }
