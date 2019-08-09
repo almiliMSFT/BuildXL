@@ -133,5 +133,6 @@ expr
     | Input=expr '|' Func=expr                        #PipeExpr
     | Lhs=expr Op=anyBinaryOp Rhs=expr                #BinExpr
     | '(' Sub=expr ')'                                #SubExpr
+    | 'let' Name=id ':=' Bnd=expr ('in' Sub=expr)?    #LetExpr 
     ;
 

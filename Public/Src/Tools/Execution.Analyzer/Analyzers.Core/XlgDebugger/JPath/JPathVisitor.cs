@@ -194,6 +194,13 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitCardinalityExpr([NotNull] JPathParser.CardinalityExprContext context);
 	/// <summary>
+	/// Visit a parse tree produced by the <c>LetExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLetExpr([NotNull] JPathParser.LetExprContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>FuncAppExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
