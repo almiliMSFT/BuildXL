@@ -145,26 +145,19 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitBinaryLogicExpr([NotNull] JPathParser.BinaryLogicExprContext context);
 	/// <summary>
-	/// Visit a parse tree produced by the <c>VarId</c>
-	/// labeled alternative in <see cref="JPathParser.id"/>.
+	/// Visit a parse tree produced by the <c>PropertyId</c>
+	/// labeled alternative in <see cref="JPathParser.prop"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitVarId([NotNull] JPathParser.VarIdContext context);
+	Result VisitPropertyId([NotNull] JPathParser.PropertyIdContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>EscId</c>
-	/// labeled alternative in <see cref="JPathParser.id"/>.
+	/// labeled alternative in <see cref="JPathParser.prop"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitEscId([NotNull] JPathParser.EscIdContext context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>RootId</c>
-	/// labeled alternative in <see cref="JPathParser.id"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitRootId([NotNull] JPathParser.RootIdContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>IdSelector</c>
 	/// labeled alternative in <see cref="JPathParser.selector"/>.
@@ -291,6 +284,13 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitPipeExpr([NotNull] JPathParser.PipeExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>VarExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVarExpr([NotNull] JPathParser.VarExprContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>LiteralExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.

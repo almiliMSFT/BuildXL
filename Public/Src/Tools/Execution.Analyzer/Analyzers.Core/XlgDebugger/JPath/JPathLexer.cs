@@ -38,7 +38,8 @@ public partial class JPathLexer : Lexer {
 		T__9=10, T__10=11, T__11=12, T__12=13, WS=14, NOT=15, AND=16, OR=17, XOR=18, 
 		IFF=19, GTE=20, LTE=21, GT=22, LT=23, EQ=24, NEQ=25, MATCH=26, NMATCH=27, 
 		MINUS=28, PLUS=29, TIMES=30, DIV=31, MOD=32, CONCAT=33, INTERSECT=34, 
-		IntLit=35, StrLit=36, RegExLit=37, VarID=38, RootID=39, EscID=40, Switch=41;
+		IntLit=35, StrLit=36, RegExLit=37, PropertyId=38, VarId=39, EscID=40, 
+		Opt=41;
 	public static string[] channelNames = {
 		"DEFAULT_TOKEN_CHANNEL", "HIDDEN"
 	};
@@ -52,7 +53,7 @@ public partial class JPathLexer : Lexer {
 		"T__9", "T__10", "T__11", "T__12", "WS", "NOT", "AND", "OR", "XOR", "IFF", 
 		"GTE", "LTE", "GT", "LT", "EQ", "NEQ", "MATCH", "NMATCH", "MINUS", "PLUS", 
 		"TIMES", "DIV", "MOD", "CONCAT", "INTERSECT", "IntLit", "StrLit", "RegExLit", 
-		"IdFragment", "VarID", "RootID", "EscID", "Switch"
+		"IdFragment", "PropertyId", "VarId", "EscID", "Opt"
 	};
 
 
@@ -75,8 +76,8 @@ public partial class JPathLexer : Lexer {
 		null, null, null, null, null, null, null, null, null, null, null, null, 
 		null, null, "WS", "NOT", "AND", "OR", "XOR", "IFF", "GTE", "LTE", "GT", 
 		"LT", "EQ", "NEQ", "MATCH", "NMATCH", "MINUS", "PLUS", "TIMES", "DIV", 
-		"MOD", "CONCAT", "INTERSECT", "IntLit", "StrLit", "RegExLit", "VarID", 
-		"RootID", "EscID", "Switch"
+		"MOD", "CONCAT", "INTERSECT", "IntLit", "StrLit", "RegExLit", "PropertyId", 
+		"VarId", "EscID", "Opt"
 	};
 	public static readonly IVocabulary DefaultVocabulary = new Vocabulary(_LiteralNames, _SymbolicNames);
 

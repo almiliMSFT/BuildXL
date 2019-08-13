@@ -55,16 +55,16 @@ RegExLit
 fragment IdFragment
     : [a-zA-Z][a-zA-Z0-9_]* ;
 
-VarID
+PropertyId
     : IdFragment ;
 
-RootID
+VarId
     : '$' IdFragment ;
 
 EscID
     : '`' ~[`]+ '`' ;
 
-Switch
+Opt
     : '-' [a-zA-Z0-9'-']+ ;
 
 intBinaryOp
@@ -111,14 +111,14 @@ logicExpr
     | '(' Sub=logicExpr ')'                           #SubLogicExpr
     ;
 
-id  : PropertyName=VarID                              #VarId
+prop
+    : PropertyName=PropertyId                         #PropertyId
     | PropertyName=EscID                              #EscId
-    | RootPropertyName=RootID                         #RootId
     ;
 
 selector
-    : Name=id                                         #IdSelector
-    | '(' Names+=id ('+' Names+=id)+ ')'              #UnionSelector
+    : Name=prop                                       #IdSelector
+    | '(' Names+=prop ('+' Names+=prop)+ ')'          #UnionSelector
     ;
 
 literal
@@ -130,6 +130,7 @@ literal
 expr
     : '$'                                             #RootExpr
     | Sub=selector                                    #SelectorExpr
+    | Var=VarId                                       #VarExpr
     | Lit=literal                                     #LiteralExpr
     | Lhs=expr '.' Selector=selector                  #MapExpr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
@@ -138,10 +139,10 @@ expr
     | '#' Sub=expr                                    #CardinalityExpr
     | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExprParen
     | Func=expr Arg=expr                              #FuncAppExpr
-    | Func=expr OptName=Switch (OptValue=literal)?    #FuncOptExpr
+    | Func=expr OptName=Opt (OptValue=literal)?       #FuncOptExpr
     | Input=expr '|' Func=expr                        #PipeExpr
     | Lhs=expr Op=anyBinaryOp Rhs=expr                #BinExpr
     | '(' Sub=expr ')'                                #SubExpr
-    | 'let' Name=id ':=' Value=expr ('in' Sub=expr)?  #LetExpr 
+    | 'let' Var=VarId ':=' Val=expr ('in' Sub=expr)?  #LetExpr 
     ;
 
