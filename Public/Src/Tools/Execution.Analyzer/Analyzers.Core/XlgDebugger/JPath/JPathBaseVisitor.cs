@@ -391,6 +391,17 @@ public partial class JPathBaseVisitor<Result> : AbstractParseTreeVisitor<Result>
 	/// <return>The visitor result.</return>
 	public virtual Result VisitIndexExpr([NotNull] JPathParser.IndexExprContext context) { return VisitChildren(context); }
 	/// <summary>
+	/// Visit a parse tree produced by the <c>AssignExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitAssignExpr([NotNull] JPathParser.AssignExprContext context) { return VisitChildren(context); }
+	/// <summary>
 	/// Visit a parse tree produced by the <c>SelectorExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// <para>

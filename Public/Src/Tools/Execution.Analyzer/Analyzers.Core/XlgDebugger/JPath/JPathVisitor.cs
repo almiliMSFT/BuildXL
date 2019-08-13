@@ -257,6 +257,13 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitIndexExpr([NotNull] JPathParser.IndexExprContext context);
 	/// <summary>
+	/// Visit a parse tree produced by the <c>AssignExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAssignExpr([NotNull] JPathParser.AssignExprContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>SelectorExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
