@@ -43,7 +43,29 @@ namespace BuildXL.Execution.Analyzer.JPath
     }
 
     /// <summary>
-    /// Contains a property name to be resolved against the current environment.
+    /// A variable name to be resolved against the current environment.
+    /// 
+    /// Syntax example 1: $myVar
+    /// </summary>
+    public sealed class VarExpr : Expr
+    {
+        /// <summary>Variable name.  Must start with '$'. </summary>
+        public string Name { get; }
+
+        /// <nodoc />
+        public VarExpr(string name)
+        {
+            Contract.Requires(!string.IsNullOrWhiteSpace(name));
+            Name = name;
+        }
+
+        /// <inheritdoc />
+        public override string Print() => Name;
+    }
+
+    /// <summary>
+    /// Contains a property name to be resolved against the current result in the environment
+    /// (<see cref="Evaluator.Env.Current"/>).
     /// 
     /// Syntax example 1: Key
     /// Syntax example 2: `Key with spaces`
@@ -376,10 +398,8 @@ namespace BuildXL.Execution.Analyzer.JPath
 
     public class LetExpr : Expr
     {
-        private readonly Selector m_name;
-
         /// <summary>Name of the let binding</summary>
-        public string Name => m_name.PropertyNames.First();
+        public string Name { get; }
 
         /// <summary>Value of the let binding</summary>
         public Expr Value { get; }
@@ -391,18 +411,17 @@ namespace BuildXL.Execution.Analyzer.JPath
         public Expr Sub { get; }
 
         /// <nodoc />
-        public LetExpr(Selector name, Expr value, Expr sub)
+        public LetExpr(string name, Expr value, Expr sub)
         {
-            Contract.Requires(name != null);
-            Contract.Requires(name.PropertyNames.Count == 1);
+            Contract.Requires(!string.IsNullOrWhiteSpace(name));
             Contract.Requires(value != null);
 
-            m_name = name;
+            Name = name;
             Value = value;
             Sub = sub;
         }
 
         /// <inheritdoc />
-        public override string Print() => $"let {m_name.Print()} := {Value.Print()}" + Sub != null ? $" in {Sub.Print()}" : "";
+        public override string Print() => $"let {Name} := {Value.Print()}" + Sub != null ? $" in {Sub.Print()}" : "";
     }
 }

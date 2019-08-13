@@ -94,13 +94,16 @@ namespace BuildXL.Execution.Analyzer
             };
 
             RootEnv = new Env(
-                objectResolver: (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj),
-                root: new ObjectInfo(
-                    preview: "$", 
+                parent: null,
+                resolver: (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj),
+                vars: LibraryFunctions.All.ToDictionary(f => '$' + f.Name, f => Result.Scalar(f)),
+                current: new ObjectInfo(
+                    preview: "$",
                     properties: Concat(
                         SupportedScopes.Select(obj => new Property(obj.Preview, obj)),
-                        SupportedScopes.SelectMany(obj => obj.Properties),
-                        LibraryFunctions.All.Select(func => new Property(func.Name, func)))));
+                        SupportedScopes.SelectMany(obj => obj.Properties))));
+                    
+                        //LibraryFunctions.All.Select(func => new Property(func.Name, func)))));
 
             Evaluator = new Evaluator(RootEnv);
         }

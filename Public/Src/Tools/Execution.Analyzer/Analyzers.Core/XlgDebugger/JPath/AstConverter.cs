@@ -86,7 +86,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             return context.Sub.Accept(this);
         }
 
-        public override Expr VisitVarId([NotNull] JPathParser.VarIdContext context)
+        public override Expr VisitPropertyId([NotNull] JPathParser.PropertyIdContext context)
         {
             return new Selector(context.PropertyName.Text); 
         }
@@ -96,9 +96,9 @@ namespace BuildXL.Execution.Analyzer.JPath
             return new Selector(context.PropertyName.Text.Trim('`')); 
         }
 
-        public override Expr VisitRootId([NotNull] JPathParser.RootIdContext context)
+        public override Expr VisitVarExpr([NotNull] JPathParser.VarExprContext context)
         {
-            return new MapExpr(RootExpr.Instance, new Selector(context.RootPropertyName.Text.TrimStart('$')));
+            return new VarExpr(context.Var.Text);
         }
 
         public override Expr VisitIdSelector([NotNull] JPathParser.IdSelectorContext context)
@@ -219,8 +219,8 @@ namespace BuildXL.Execution.Analyzer.JPath
         public override Expr VisitLetExpr([NotNull] JPathParser.LetExprContext context)
         {
             return new LetExpr(
-                name: context.Name.Accept(this) as Selector,
-                value: context.Value.Accept(this),
+                name: context.Var.Text,
+                value: context.Val.Accept(this),
                 sub: context.Sub?.Accept(this));
         }
     }

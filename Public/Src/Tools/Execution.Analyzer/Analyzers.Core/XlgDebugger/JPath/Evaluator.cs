@@ -102,6 +102,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             public static implicit operator Result(string scalar)    => Scalar(scalar);
             public static implicit operator Result(Regex scalar)     => Scalar(scalar);
             public static implicit operator Result(Function scalar)  => Scalar(scalar);
+            public static implicit operator Result(ObjectInfo obj)   => Scalar(obj);
             public static implicit operator Result(object[] arr)     => Array(arr);
             public static implicit operator Result(List<object> arr) => Array(arr);
         }
@@ -111,53 +112,87 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// </summary>
         public class Env : IEquatable<Env>
         {
-            /// <summary>
-            /// A caller-provided object resolver.
-            /// 
-            /// Takes an object and returns an <see cref="ObjectInfo"/> for it
-            /// (i.e., a name and a list of its properties).
-            /// </summary>
-            public ObjectResolver ResolveObject { get; }
+            private readonly IDictionary<string, Result> m_vars;
 
             /// <summary>
-            /// The root object (<see cref="RootExpr"/>).
+            /// Parent environment.
             /// </summary>
-            public object Root { get; }
+            public Env Parent { get; }
 
             /// <summary>
             /// The result of the last evaluated expression (against which properties are resolved)
             /// </summary>
             public Result Current { get; }
 
-            /// <nodoc />
-            public Env(ObjectResolver resolveObject, object root, Result current)
-            {
-                Contract.Requires(resolveObject != null);
-                Contract.Requires(root != null);
-                Contract.Requires(current != null);
+            /// <summary>
+            /// A caller-provided object resolver.
+            /// 
+            /// Takes an object and returns an <see cref="ObjectInfo"/> for it
+            /// (i.e., a name and a list of its properties).
+            /// </summary>
+            public ObjectResolver Resolver { get; }
 
-                ResolveObject = resolveObject;
-                Root = root;
+            /// <nodoc />
+            public Env(Env parent, Result current, ObjectResolver resolver, IDictionary<string, Result> vars = null)
+            {
+                Contract.Requires(resolver != null);
+                Contract.Requires(current != null);
+                Contract.Requires(vars == null || vars.Keys.All(name => name.StartsWith("$")));
+
+                Parent = parent;
                 Current = current;
+                Resolver = resolver;
+
+                m_vars = new Dictionary<string, Result>();
+                if (vars != null)
+                {
+                    m_vars.AddRange(vars);
+                }
             }
 
             /// <nodoc />
             public Env(ObjectResolver objectResolver, object root)
-                : this(objectResolver, root, Result.Scalar(root)) { }
+                : this(null, Result.Scalar(root), objectResolver) { }
 
             /// <summary>
-            /// Returns a new environment in which only the <see cref="Current"/> property is updated to <paramref name="newCurrent"/>.
+            /// Returns any <see cref="Result"/> bound to <paramref name="varName"/>.
+            /// If this environment does not contain any binding for <paramref name="varName"/>,
+            /// the lookup continues in the <see cref="Parent"/> environment.  When no parent
+            /// environment exist, returns null.
+            /// </summary>
+            public Result ResolveVar(string varName)
+            {
+                return m_vars.TryGetValue(varName, out var result)
+                    ? result
+                    : Parent?.ResolveVar(varName);
+            }
+
+            /// <summary>
+            /// The root object (<see cref="RootExpr"/>).
+            /// </summary>
+            public Result Root => Parent != null ? Parent.Root : Current;
+
+            /// <summary>
+            /// Returns a new child environment in which only the <see cref="Current"/> property is updated to <paramref name="newCurrent"/>.
             /// </summary>
             internal Env WithCurrent(Result newCurrent)
             {
-                return new Env(ResolveObject, Root, newCurrent);
+                return new Env(parent: this, newCurrent, Resolver);
+            }
+
+            /// <summary>
+            /// Returns a new child environment in which <paramref name="vars"/> are set.
+            /// </summary>
+            internal Env WithVars(params (string Name, Result Value)[] vars)
+            {
+                return new Env(parent: this, Current, Resolver, vars.ToDictionary(t => t.Name, t => t.Value));
             }
 
             /// <inheritdoc />
             public bool Equals(Env other)
             {
+                // TODO: FIXME
                 return other != null &&
-                    other.Root.Equals(Root) &&
                     other.Current.Equals(Current);
             }
 
@@ -406,9 +441,12 @@ namespace BuildXL.Execution.Analyzer.JPath
             {
                 switch (expr)
                 {
+                    case VarExpr varExpr:
+                        return TopEnv.ResolveVar(varExpr.Name) ?? Result.Empty;
+
                     case Selector selector:
                         return TopEnv.Current
-                            .Select(obj => TopEnv.ResolveObject(obj))
+                            .Select(obj => TopEnv.Resolver(obj))
                             .SelectMany(obj => obj.Properties.Where(p => selector.PropertyNames.Contains(p.Name)))
                             .SelectMany(prop =>
                             {
@@ -482,16 +520,18 @@ namespace BuildXL.Execution.Analyzer.JPath
                                 value: opt.Value != null ? Eval(opt.Value) : null));
                         return function.Apply(this, args);
 
-                    //case LetExpr letExpr:
-                    //    var name = letExpr.Name;
-                    //    var value = Eval(env, letExpr.Value);
-                    //    if 
+                    case LetExpr letExpr:
+                        var name = letExpr.Name;
+                        var value = Eval(letExpr.Value);
+                        return letExpr.Sub != null
+                            ? InNewEnv(TopEnv.WithVars((name, value)), letExpr.Sub)
+                            : value;
 
                     case CardinalityExpr cardExpr:
                         return Eval(cardExpr.Sub).Count;
 
                     case RootExpr rootExpr:
-                        return Result.Scalar(TopEnv.Root);
+                        return TopEnv.Root;
 
                     case IntLit intLit:
                         return intLit.Value;
@@ -520,9 +560,11 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         private Result InNewEnv(Expr newCurrent, Expr inNewEnv) => InNewEnv(Eval(newCurrent), inNewEnv);
 
-        private Result InNewEnv(Result newCurrent, Expr inNewEnv)
+        private Result InNewEnv(Result newCurrent, Expr inNewEnv) => InNewEnv(TopEnv.WithCurrent(newCurrent), inNewEnv);
+
+        private Result InNewEnv(Env newEnv, Expr inNewEnv)
         {
-            m_envStack.Push(TopEnv.WithCurrent(newCurrent));
+            m_envStack.Push(newEnv);
             try
             {
                 return Eval(inNewEnv);
@@ -622,7 +664,7 @@ namespace BuildXL.Execution.Analyzer.JPath
                 return obj?.ToString() ?? "<null>";
             }
 
-            var objInfo = env.ResolveObject(obj);
+            var objInfo = env.Resolver(obj);
             return objInfo.Preview;
         }
 
