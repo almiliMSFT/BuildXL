@@ -422,6 +422,6 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         /// <inheritdoc />
-        public override string Print() => $"let {Name} := {Value.Print()}" + Sub != null ? $" in {Sub.Print()}" : "";
+        public override string Print() => $"let {Name} := {Value.Print()}" + (Sub != null ? $" in {Sub.Print()}" : "");
     }
 }

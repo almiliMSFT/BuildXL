@@ -160,11 +160,23 @@ namespace BuildXL.Execution.Analyzer.JPath
             /// the lookup continues in the <see cref="Parent"/> environment.  When no parent
             /// environment exist, returns null.
             /// </summary>
-            public Result ResolveVar(string varName)
+            public Result GetVar(string varName)
             {
                 return m_vars.TryGetValue(varName, out var result)
                     ? result
-                    : Parent?.ResolveVar(varName);
+                    : Parent?.GetVar(varName);
+            }
+
+            /// <summary>
+            /// MUTATES the current environment by adding  variable binding.
+            /// </summary>
+            /// <param name="varName"></param>
+            /// <param name="value"></param>
+            /// <returns></returns>
+            public Result SetVar(string varName, Result value)
+            {
+                m_vars[varName] = value;
+                return value;
             }
 
             /// <summary>
@@ -442,7 +454,7 @@ namespace BuildXL.Execution.Analyzer.JPath
                 switch (expr)
                 {
                     case VarExpr varExpr:
-                        return TopEnv.ResolveVar(varExpr.Name) ?? Result.Empty;
+                        return TopEnv.GetVar(varExpr.Name) ?? Result.Empty;
 
                     case Selector selector:
                         return TopEnv.Current
@@ -525,7 +537,7 @@ namespace BuildXL.Execution.Analyzer.JPath
                         var value = Eval(letExpr.Value);
                         return letExpr.Sub != null
                             ? InNewEnv(TopEnv.WithVars((name, value)), letExpr.Sub)
-                            : value;
+                            : TopEnv.SetVar(name, value);
 
                     case CardinalityExpr cardExpr:
                         return Eval(cardExpr.Sub).Count;
