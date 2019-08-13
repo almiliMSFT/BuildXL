@@ -129,8 +129,8 @@ literal
 
 expr
     : '$'                                             #RootExpr
-    | Sub=selector                                    #SelectorExpr
     | Var=VarId                                       #VarExpr
+    | Sub=selector                                    #SelectorExpr
     | Lit=literal                                     #LiteralExpr
     | Lhs=expr '.' Selector=selector                  #MapExpr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr

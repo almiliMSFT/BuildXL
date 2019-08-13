@@ -1721,18 +1721,18 @@ public partial class JPathParser : Parser {
 				break;
 			case 2:
 				{
-				_localctx = new SelectorExprContext(_localctx);
+				_localctx = new VarExprContext(_localctx);
 				Context = _localctx;
 				_prevctx = _localctx;
-				State = 120; ((SelectorExprContext)_localctx).Sub = selector();
+				State = 120; ((VarExprContext)_localctx).Var = Match(VarId);
 				}
 				break;
 			case 3:
 				{
-				_localctx = new VarExprContext(_localctx);
+				_localctx = new SelectorExprContext(_localctx);
 				Context = _localctx;
 				_prevctx = _localctx;
-				State = 121; ((VarExprContext)_localctx).Var = Match(VarId);
+				State = 121; ((SelectorExprContext)_localctx).Sub = selector();
 				}
 				break;
 			case 4:
@@ -2089,8 +2089,8 @@ public partial class JPathParser : Parser {
 		'\x3', '\x2', '\x2', '\x2', 'v', 't', '\x3', '\x2', '\x2', '\x2', 'v', 
 		'u', '\x3', '\x2', '\x2', '\x2', 'w', '\x1B', '\x3', '\x2', '\x2', '\x2', 
 		'x', 'y', '\b', '\xF', '\x1', '\x2', 'y', '\x8C', '\a', '\x5', '\x2', 
-		'\x2', 'z', '\x8C', '\x5', '\x18', '\r', '\x2', '{', '\x8C', '\a', ')', 
-		'\x2', '\x2', '|', '\x8C', '\x5', '\x1A', '\xE', '\x2', '}', '~', '\a', 
+		'\x2', 'z', '\x8C', '\a', ')', '\x2', '\x2', '{', '\x8C', '\x5', '\x18', 
+		'\r', '\x2', '|', '\x8C', '\x5', '\x1A', '\xE', '\x2', '}', '~', '\a', 
 		'\n', '\x2', '\x2', '~', '\x8C', '\x5', '\x1C', '\xF', '\n', '\x7F', '\x80', 
 		'\a', '\x3', '\x2', '\x2', '\x80', '\x81', '\x5', '\x1C', '\xF', '\x2', 
 		'\x81', '\x82', '\a', '\x4', '\x2', '\x2', '\x82', '\x8C', '\x3', '\x2', 
