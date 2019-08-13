@@ -169,6 +169,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
                     Case<PathAtom>(atom => new ObjectInfo($"a`{atom.ToString(StringTable)}`", atom)),
                     Case<FileArtifact>(file => new ObjectInfo($"f`{file.Path.ToString(PathTable)}`", file)),
                     Case<DirectoryArtifact>(dir => new ObjectInfo($"d`{dir.Path.ToString(PathTable)}`", dir)),
+                    Case<int>(num => new ObjectInfo($"{num}")),
                     Case<uint>(num => new ObjectInfo($"{num}")),
                     Case<short>(num => new ObjectInfo($"{num}", (int)num)),
                     Case<long>(num => new ObjectInfo($"{num}")),
@@ -178,7 +179,8 @@ namespace BuildXL.FrontEnd.Script.Debugger
                     Case<NumberLiteral>(numLit => new ObjectInfo(numLit.UnboxedValue.ToString(), numLit)),
                     Case<Func<object>>(func => FuncObjInfo(func)),
                     Case<ArraySegment<object>>(arrSeg => ArrayObjInfo(arrSeg)),
-                    Case<IEnumerable>(enu => new ObjectInfo("IEnumerable", Lazy.Create(() => new[] { new Property("Result", enu.Cast<object>().ToArray()) }))),
+                    Case<IEnumerable>(enu => 
+                    new ObjectInfo("IEnumerable", Lazy.Create(() => new[] { new Property("Result", enu.Cast<object>().ToArray()) }))),
                     Case<ArrayLiteral>(arrLit => ArrayObjInfo(arrLit.Values.Select(v => v.Value).ToArray()).WithOriginal(arrLit)),
                     Case<ModuleBinding>(binding => GetObjectInfo(context, binding.Body)),
                     Case<ErrorValue>(error => ErrorValueInfo()),

@@ -154,6 +154,9 @@ namespace BuildXL.Execution.Analyzer.JPath
             public Env(ObjectResolver objectResolver, object root)
                 : this(null, Result.Scalar(root), objectResolver) { }
 
+            /// <summary>Returns all vars defined in this environment only</summary>
+            public IEnumerable<KeyValuePair<string, Result>> Vars => m_vars;
+
             /// <summary>
             /// Returns any <see cref="Result"/> bound to <paramref name="varName"/>.
             /// If this environment does not contain any binding for <paramref name="varName"/>,
@@ -198,19 +201,22 @@ namespace BuildXL.Execution.Analyzer.JPath
             }
 
             /// <inheritdoc />
-            public override int GetHashCode()
+            public string GetContentHash()
             {
-                var result = Current.GetHashCode();
-                foreach (var v in m_vars)
+                using (var sbWrapper = Pools.StringBuilderPool.GetInstance())
                 {
-                    result = HashCodeHelper.Combine(result, v.Key.GetHashCode());
-                    result = HashCodeHelper.Combine(result, v.Value.GetHashCode());
+                    var sb = sbWrapper.Instance;
+                    sb.Append("Current:").Append(Current.GetHashCode());
+                    foreach (var v in m_vars)
+                    {
+                        sb.Append(",var:").Append(v.Key).Append(":").Append(v.Value.GetHashCode());
+                    }
+                    if (Parent != null)
+                    {
+                        sb.Append(",parent:").Append(Parent.GetHashCode());
+                    }
+                    return sb.ToString();
                 }
-                if (Parent != null)
-                {
-                    result = HashCodeHelper.Combine(result, Parent.GetHashCode());
-                }
-                return result;
             }
         }
 
@@ -419,7 +425,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         private readonly Stack<Env> m_envStack = new Stack<Env>();
         private readonly Dictionary<string, Result> m_evalCache = new Dictionary<string, Result>();
 
-        private Env TopEnv => m_envStack.Peek();
+        public Env TopEnv => m_envStack.Peek();
 
         public Evaluator(Env rootEnv)
         {
@@ -430,7 +436,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// <nodoc />
         public Result Eval(Expr expr)
         {
-            var key = $"{expr.Print()}|{TopEnv.GetHashCode()}";
+            var key = $"{expr.Print()}|{TopEnv.GetContentHash()}";
             if (m_evalCache.TryGetValue(key, out var result))
             {
                 Console.WriteLine("============== cached: " + key);

@@ -40,11 +40,12 @@ namespace BuildXL.Execution.Analyzer
 
         private StringTable StringTable => PathTable.StringTable;
 
+        private Renderer Renderer => Analyzer.Session.Renderer;
+
         private ObjectInfo PipsByType { get; }
 
         private ObjectInfo PipsByStatus { get; }
-
-        private ObjectInfo[] SupportedScopes { get; }
+        private ObjectInfo RootObject { get; }
 
         private Env RootEnv { get; }
 
@@ -76,36 +77,27 @@ namespace BuildXL.Execution.Analyzer
                 .Concat(new[] { ExeLevelNotCompleted })
                 .Select(levelStr => new Property(levelStr, () => GetPipsForExecutionLevel(levelStr))));
 
-            SupportedScopes = new[]
+            RootObject = new ObjectInfo(preview: "Root", properties: new[]
             {
-                new ObjectInfo(preview: "Global", properties: new[]
+                new Property("Pips",          () => PipGraph.RetrieveAllPips()),
+                new Property("Files",         () => PipGraph.AllFiles),
+                new Property("Directories",   () => PipGraph.AllSealDirectories),
+                //new Property("CriticalPath",  new AnalyzeCricialPath()),
+                new Property("GroupedBy",     new ObjectInfo(new[]
                 {
-                    new Property("Pips",          () => PipGraph.RetrieveAllPips()),
-                    new Property("Files",         () => PipGraph.AllFiles),
-                    new Property("Directories",   () => PipGraph.AllSealDirectories),
-                    //new Property("CriticalPath",  new AnalyzeCricialPath()),
-                    new Property("GroupedBy",     new ObjectInfo(new[]
-                    {
-                        new Property("Pips",          new PipsScope()),
-                        new Property("Files",         () => GroupFiles(PipGraph.AllFiles)),
-                        new Property("Directories",   () => GroupDirs(PipGraph.AllSealDirectories))
-                    }))
-                })
-            };
+                    new Property("Pips",          new PipsScope()),
+                    new Property("Files",         () => GroupFiles(PipGraph.AllFiles)),
+                    new Property("Directories",   () => GroupDirs(PipGraph.AllSealDirectories))
+                }))
+            });
 
             RootEnv = new Env(
                 parent: null,
-                resolver: (obj) => Analyzer.Session.Renderer.GetObjectInfo(context: this, obj),
+                resolver: (obj) => Renderer.GetObjectInfo(context: this, obj),
                 vars: LibraryFunctions.All.ToDictionary(f => '$' + f.Name, f => Result.Scalar(f)),
-                current: new ObjectInfo(
-                    preview: "$",
-                    properties: Concat(
-                        SupportedScopes.Select(obj => new Property(obj.Preview, obj)),
-                        SupportedScopes.SelectMany(obj => obj.Properties))));
-                    
-                        //LibraryFunctions.All.Select(func => new Property(func.Name, func)))));
+                current: RootObject);
 
-            Evaluator = new Evaluator(RootEnv);
+            Evaluator = new Evaluator(new Env(parent: RootEnv, resolver: RootEnv.Resolver, current: RootEnv.Current));
         }
 
         private IEnumerable<T> Concat<T>(params IEnumerable<T>[] list)
@@ -170,22 +162,30 @@ namespace BuildXL.Execution.Analyzer
         /// <inheritdoc />
         public override IEnumerable<ObjectContext> GetSupportedScopes(int frameIndex)
         {
-            return SupportedScopes.Select(obj => new ObjectContext(this, obj));
+            return new[]
+            {
+                Renderer.GetObjectInfo(this, Evaluator.TopEnv.Root).WithPreview("Root"),
+                new ObjectInfo("Vars", properties: Evaluator.TopEnv.Vars.Select(kvp => new Property(kvp.Key, kvp.Value)))
+            }
+            .Select(obj => new ObjectContext(this, obj));
         }
 
         /// <nodoc />
         public ObjectInfo Render(Renderer renderer, object ctx, object obj)
         {
+
             switch (obj)
             {
                 case AbsolutePath p:               return new ObjectInfo(p.ToString(PathTable));
+                case Result result:                return renderer.GetObjectInfo(ctx, result.IsScalar ? result.Value.First() : result.Value.ToArray());
+                case Function func:                return new ObjectInfo("fun");
                 case PipsScope ps:                 return PipsInfo(ps);
                 case FileArtifact f:               return FileArtifactInfo(f);
                 case DirectoryArtifact d:          return DirectoryArtifactInfo(d);
                 case AnalyzePath ap:               return AnalyzePathInfo(ap);
                 case AnalyzeCricialPath cp:        return AnalyzeCricialPathInfo();
-                case PipId pipId:                  return Render(renderer, ctx, Analyzer.GetPip(pipId)).WithPreview(pipId.ToString());
-                case PipReference pipRef:          return Render(renderer, ctx, Analyzer.GetPip(pipRef.PipId));
+                case PipId pipId:                  return renderer.GetObjectInfo(ctx, Analyzer.GetPip(pipId)).WithPreview(pipId.ToString());
+                case PipReference pipRef:          return renderer.GetObjectInfo(ctx, Analyzer.GetPip(pipRef.PipId));
                 case Process proc:                 return ProcessInfo(proc);
                 case Pip pip:                      return GenericObjectInfo(pip, preview: PipPreview(pip));
                 case FileArtifactWithAttributes f: return GenericObjectInfo(f, preview: FileArtifactPreview(f.ToFileArtifact()));
