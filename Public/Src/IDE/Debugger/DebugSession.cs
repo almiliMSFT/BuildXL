@@ -271,30 +271,30 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <inheritdoc/>
         public void Completions(ICompletionsCommand cmd)
         {
-            if (!cmd.FrameId.HasValue)
-            {
-                SendErrorEvaluationInGlobalScopeNotSupported(cmd);
-                return;
-            }
+            //if (!cmd.FrameId.HasValue)
+            //{
+            //    SendErrorEvaluationInGlobalScopeNotSupported(cmd);
+            //    return;
+            //}
 
-            var frameRef = m_scopeHandles.Get(cmd.FrameId.Value, null);
-            var ans = ExpressionEvaluator.EvaluateExpression(State.GetThreadState(frameRef.ThreadId), frameRef.FrameIndex, GetCompletionTextToEvaluate(cmd));
+            //var frameRef = m_scopeHandles.Get(cmd.FrameId.Value, null);
+            //var ans = ExpressionEvaluator.EvaluateExpression(State.GetThreadState(frameRef.ThreadId), frameRef.FrameIndex, GetCompletionTextToEvaluate(cmd));
 
-            List<ICompletionItem> items;
-            if (!ans.Succeeded)
-            {
-                items = new List<ICompletionItem>(0);
-            }
-            else
-            {
-                items = Renderer
-                    .GetObjectInfo(ans.Result.Context, ans.Result.Object)
-                    .Properties
-                    .Select(p => (ICompletionItem)new CompletionItem(p.Name, p.Name, p.Kind))
-                    .ToList();
-            }
+            //List<ICompletionItem> items;
+            //if (!ans.Succeeded)
+            //{
+            //    items = new List<ICompletionItem>(0);
+            //}
+            //else
+            //{
+            //    items = Renderer
+            //        .GetObjectInfo(ans.Result.Context, ans.Result.Object)
+            //        .Properties
+            //        .Select(p => (ICompletionItem)new CompletionItem(p.Name, p.Name, p.Kind))
+            //        .ToList();
+            //}
 
-            cmd.SendResult(new CompletionsResult(items));
+            cmd.SendResult(new CompletionsResult(new List<ICompletionItem>(0)));
         }
 
         // ===========================================================================================

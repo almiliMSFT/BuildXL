@@ -223,5 +223,13 @@ namespace BuildXL.Execution.Analyzer.JPath
                 value: context.Val.Accept(this),
                 sub: context.Sub?.Accept(this));
         }
+
+        public override Expr VisitAssignExpr([NotNull] JPathParser.AssignExprContext context)
+        {
+            return new LetExpr(
+                name: context.Var.Text,
+                value: context.Val.Accept(this),
+                sub: null);
+        }
     }
 }
