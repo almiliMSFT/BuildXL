@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -271,35 +272,41 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <inheritdoc/>
         public void Completions(ICompletionsCommand cmd)
         {
-            //if (!cmd.FrameId.HasValue)
-            //{
-            //    SendErrorEvaluationInGlobalScopeNotSupported(cmd);
-            //    return;
-            //}
+            if (!cmd.FrameId.HasValue)
+            {
+                SendErrorEvaluationInGlobalScopeNotSupported(cmd);
+                return;
+            }
 
-            //var frameRef = m_scopeHandles.Get(cmd.FrameId.Value, null);
-            //var ans = ExpressionEvaluator.EvaluateExpression(State.GetThreadState(frameRef.ThreadId), frameRef.FrameIndex, GetCompletionTextToEvaluate(cmd));
+            var frameRef = m_scopeHandles.Get(cmd.FrameId.Value, null);
+            var textToEval = ExtractCompletionRequestPrefixText(cmd);
+            var lastIdx = new[] { '.', '[', '(' }.Max(c => textToEval.LastIndexOf(c));
+            var text = lastIdx > -1
+                ? textToEval.Substring(0, length: lastIdx) + "[0]"
+                : textToEval;
+            var ans = ExpressionEvaluator.EvaluateExpression(State.GetThreadState(frameRef.ThreadId), frameRef.FrameIndex, text);
 
-            //List<ICompletionItem> items;
-            //if (!ans.Succeeded)
-            //{
-            //    items = new List<ICompletionItem>(0);
-            //}
-            //else
-            //{
-            //    items = Renderer
-            //        .GetObjectInfo(ans.Result.Context, ans.Result.Object)
-            //        .Properties
-            //        .Select(p => (ICompletionItem)new CompletionItem(p.Name, p.Name, p.Kind))
-            //        .ToList();
-            //}
+            List<ICompletionItem> items;
+            if (!ans.Succeeded)
+            {
+                items = new List<ICompletionItem>(0);
+            }
+            else
+            {
+                items = Renderer
+                    .GetObjectInfo(ans.Result.Context, ans.Result.Object)
+                    .Properties
+                    .Select(p => (ICompletionItem)new CompletionItem(p.Name, p.Name, p.Kind))
+                    .ToList();
+            }
 
-            cmd.SendResult(new CompletionsResult(new List<ICompletionItem>(0)));
+            cmd.SendResult(new CompletionsResult(items));
         }
 
         // ===========================================================================================
         // === PRIVATE AUXILIARY METHODS =============================================================
         // ===========================================================================================
+
         private void Step<T>(int threadId, ICommand<T> cmd, DebugAction.ActionKind kind, T result = default(T))
         {
             var evalState = State.RemoveStoppedThread(threadId);
@@ -307,11 +314,10 @@ namespace BuildXL.FrontEnd.Script.Debugger
             cmd.SendResult(result);
         }
 
-        private static string GetCompletionTextToEvaluate(ICompletionsCommand cmd)
+        private static string ExtractCompletionRequestPrefixText(ICompletionsCommand cmd)
         {
             var idx = cmd.Column - 1;
-            var text = idx <= cmd.Text.Length ? cmd.Text.Substring(0, idx) : cmd.Text;
-            return text.TrimEnd('.');
+            return idx <= cmd.Text.Length ? cmd.Text.Substring(0, idx) : cmd.Text;
         }
 
         private static void SendErrorNotSupported<T>(ICommand<T> cmd, string category) => cmd.SendErrorResult(1000, category + " not supported");

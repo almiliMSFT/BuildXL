@@ -93,7 +93,15 @@ namespace BuildXL.Execution.Analyzer
 
             RootEnv = new Env(
                 parent: null,
-                resolver: (obj) => Renderer.GetObjectInfo(context: this, obj),
+                resolver: (obj) => 
+                {
+                    var result = Renderer.GetObjectInfo(context: this, obj);
+                    return new ObjectInfo(
+                        result.Preview,
+                        properties: result.Properties
+                            .Select(p => new Property(p.Name, value: Renderer.IsInvalid(p.Value) ? new object[0] : p.Value))
+                            .ToArray());
+                },
                 vars: LibraryFunctions.All.ToDictionary(f => '$' + f.Name, f => Result.Scalar(f)),
                 current: RootObject);
 
@@ -125,6 +133,12 @@ namespace BuildXL.Execution.Analyzer
         #region Expression Evaluator
 
         /// <inheritdoc />
+        public Possible<ObjectContext, Failure> GetCompletions(ThreadState threadState, int frameIndex, string expr)
+        {
+            return new Failure<string>("hi");
+        }
+
+        /// <inheritdoc />
         public Possible<ObjectContext, Failure> EvaluateExpression(ThreadState threadState, int frameIndex, string expr)
         {
             if (Pip.TryParseSemiStableHash(expr, out var hash) && Analyzer.SemiStableHash2Pip.TryGetValue(hash, out var pipId))
@@ -138,15 +152,10 @@ namespace BuildXL.Execution.Analyzer
                 return new ObjectContext(context: this, new AnalyzePath(path));
             }
 
-            
             var maybeResult = JPath.JPath.TryEval(Evaluator, expr);
             if (maybeResult.Succeeded)
             {
-                return new ObjectContext(
-                    this, 
-                    maybeResult.Result.Count == 1 
-                        ? maybeResult.Result.First()
-                        : maybeResult.Result.Value.ToArray());
+                return new ObjectContext(this, maybeResult.Result);
             }
             else
             {
@@ -165,9 +174,12 @@ namespace BuildXL.Execution.Analyzer
             return new[]
             {
                 Renderer.GetObjectInfo(this, Evaluator.TopEnv.Root).WithPreview("Root"),
-                new ObjectInfo("Vars", properties: Evaluator.TopEnv.Vars.Select(kvp => new Property(kvp.Key, kvp.Value)))
+                new ObjectInfo("Funs", properties: RootEnv.Vars.Select(VarToProp)),
+                new ObjectInfo("Vars", properties: Evaluator.TopEnv.Vars.Select(VarToProp))
             }
             .Select(obj => new ObjectContext(this, obj));
+
+            Property VarToProp(KeyValuePair<string, Result> kvp) => new Property(kvp.Key, kvp.Value);
         }
 
         /// <nodoc />
@@ -246,13 +258,13 @@ namespace BuildXL.Execution.Analyzer
                 new Property("CMD", Analyzer.RenderProcessArguments(proc)),
                 new Property("Inputs", new ObjectInfo(properties: new[]
                 {
-                    new Property("Files", proc.Dependencies),
-                    new Property("Directories", proc.DirectoryDependencies)
+                    new Property("Files", proc.Dependencies.ToArray()),
+                    new Property("Directories", proc.DirectoryDependencies.ToArray())
                 })),
                 new Property("Outputs", new ObjectInfo(properties: new[]
                 {
-                    new Property("Files", proc.FileOutputs),
-                    new Property("Directories", proc.DirectoryOutputs)
+                    new Property("Files", proc.FileOutputs.ToArray()),
+                    new Property("Directories", proc.DirectoryOutputs.ToArray())
                 })),
                 new Property("ExecutionPerformance", pipExePerf),
                 new Property("MonitoringData", () => Analyzer.TryGetProcessMonitoringData(proc.PipId)),

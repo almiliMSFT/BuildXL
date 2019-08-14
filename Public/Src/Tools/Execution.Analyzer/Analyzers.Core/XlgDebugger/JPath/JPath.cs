@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.ContractsLight;
 using System.IO;
+using System.Linq;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using BuildXL.Utilities;
@@ -98,7 +99,8 @@ namespace BuildXL.Execution.Analyzer.JPath
         private static Possible<JPathParser.ExprContext> TryParseInternal(string str)
         {
             var lexer = new JPathLexer(new AntlrInputStream(str));
-            var parser = new JPathParser(new CommonTokenStream(lexer));
+            var tokenStream = new CommonTokenStream(lexer);
+            var parser = new JPathParser(tokenStream);
             var listener = new JPathListener();
             parser.AddErrorListener(listener);
             var expr = parser.expr();
@@ -106,6 +108,13 @@ namespace BuildXL.Execution.Analyzer.JPath
             if (listener.HasErrors)
             {
                 return new Failure<string>("Syntex error: " + listener.FirstError);
+            }
+            else if (tokenStream.Index < tokenStream.Size - 1)
+            {
+                var tokens = string.Join("", Enumerable
+                    .Range(tokenStream.Index, count: tokenStream.Size - tokenStream.Index - 1)
+                    .Select(idx => tokenStream.Get(idx).Text));
+                return new Failure<string>($"Unconsumed tokens: {tokens}");
             }
             else
             {

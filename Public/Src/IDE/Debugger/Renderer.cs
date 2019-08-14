@@ -279,7 +279,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
         ///     BuildXL objects that are not "IsValid" are very finicky, and thus not amenable
         ///     to generic processing (e.g., just looking up their public property values).
         /// </summary>
-        private static bool IsInvalid(object obj, PropertyInfo[] propertiesToInclude = null)
+        public static bool IsInvalid(object obj, PropertyInfo[] propertiesToInclude = null)
         {
             return obj != null &&
                 (propertiesToInclude ?? GetPublicProperties(obj))
