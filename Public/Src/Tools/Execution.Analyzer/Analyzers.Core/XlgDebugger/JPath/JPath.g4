@@ -144,6 +144,6 @@ expr
     | Lhs=expr Op=anyBinaryOp Rhs=expr                #BinExpr
     | '(' Sub=expr ')'                                #SubExpr
     | 'let' Var=VarId ':=' Val=expr 'in' Sub=expr?    #LetExpr 
-    | Var=VarId ':=' Val=expr ';'                     #AssignExpr
+    | Var=VarId ':=' Val=expr ';'?                    #AssignExpr
     ;
 
