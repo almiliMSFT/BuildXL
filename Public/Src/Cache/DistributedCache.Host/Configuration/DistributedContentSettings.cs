@@ -384,6 +384,9 @@ namespace BuildXL.Cache.Host.Configuration
         [DataMember]
         public TimeSpan? ContentLocationDatabaseCacheFlushingMaximumInterval { get; set; }
 
+        [DataMember]
+        public int? FullRangeCompactionIntervalMinutes { get; set; }
+
         // Key Vault Settings
         [DataMember]
         public string KeyVaultSettingsString { get; set; }
@@ -490,6 +493,12 @@ namespace BuildXL.Cache.Host.Configuration
         /// </summary>
         [DataMember]
         public bool OverrideUnixFileAccessMode { get; set; } = false;
+
+        [DataMember]
+        public bool EnableProactiveCopy { get; set; } = false;
+
+        [DataMember]
+        public int ProactiveCopyLocationsThreshold { get; set; } = 1;
 
         #endregion
 
