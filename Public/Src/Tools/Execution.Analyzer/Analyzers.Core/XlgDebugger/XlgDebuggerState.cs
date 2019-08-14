@@ -200,7 +200,7 @@ namespace BuildXL.Execution.Analyzer
                 case PipReference pipRef:          return renderer.GetObjectInfo(ctx, Analyzer.GetPip(pipRef.PipId));
                 case Process proc:                 return ProcessInfo(proc);
                 case Pip pip:                      return GenericObjectInfo(pip, preview: PipPreview(pip));
-                case FileArtifactWithAttributes f: return GenericObjectInfo(f, preview: FileArtifactPreview(f.ToFileArtifact()));
+                case FileArtifactWithAttributes f: return FileArtifactInfo(f.ToFileArtifact()); // return GenericObjectInfo(f, preview: FileArtifactPreview(f.ToFileArtifact()));
                 case ProcessMonitoringData m:      return ProcessMonitoringInfo(m);
                 case string s:                     return new ObjectInfo(s);
                 default:
@@ -242,7 +242,15 @@ namespace BuildXL.Execution.Analyzer
 
         private string PipPreview(Pip pip)
         {
-            return $"<{pip.PipType.ToString().ToUpperInvariant()}> {pip.GetShortDescription(PipGraph.Context)}";
+            var pipType = pip.PipType.ToString().ToUpperInvariant();
+            try
+            {
+                return $"<{pipType}> {pip.GetShortDescription(PipGraph.Context)}";
+            }
+            catch (Exception e)
+            {
+                return pipType;
+            }
         }
 
         private ObjectInfo ProcessInfo(Process proc)
@@ -291,6 +299,7 @@ namespace BuildXL.Execution.Analyzer
                 properties: new[]
                 {
                     new Property("Path", f.Path.ToString(PathTable)),
+                    new Property("Kind", f.IsSourceFile ? "source" : "output"),
                     new Property("RewriteCount", f.RewriteCount),
                     new Property("FileContentInfo", () => Analyzer.TryGetFileContentInfo(f)),
                     f.IsOutputFile ? new Property("Producer", () => Analyzer.AsPipReference(PipGraph.GetProducer(f))) : null,
@@ -314,8 +323,9 @@ namespace BuildXL.Execution.Analyzer
                 {
                     new Property("Path", d.Path.ToString(PathTable)),
                     new Property("PartialSealId", d.PartialSealId),
+                    new Property("Kind", kind),
                     d.IsOutputDirectory() ? new Property("Producer", () => PipGraph.GetProducer(d)) : null,
-                    new Property("Consumers", () => PipGraph.GetConsumingPips(d.Path)),
+                    new Property("Consumers", PipGraph.GetConsumingPips(d.Path).ToArray()),
                     d.PartialSealId > 0 ? new Property("Members", () => PipGraph.ListSealedDirectoryContents(d)) : null
                 }
                 .Where(p => p != null));
