@@ -391,7 +391,7 @@ namespace BuildXL.Pips.Operations
         /// </summary>
         public string GetShortDescription(PipExecutionContext context)
         {
-            if(Provenance == null)
+            if (Provenance == null)
             {
                 return "";
             }
@@ -401,7 +401,10 @@ namespace BuildXL.Pips.Operations
                 return Provenance.Usage.ToString(context.PathTable);
             }
 
-            var moduleName = Provenance.ModuleName.ToString(context.StringTable);
+            var maybeModuleName = Provenance.ModuleName.IsValid
+                ? Provenance.ModuleName.ToString(context.StringTable) + " - "
+                : string.Empty;
+
             var valueName = Provenance.OutputValueSymbol.ToString(context.SymbolTable);
 
             var toolName = string.Empty;
@@ -412,7 +415,7 @@ namespace BuildXL.Pips.Operations
 
             var qualifierName = context.QualifierTable.GetFriendlyUserString(Provenance.QualifierId);
 
-            return $"{moduleName} - {valueName}{toolName} [{qualifierName}]";
+            return $"{maybeModuleName}{valueName}{toolName} [{qualifierName}]";
         }
     }
 }

@@ -243,14 +243,7 @@ namespace BuildXL.Execution.Analyzer
         private string PipPreview(Pip pip)
         {
             var pipType = pip.PipType.ToString().ToUpperInvariant();
-            try
-            {
-                return $"<{pipType}> {pip.GetShortDescription(PipGraph.Context)}";
-            }
-            catch (Exception e)
-            {
-                return pipType;
-            }
+            return $"<{pipType}> {pip.GetShortDescription(PipGraph.Context)}";
         }
 
         private ObjectInfo ProcessInfo(Process proc)
