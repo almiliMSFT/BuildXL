@@ -25,6 +25,7 @@ contentcache/
 /config.user.dsc
 # BuildXL Ide generated files
 *.g.*proj
+*.g2.*proj
 
 # Don't check-in packages for TypeScript.Net
 Public/Src/TypeScript.Net/packages/

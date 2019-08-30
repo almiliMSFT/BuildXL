@@ -14,7 +14,7 @@ using BuildXL.Pips.Operations;
 using BuildXL.Utilities;
 using static BuildXL.Utilities.FormattableStringEx;
 
-namespace BuildXL.Ide.Generator
+namespace BuildXL.Ide.Generator.Old
 {
     /// <summary>
     /// CSharp project that represents a spec file
