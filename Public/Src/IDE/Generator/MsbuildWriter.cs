@@ -21,15 +21,14 @@ namespace BuildXL.Ide.Generator
 {
     internal sealed class MsbuildWriter
     {
-        private const string MsBuildNamespace = "http://schemas.microsoft.com/developer/msbuild/2003";
         private const string CSharpProjectTypeGuid = "{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}";
         private const string NativeProjectTypeGuid = "{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}";
         private const string SolutionItemsGuid = "{11111111-1111-1111-1111-111111111111}";
 
-        private static readonly XName ProjectXName = XName.Get("Project", MsBuildNamespace);
-        private static readonly XName PropertyGroupXName = XName.Get("PropertyGroup", MsBuildNamespace);
-        private static readonly XName ItemGroupXName = XName.Get("ItemGroup", MsBuildNamespace);
-        private static readonly XName ImportXName = XName.Get("Import", MsBuildNamespace);
+        private static readonly XName ProjectXName = XName.Get("Project");
+        private static readonly XName PropertyGroupXName = XName.Get("PropertyGroup");
+        private static readonly XName ItemGroupXName = XName.Get("ItemGroup");
+        private static readonly XName ImportXName = XName.Get("Import");
 
         public HashSet<string> ExcludedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -89,9 +88,9 @@ namespace BuildXL.Ide.Generator
                     };
 
                     var itemDefinition = new XElement(
-                        XName.Get("ItemDefinitionGroup", MsBuildNamespace),
+                        XName.Get("ItemDefinitionGroup"),
                         new XElement(
-                            XName.Get("ClCompile", MsBuildNamespace),
+                            XName.Get("ClCompile"),
                             GetConditionedValues(vcxprojFile, "PreprocessorDefinitions", vcxprojFile.ConstantsByQualifier),
                             GetConditionedValues(vcxprojFile, "AdditionalIncludeDirectories", vcxprojFile.IncludeDirsByQualifier)));
 
@@ -104,13 +103,24 @@ namespace BuildXL.Ide.Generator
                     targetImport = new XElement(ImportXName, new XAttribute("Project", Path.Combine("$(VCTargetsPath)", "Microsoft.Cpp.targets")));
                 }
 
+                var targetFrameworks = string.Empty;
+                if (msbuildFile is CsprojFile csprojFile)
+                {
+                    targetFrameworks = string.Join(";", csprojFile.ProjectsByQualifier.Keys
+                        .Select(q => csprojFile.TryGetQualifierProperty(q, MsbuildFile.QualifierTargetFrameworkPropertyName, out var tfm) ? tfm : null)
+                        .Where(tfm => tfm != null)
+                        .Distinct()
+                        .OrderBy(tfm => tfm));
+                }
+
                 var projectFile = new XDocument(
                     new XElement(
                         ProjectXName,
-                        new XAttribute("ToolsVersion", "12.0"),
+                        new XAttribute("Sdk", "Microsoft.NET.Sdk"),
                         new XElement(
                             PropertyGroupXName,
-                            new XElement(XName.Get("SolutionRoot", MsBuildNamespace), solutionRootExpression)),
+                            new XElement(XName.Get("SolutionRoot"), solutionRootExpression),
+                            new XElement(XName.Get("TargetFrameworks"), targetFrameworks)),
                         beforePropsImport,
                         properties,
                         afterPropsImport,
@@ -140,9 +150,9 @@ namespace BuildXL.Ide.Generator
             }
         }
 
-        private IEnumerable<XElement> GetConditionedValues(VcxprojFile vcxprojFile, string name, MultiValueDictionary<string, object> valuesByQualifier)
+        private IEnumerable<XElement> GetConditionedValues(VcxprojFile vcxprojFile, string name, MultiValueDictionary<QualifierId, object> valuesByQualifier)
         {
-            var xName = XName.Get(name, MsBuildNamespace);
+            var xName = XName.Get(name);
             var builder = new StringBuilder();
 
             HashSet<object> unconditionedValues = null;
@@ -174,12 +184,6 @@ namespace BuildXL.Ide.Generator
 
             foreach (var qualifier in valuesByQualifier.Keys)
             {
-                string qualifierComparisonValue = vcxprojFile.GetQualifierComparisonValue(qualifier);
-                if (!qualifiers.Add(qualifierComparisonValue))
-                {
-                    continue;
-                }
-
                 var conditionedValues = valuesByQualifier[qualifier].Except(unconditionedValues);
                 if (conditionedValues.Any())
                 {
@@ -193,61 +197,45 @@ namespace BuildXL.Ide.Generator
                     builder.Append($"%({name})");
                     yield return new XElement(
                         xName,
-                        new XAttribute("Condition", $"'{vcxprojFile.UnevaluatedQualifierComparisonProperty}'=='{qualifierComparisonValue}'"),
+                        new XAttribute("Condition", vcxprojFile.GenerateConditionalForQualifier(qualifier)),
                         builder.ToString());
                 }
             }
         }
 
         [SuppressMessage("Microsoft.Globalization", "CA1305")]
-        private IEnumerable<XElement> GetItems(MsbuildFile msbuildFile, Project project, string friendlyQualifierName)
+        private IEnumerable<XElement> GetItems(MsbuildFile msbuildFile, Project project, QualifierId qualifierId)
         {
             if (project.Items.Count == 0)
             {
                 return EmptyArray<XElement>();
             }
 
-            string evaluatedQualifierComparisonValue = null;
-            if (friendlyQualifierName != null)
-            {
-                evaluatedQualifierComparisonValue = msbuildFile.GetQualifierComparisonValue(friendlyQualifierName);
-            }
-
             var items = project.Items.OrderBy(grouping => grouping.Key).Select(
                 grouping => new XElement(
                     ItemGroupXName,
-                    string.IsNullOrEmpty(evaluatedQualifierComparisonValue) 
-                        ? EmptyArray<XAttribute>() 
-                        : (object)new XAttribute("Condition", $"'{msbuildFile.UnevaluatedQualifierComparisonProperty}' == '{evaluatedQualifierComparisonValue}'"),
+                    new XAttribute("Condition", msbuildFile.GenerateConditionalForQualifier(qualifierId)),
                     grouping
                         .Where(item => !IsExcludedItemInclude(ValueToMsBuild(item.Include, msbuildFile)))
                         .OrderBy(item => ValueToMsBuild(item.Include, msbuildFile), StringComparer.OrdinalIgnoreCase)
                         .Select(
                             item => new XElement(
-                                XName.Get(grouping.Key, MsBuildNamespace),
+                                XName.Get(grouping.Key),
                                 new XAttribute("Include", ValueToMsBuild(item.Include, msbuildFile)),
                                 item.Metadata
                                     .OrderBy(kv => kv.Key)
-                                    .Select(kv => new XElement(XName.Get(kv.Key, MsBuildNamespace), ValueToMsBuild(kv.Value, msbuildFile)))))));
+                                    .Select(kv => new XElement(XName.Get(kv.Key), ValueToMsBuild(kv.Value, msbuildFile)))))));
 
             return items;
         }
 
-        private IEnumerable<XElement> GetProperties(MsbuildFile msbuildFile, Project project, string friendlyQualifierName)
+        private IEnumerable<XElement> GetProperties(MsbuildFile msbuildFile, Project project, QualifierId qualifierId)
         {
-            string evaluatedQualifierComparisonValue = null;
-            if (friendlyQualifierName != null)
-            {
-                evaluatedQualifierComparisonValue = msbuildFile.GetQualifierComparisonValue(friendlyQualifierName);
-            }
-
             var properties = new XElement(
                 PropertyGroupXName,
-                string.IsNullOrEmpty(evaluatedQualifierComparisonValue)
-                        ? EmptyArray<XAttribute>()
-                        : (object)new XAttribute("Condition", $"'{msbuildFile.UnevaluatedQualifierComparisonProperty}' == '{evaluatedQualifierComparisonValue}'"),
+                new XAttribute("Condition", msbuildFile.GenerateConditionalForQualifier(qualifierId)),
                 project.Properties.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
-                    .Select(kv => new XElement(XName.Get(kv.Key, MsBuildNamespace), ValueToMsBuild(kv.Value, msbuildFile, true))));
+                    .Select(kv => new XElement(XName.Get(kv.Key), ValueToMsBuild(kv.Value, msbuildFile, true))));
 
             if (properties.HasElements)
             {
@@ -323,11 +311,11 @@ namespace BuildXL.Ide.Generator
             var rootSettingsFile = new XDocument(
                 new XElement(
                     ProjectXName,
-                    new XAttribute("ToolsVersion", "12.0"),
+                    new XAttribute("Sdk", "Microsoft.NET.Sdk"),
                     new XElement(
                         PropertyGroupXName,
                         new XElement(
-                            XName.Get("EnlistmentRoot", MsBuildNamespace),
+                            XName.Get("EnlistmentRoot"),
                             GetFullPathExpression(PathUtilities.EnsureTrailingSlash(m_context.EnlistmentRootStr), rootSettingsPath)))));
 
             // new XElement(XName.Get("OutputRoot", MsBuildNamespace), m_outputDir),

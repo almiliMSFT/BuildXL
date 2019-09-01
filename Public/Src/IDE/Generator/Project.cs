@@ -19,7 +19,7 @@ namespace BuildXL.Ide.Generator
         /// <summary>
         /// The name of the qualifier used by the project
         /// </summary>
-        public string FriendlyQualifier { get; private set; }
+        public QualifierId FriendlyQualifier { get; }
 
         private readonly ConcurrentDictionary<string, object> m_properties;
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<object, Item>> m_items;
@@ -35,7 +35,7 @@ namespace BuildXL.Ide.Generator
         /// <summary>
         /// Constructs a new project
         /// </summary>
-        public Project(string friendlyQualifier)
+        public Project(QualifierId friendlyQualifier)
         {
             FriendlyQualifier = friendlyQualifier;
             RawReferences = new List<AbsolutePath>();
@@ -46,13 +46,16 @@ namespace BuildXL.Ide.Generator
         /// <summary>
         /// Sets the project output directory
         /// </summary>
-        public void SetOutputDirectory(AbsolutePath outputDirectory, OutputDirectoryType outputDirectoryType, string buildFilter)
+        public void SetOutputDirectory(AbsolutePath outputDirectory, string outDirWithTrailingSlash, OutputDirectoryType outputDirectoryType, string buildFilter)
         {
             if (outputDirectoryType > m_outputDirectoryType)
             {
+                
                 m_outputDirectoryType = outputDirectoryType;
                 SetProperty("OutputPath", outputDirectory);
-                SetProperty("OutDir", outputDirectory);
+                SetProperty("OutDir", outDirWithTrailingSlash);
+                SetProperty("BaseIntermediateOutputPath", outDirWithTrailingSlash);
+                SetProperty("IntermediateOutputPath", outDirWithTrailingSlash);
                 SetProperty("DominoBuildFilter", buildFilter);
             }
         }

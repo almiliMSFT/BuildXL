@@ -17,8 +17,8 @@ namespace BuildXL.Ide.Generator
     /// </summary>
     internal sealed class VcxprojFile : MsbuildFile
     {
-        public MultiValueDictionary<string, object> ConstantsByQualifier;
-        public MultiValueDictionary<string, object> IncludeDirsByQualifier;
+        public MultiValueDictionary<QualifierId, object> ConstantsByQualifier;
+        public MultiValueDictionary<QualifierId, object> IncludeDirsByQualifier;
 
         internal VcxprojFile(
             Context context,
@@ -26,17 +26,16 @@ namespace BuildXL.Ide.Generator
             : base(context, specFilePath, ".vcxproj")
         {
             m_inputs = new List<AbsolutePath>();
-            ConstantsByQualifier = new MultiValueDictionary<string, object>();
-            IncludeDirsByQualifier = new MultiValueDictionary<string, object>();
+            ConstantsByQualifier = new MultiValueDictionary<QualifierId, object>();
+            IncludeDirsByQualifier = new MultiValueDictionary<QualifierId, object>();
         }
 
-        internal override string UnevaluatedQualifierComparisonProperty => "$(Configuration)|$(Platform)";
-
-        internal override string GetQualifierComparisonValue(string friendlyQualifierName)
+        internal override string GenerateConditionalForQualifier(QualifierId qualifierId)
         {
             string configuration = "Debug";
             string platform = "X64";
 
+            var friendlyQualifierName = Context.QualifierTable.GetCanonicalDisplayString(qualifierId);
             var normalizedFriendlyQualifier = friendlyQualifierName.ToLowerInvariant();
             if (normalizedFriendlyQualifier.Contains("release"))
             {
@@ -48,19 +47,19 @@ namespace BuildXL.Ide.Generator
                 platform = "Win32";
             }
 
-            return I($"{configuration}|{platform}");
+            return $"'$(Configuration)|$(Platform)' == '{configuration}|{platform}'";
         }
 
         internal override void VisitProcess(Process process, ProcessType pipCategory)
         {
-            string friendlyQualifier = Context.QualifierTable.GetCanonicalDisplayString(process.Provenance.QualifierId);
+            var qualifier = process.Provenance.QualifierId;
 
             // TODO: After fixing the qualifier in the DS, I will start using the qualifier id instead of friendly qualifier name
                 // Context.QualifierTable.GetQualifiedOutputDirectoryPart(Context.StringTable, qualifierId).ToString(Context.StringTable);
             var arguments = Context.GetArgumentsDataFromProcess(process);
 
             Project project;
-            if (!ProjectsByQualifier.TryGetValue(friendlyQualifier, out project))
+            if (!ProjectsByQualifier.TryGetValue(qualifier, out project))
             {
                 project = CreateProject(process);
                 project.SetProperty("PlatformToolset", "v140");
@@ -68,7 +67,7 @@ namespace BuildXL.Ide.Generator
                 FillProjectConfigurations(project);
                 AddHeaderFiles(project);
 
-                ProjectsByQualifier.Add(friendlyQualifier, project);
+                ProjectsByQualifier.Add(qualifier, project);
             }
 
             switch (pipCategory)

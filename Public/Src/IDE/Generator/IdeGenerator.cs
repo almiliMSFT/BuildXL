@@ -116,6 +116,8 @@ namespace BuildXL.Ide.Generator
         /// </summary>
         public bool Generate()
         {
+            System.Diagnostics.Debugger.Launch();
+
             IReadOnlyList<MsbuildFile> msbuildFiles = GenerateMsbuildFiles();
 
             // After generating all msbuild files, decide the project and assembly references
@@ -151,7 +153,10 @@ namespace BuildXL.Ide.Generator
             foreach (var processPips in specFileGroupedProcessPips)
             {
                 var specFile = processPips.Key;
-                var categorizedProcesses = processPips.OfType<Process>().Select(p => ProcessWithType.Categorize(m_context, p));
+                var categorizedProcesses = processPips
+                    .OfType<Process>()
+                    .Select(p => ProcessWithType.Categorize(m_context, p))
+                    .ToList();
 
                 MsbuildFile msbuildFile = null;
                 if (categorizedProcesses.Any(a => a.Type == ProcessType.Csc))
@@ -213,116 +218,6 @@ namespace BuildXL.Ide.Generator
                         }
                     }
                 }
-            }
-        }
-
-        /// <summary>
-        /// Merge all projects which are generated from the same spec file with different qualifiers
-        /// After merging them, we will have knowledge about which properties or items are conditioned.
-        /// </summary>
-        private static void CreateConditionedProjects(MsbuildFile msbuildFile)
-        {
-            // Create a new process project for each old process project. The new ones will not have items and properties.
-            // We will put new items and properties below.
-            var oldProjects = msbuildFile.ProjectsByQualifier.Values.ToArray();
-            var numProjects = oldProjects.Length;
-
-            if (numProjects == 0)
-            {
-                return;
-            }
-
-            // create new projects with same qualifiers
-            var newProjects = new Project[oldProjects.Length];
-            for (int i = 0; i < oldProjects.Length; i++)
-            {
-                newProjects[i] = new Project(oldProjects[i].FriendlyQualifier);
-            }
-
-            // Find the unconditioned items.
-            HashSet<(string, object)> unconditionedValues = null;
-            HashSet<(string, object)> projectValues = new HashSet<ValueTuple<string, object>>();
-            foreach (var project in oldProjects)
-            {
-                projectValues.Clear();
-                projectValues.UnionWith(project.Items.SelectMany(grouping => grouping.Select(item => (grouping.Key, item.Include))));
-                Context.HandledItemTypes.UnionWith(project.Items.Select(grouping => grouping.Key));
-
-                if (unconditionedValues == null)
-                {
-                    unconditionedValues = new HashSet<(string, object)>(projectValues);
-                }
-                else
-                {
-                    unconditionedValues.IntersectWith(projectValues);
-                }
-            }
-
-            // Create an unconditioned project with an empty qualifier and populate it with the unconditioned (common) values
-            var unconditionedProject = new Project(string.Empty);
-
-            for (int i = 0; i < oldProjects.Length; i++)
-            {
-                foreach (var itemGroup in oldProjects[i].Items)
-                {
-                    foreach (var item in itemGroup)
-                    {
-                        if (!unconditionedValues.Contains((itemGroup.Key, item.Include)))
-                        {
-                            newProjects[i].AddItem(itemGroup.Key, item);
-                        }
-                        else if (i == 0)
-                        {
-                            unconditionedProject.AddItem(itemGroup.Key, item);
-                        }
-                    }
-                }
-            }
-
-            // Now split out conditioned/unconditioned properties
-            unconditionedValues = null;
-
-            foreach (var project in oldProjects)
-            {
-                projectValues.Clear();
-                projectValues.UnionWith(project.Properties.Select(property => (property.Key, property.Value)));
-
-                if (unconditionedValues == null)
-                {
-                    unconditionedValues = new HashSet<(string, object)>(projectValues);
-                }
-                else
-                {
-                    unconditionedValues.IntersectWith(projectValues);
-                }
-            }
-
-            for (int i = 0; i < oldProjects.Length; i++)
-            {
-                foreach (var property in oldProjects[i].Properties)
-                {
-                    if (!unconditionedValues.Contains((property.Key, property.Value)))
-                    {
-                        newProjects[i].CopyPropertyFrom(property.Key, oldProjects[i]);
-                    }
-                    else if (i == 0)
-                    {
-                        unconditionedProject.CopyPropertyFrom(property.Key, oldProjects[i]);
-                    }
-                }
-            }
-
-            msbuildFile.ProjectsByQualifier.Clear();
-            msbuildFile.ProjectsByQualifier.Add(string.Empty, unconditionedProject);
-
-            if (numProjects == 1)
-            {
-                return;
-            }
-
-            foreach (var newProject in newProjects)
-            {
-                msbuildFile.ProjectsByQualifier.Add(newProject.FriendlyQualifier, newProject);
             }
         }
 

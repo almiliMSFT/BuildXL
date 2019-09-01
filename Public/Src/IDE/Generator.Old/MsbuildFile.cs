@@ -86,7 +86,7 @@ namespace BuildXL.Ide.Generator.Old
             // Add '.g' suffix only if the projects files will be in the spec root
             if (Context.CanWriteToSrc)
             {
-                projectExtension = ".g2" + projectExtension;
+                projectExtension = ".g" + projectExtension;
             }
 
             // Relative to enlistment root
