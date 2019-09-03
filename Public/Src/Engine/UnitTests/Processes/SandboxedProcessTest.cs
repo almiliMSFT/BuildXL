@@ -471,12 +471,6 @@ namespace Test.BuildXL.Processes
         }
 
         [Fact]
-        public async Task ErrorRegex()
-        {
-
-        }
-
-        [Fact]
         public async Task StandardOutputToFile()
         {
             const string Expected = "Success";
