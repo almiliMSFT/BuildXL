@@ -259,12 +259,6 @@ namespace BuildXL.Ide.Generator
         {
             Action<object> action = null;
 
-            var cmdline = arguments.ToString(new PipFragmentRenderer(Context.PathTable));
-            if (cmdline.Contains("Async="))
-            {
-                System.Diagnostics.Debugger.Launch();
-            }
-
             foreach (var arg in arguments)
             {
                 var type = arg.FragmentType;
@@ -293,7 +287,7 @@ namespace BuildXL.Ide.Generator
                             break;
                         case "/r:":
                         case "/link:":
-                            action = (obj) => project.RawReferences.Add((AbsolutePath)obj);
+                            action = (obj) => project.RawReferences.Add((null, (AbsolutePath)obj));
                             break;
                         case "/langversion:":
                             action = (obj) => project.SetProperty("LangVersion", (string)obj);
@@ -377,14 +371,26 @@ namespace BuildXL.Ide.Generator
                         default:
                             const string Target = "/target:";
                             const string Define = "/define:";
+                            const string Reference = "/r:";
 
                             if (strValue.StartsWith(Target, StringComparison.OrdinalIgnoreCase))
                             {
                                 project.SetProperty("OutputType", strValue.Substring(Target.Length));
+                                break;
                             }
-                            else if (strValue.StartsWith("/define:", StringComparison.OrdinalIgnoreCase))
+
+                            if (strValue.StartsWith(Define, StringComparison.OrdinalIgnoreCase))
                             {
                                 project.SetProperty("DefineConstants", strValue.Substring(Define.Length).Trim('"'));
+                                break;
+                            }
+
+                            if (strValue.StartsWith(Reference, StringComparison.OrdinalIgnoreCase) &&
+                                strValue.EndsWith("="))
+                            {
+                                string alias = strValue.Substring(Reference.Length).Split('=')[0];
+                                action = (obj) => project.RawReferences.Add((alias, (AbsolutePath)obj));
+                                break;
                             }
 
                             break;

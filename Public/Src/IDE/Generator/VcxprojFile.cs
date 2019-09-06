@@ -98,7 +98,7 @@ namespace BuildXL.Ide.Generator
                 {
                     // Sources
                     var path = GetPathValue(arg);
-                    project.RawReferences.Add(path);
+                    project.RawReferences.Add((Alias: null, Path: path));
                 }
             }
         }
