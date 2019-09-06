@@ -17,9 +17,9 @@ namespace BuildXL.Ide.Generator
     internal sealed class Project
     {
         /// <summary>
-        /// The name of the qualifier used by the project
+        /// The qualifier used by the project
         /// </summary>
-        public QualifierId FriendlyQualifier { get; }
+        public QualifierId QualifierId { get; }
 
         private readonly ConcurrentDictionary<string, object> m_properties;
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<object, Item>> m_items;
@@ -37,7 +37,7 @@ namespace BuildXL.Ide.Generator
         /// </summary>
         public Project(QualifierId friendlyQualifier)
         {
-            FriendlyQualifier = friendlyQualifier;
+            QualifierId = friendlyQualifier;
             RawReferences = new List<AbsolutePath>();
             m_properties = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             m_items = new ConcurrentDictionary<string, ConcurrentDictionary<object, Item>>(StringComparer.OrdinalIgnoreCase);
@@ -46,16 +46,13 @@ namespace BuildXL.Ide.Generator
         /// <summary>
         /// Sets the project output directory
         /// </summary>
-        public void SetOutputDirectory(AbsolutePath outputDirectory, string outDirWithTrailingSlash, OutputDirectoryType outputDirectoryType, string buildFilter)
+        public void SetOutputDirectory(AbsolutePath outputDirectory, OutputDirectoryType outputDirectoryType, string buildFilter)
         {
             if (outputDirectoryType > m_outputDirectoryType)
             {
-                
                 m_outputDirectoryType = outputDirectoryType;
-                SetProperty("OutputPath", outputDirectory);
-                SetProperty("OutDir", outDirWithTrailingSlash);
-                SetProperty("BaseIntermediateOutputPath", outDirWithTrailingSlash);
-                SetProperty("IntermediateOutputPath", outDirWithTrailingSlash);
+                //SetProperty("OutputPath", outputDirectory);
+                //SetProperty("OutDir", outputDirectory);
                 SetProperty("DominoBuildFilter", buildFilter);
             }
         }

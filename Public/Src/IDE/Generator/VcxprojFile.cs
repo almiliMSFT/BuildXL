@@ -17,8 +17,8 @@ namespace BuildXL.Ide.Generator
     /// </summary>
     internal sealed class VcxprojFile : MsbuildFile
     {
-        public MultiValueDictionary<QualifierId, object> ConstantsByQualifier;
-        public MultiValueDictionary<QualifierId, object> IncludeDirsByQualifier;
+        public MultiValueDictionary<Project, object> ConstantsByProject;
+        public MultiValueDictionary<Project, object> IncludeDirsByProject;
 
         internal VcxprojFile(
             Context context,
@@ -26,16 +26,16 @@ namespace BuildXL.Ide.Generator
             : base(context, specFilePath, ".vcxproj")
         {
             m_inputs = new List<AbsolutePath>();
-            ConstantsByQualifier = new MultiValueDictionary<QualifierId, object>();
-            IncludeDirsByQualifier = new MultiValueDictionary<QualifierId, object>();
+            ConstantsByProject = new MultiValueDictionary<Project, object>();
+            IncludeDirsByProject = new MultiValueDictionary<Project, object>();
         }
 
-        internal override string GenerateConditionalForQualifier(QualifierId qualifierId)
+        internal override string GenerateConditionalForProject(Project project)
         {
             string configuration = "Debug";
             string platform = "X64";
 
-            var friendlyQualifierName = Context.QualifierTable.GetCanonicalDisplayString(qualifierId);
+            var friendlyQualifierName = Context.QualifierTable.GetCanonicalDisplayString(project.QualifierId);
             var normalizedFriendlyQualifier = friendlyQualifierName.ToLowerInvariant();
             if (normalizedFriendlyQualifier.Contains("release"))
             {
@@ -162,7 +162,7 @@ namespace BuildXL.Ide.Generator
                         {
                             if ((AbsolutePath)obj != SpecDirectory)
                             {
-                                IncludeDirsByQualifier.Add(project.FriendlyQualifier, (AbsolutePath)obj);
+                                IncludeDirsByProject.Add(project, (AbsolutePath)obj);
                             }
                         };
                     }
@@ -179,7 +179,7 @@ namespace BuildXL.Ide.Generator
                                 Contract.Assert(false, "Expecting string or PipData as a preprocessor definition argument");
                             }
 
-                            ConstantsByQualifier.Add(project.FriendlyQualifier, (string)obj);
+                            ConstantsByProject.Add(project, (string)obj);
                         };
                     }
                 }

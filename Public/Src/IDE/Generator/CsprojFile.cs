@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using BuildXL.Pips.Operations;
 using BuildXL.Utilities;
+using BuildXL.Utilities.Qualifier;
 
 namespace BuildXL.Ide.Generator
 {
@@ -15,6 +16,8 @@ namespace BuildXL.Ide.Generator
     /// </summary>
     internal sealed class CsprojFile : MsbuildFile
     {
+        internal const string OutputTypeProperty = "OutputType";
+
         /// <summary>
         /// Represents the resgen processes
         /// </summary>
@@ -43,9 +46,10 @@ namespace BuildXL.Ide.Generator
         {
             var qualifier = Context.QualifierTable.GetQualifier(process.Provenance.QualifierId);
 
-            // only consider processes targeting Windows
-            if (qualifier.TryGetValue(Context.StringTable, "targetRuntime", out var targetRuntime)
-                && targetRuntime != "win-x64")
+            // only consider processes targeting Windows in debug configuration
+            if (!QualifierPropertyEquals(qualifier, "targetRuntime", "win-x64")
+                || !QualifierPropertyEquals(qualifier, QualifierConfigurationPropertyName, "debug")
+                || QualifierPropertyEquals(qualifier, QualifierTargetFrameworkPropertyName, "net451"))
             {
                 return;
             }
@@ -202,15 +206,15 @@ namespace BuildXL.Ide.Generator
             base.EndVisitingProject();
         }
 
-        internal override string GenerateConditionalForQualifier(QualifierId qualifierId)
+        internal override string GenerateConditionalForProject(Project project)
         {
             var conjuncts = new List<string>();
-            if (TryGetQualifierProperty(qualifierId, QualifierConfigurationPropertyName, out var conf))
+            if (TryGetQualifierProperty(project, QualifierConfigurationPropertyName, out var conf))
             {
                 conjuncts.Add($"'$(Configuration)' == '{conf}'");
             }
 
-            if (TryGetQualifierProperty(qualifierId, QualifierTargetFrameworkPropertyName, out var targetFramework))
+            if (TryGetQualifierProperty(project, QualifierTargetFrameworkPropertyName, out var targetFramework))
             {
                 conjuncts.Add($"'$(TargetFramework)' == '{targetFramework}'");
             }
@@ -231,7 +235,7 @@ namespace BuildXL.Ide.Generator
         private void AddEmbeddedResources(Project project)
         {
             List<EmbeddedResource> resources;
-            if (!ResourcesByQualifier.TryGetValue(project.FriendlyQualifier, out resources))
+            if (!ResourcesByQualifier.TryGetValue(project.QualifierId, out resources))
             {
                 return;
             }
@@ -254,6 +258,12 @@ namespace BuildXL.Ide.Generator
         private void IterateCscArguments(Project project, PipData arguments, bool isNested = false)
         {
             Action<object> action = null;
+
+            var cmdline = arguments.ToString(new PipFragmentRenderer(Context.PathTable));
+            if (cmdline.Contains("Async="))
+            {
+                System.Diagnostics.Debugger.Launch();
+            }
 
             foreach (var arg in arguments)
             {
@@ -289,7 +299,7 @@ namespace BuildXL.Ide.Generator
                             action = (obj) => project.SetProperty("LangVersion", (string)obj);
                             break;
                         case "/target:":
-                            action = (obj) => project.SetProperty("OutputType", (string)obj);
+                            action = (obj) => project.SetProperty(OutputTypeProperty, (string)obj);
                             break;
                         case "/keyfile:":
                             action = (obj) =>
@@ -365,10 +375,16 @@ namespace BuildXL.Ide.Generator
                             };
                             break;
                         default:
-                            if (strValue.StartsWith("/target:", StringComparison.OrdinalIgnoreCase))
+                            const string Target = "/target:";
+                            const string Define = "/define:";
+
+                            if (strValue.StartsWith(Target, StringComparison.OrdinalIgnoreCase))
                             {
-                                // BuildXL XML specific
-                                project.SetProperty("OutputType", strValue.Substring(8));
+                                project.SetProperty("OutputType", strValue.Substring(Target.Length));
+                            }
+                            else if (strValue.StartsWith("/define:", StringComparison.OrdinalIgnoreCase))
+                            {
+                                project.SetProperty("DefineConstants", strValue.Substring(Define.Length).Trim('"'));
                             }
 
                             break;

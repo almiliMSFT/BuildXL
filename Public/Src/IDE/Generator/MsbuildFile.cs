@@ -12,6 +12,7 @@ using System.Text;
 using BuildXL.FrontEnd.Script.Constants;
 using BuildXL.Pips.Operations;
 using BuildXL.Utilities;
+using BuildXL.Utilities.Qualifier;
 using static BuildXL.Utilities.FormattableStringEx;
 
 namespace BuildXL.Ide.Generator
@@ -144,7 +145,7 @@ namespace BuildXL.Ide.Generator
             return project;
         }
 
-        internal abstract string GenerateConditionalForQualifier(QualifierId qualifierId);
+        internal abstract string GenerateConditionalForProject(Project project);
 
         internal virtual void VisitDirectory(SealDirectory sealDirectory)
         {
@@ -246,13 +247,18 @@ namespace BuildXL.Ide.Generator
                 buildFilter = $"spec='Mount[SourceRoot]\\{relativeSpecFile}'";
             }
 
-            var outDirWithTrailingSlash = outputDirectory.ToString(Context.PathTable) + System.IO.Path.DirectorySeparatorChar;
-            project.SetOutputDirectory(outputDirectory, outDirWithTrailingSlash, outputDirectoryType, buildFilter);
+            project.SetOutputDirectory(outputDirectory, outputDirectoryType, buildFilter);
         }
 
-        internal bool TryGetQualifierProperty(QualifierId qualifierId, string propName, out string propValue)
+        internal bool TryGetQualifierProperty(Project project, string propName, out string propValue)
         {
-            return Context.QualifierTable.GetQualifier(qualifierId).TryGetValue(Context.StringTable, propName, out propValue);
+            return Context.QualifierTable.GetQualifier(project.QualifierId).TryGetValue(Context.StringTable, propName, out propValue);
+        }
+
+        internal bool QualifierPropertyEquals(Qualifier qualifier, string propertyName, string propertyValue)
+        {
+            return qualifier.TryGetValue(Context.StringTable, propertyName, out var value)
+                && value.Equals(propertyValue, StringComparison.InvariantCultureIgnoreCase);
         }
     }
 

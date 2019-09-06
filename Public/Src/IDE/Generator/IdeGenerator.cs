@@ -116,8 +116,6 @@ namespace BuildXL.Ide.Generator
         /// </summary>
         public bool Generate()
         {
-            System.Diagnostics.Debugger.Launch();
-
             IReadOnlyList<MsbuildFile> msbuildFiles = GenerateMsbuildFiles();
 
             // After generating all msbuild files, decide the project and assembly references
@@ -215,6 +213,7 @@ namespace BuildXL.Ide.Generator
                         {
                             var item = project.AddItem("Reference", referenceName);
                             item.SetMetadata("HintPath", reference);
+                            item.SetMetadata("NuGetPackageId", referenceName); // it doesn't matter what this value is
                         }
                     }
                 }

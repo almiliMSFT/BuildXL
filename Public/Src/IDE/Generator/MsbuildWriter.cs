@@ -40,7 +40,7 @@ namespace BuildXL.Ide.Generator
 
         internal MsbuildWriter(IReadOnlyList<MsbuildFile> msbuildFiles, Context context)
         {
-            m_msbuildFiles = msbuildFiles;
+            m_msbuildFiles = msbuildFiles.Where(m => m.ProjectsByQualifier.Any()).ToList();
             m_context = context;
 
             m_rootExpander = new RootExpander(m_context.PathTable);
@@ -48,8 +48,8 @@ namespace BuildXL.Ide.Generator
             m_rootExpander.Add(m_context.SolutionRoot, "$(SolutionRoot)");
 
             m_stringReplacements = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            m_stringReplacements.Add(m_context.EnlistmentRootStr, "$(EnlistmentRoot)\\");
-            m_stringReplacements.Add(m_context.SolutionRootStr, "$(SolutionRoot)\\");
+            m_stringReplacements.Add(m_context.EnlistmentRootStr, "$(EnlistmentRoot)");
+            m_stringReplacements.Add(m_context.SolutionRootStr, "$(SolutionRoot)");
         }
 
         internal void Write()
@@ -61,12 +61,23 @@ namespace BuildXL.Ide.Generator
                 // Capture pre-existing items that were not considered before.
                 var solutionRootExpression = GetFullPathExpression(m_context.SolutionRootStr, fileToWrite);
 
-                var properties =
-                    msbuildFile.ProjectsByQualifier.SelectMany(
-                        conditionAndProject => GetProperties(msbuildFile, conditionAndProject.Value, conditionAndProject.Key));
+                var allProjects = msbuildFile.ProjectsByQualifier.Values;
+
+                var commonPropertiesKvp = allProjects
+                    .First()
+                    .Properties
+                    .Where(kvp => allProjects.All(p => EqualMsBuildValues(msbuildFile, p.TryGetProperty(kvp.Key), kvp.Value)))
+                    .ToList();
+
+                var condProperties =
+                    allProjects.Select(
+                        project => GetPropertyGroup(
+                            msbuildFile.GenerateConditionalForProject(project),
+                            GetProperties(msbuildFile, project.Properties.Except(commonPropertiesKvp))));
+
                 var items =
-                    msbuildFile.ProjectsByQualifier.SelectMany(
-                        conditionAndProject => GetItems(msbuildFile, conditionAndProject.Value, conditionAndProject.Key));
+                    msbuildFile.ProjectsByQualifier.Values.SelectMany(
+                        project => GetItems(msbuildFile, project));
 
                 XElement[] afterPropsImport = EmptyArray<XElement>();
                 XElement[] beforePropsImport = EmptyArray<XElement>();
@@ -91,8 +102,8 @@ namespace BuildXL.Ide.Generator
                         XName.Get("ItemDefinitionGroup"),
                         new XElement(
                             XName.Get("ClCompile"),
-                            GetConditionedValues(vcxprojFile, "PreprocessorDefinitions", vcxprojFile.ConstantsByQualifier),
-                            GetConditionedValues(vcxprojFile, "AdditionalIncludeDirectories", vcxprojFile.IncludeDirsByQualifier)));
+                            GetConditionedValues(vcxprojFile, "PreprocessorDefinitions", vcxprojFile.ConstantsByProject),
+                            GetConditionedValues(vcxprojFile, "AdditionalIncludeDirectories", vcxprojFile.IncludeDirsByProject)));
 
                     afterPropsImport = new XElement[]
                     {
@@ -106,8 +117,8 @@ namespace BuildXL.Ide.Generator
                 var targetFrameworks = string.Empty;
                 if (msbuildFile is CsprojFile csprojFile)
                 {
-                    targetFrameworks = string.Join(";", csprojFile.ProjectsByQualifier.Keys
-                        .Select(q => csprojFile.TryGetQualifierProperty(q, MsbuildFile.QualifierTargetFrameworkPropertyName, out var tfm) ? tfm : null)
+                    targetFrameworks = string.Join(";", csprojFile.ProjectsByQualifier.Values
+                        .Select(project => csprojFile.TryGetQualifierProperty(project, MsbuildFile.QualifierTargetFrameworkPropertyName, out var tfm) ? tfm : null)
                         .Where(tfm => tfm != null)
                         .Distinct()
                         .OrderBy(tfm => tfm));
@@ -122,7 +133,8 @@ namespace BuildXL.Ide.Generator
                             new XElement(XName.Get("SolutionRoot"), solutionRootExpression),
                             new XElement(XName.Get("TargetFrameworks"), targetFrameworks)),
                         beforePropsImport,
-                        properties,
+                        GetPropertyGroup(condition: null, GetProperties(msbuildFile, commonPropertiesKvp)),
+                        condProperties,
                         afterPropsImport,
                         items,
                         targetImport));
@@ -150,15 +162,22 @@ namespace BuildXL.Ide.Generator
             }
         }
 
-        private IEnumerable<XElement> GetConditionedValues(VcxprojFile vcxprojFile, string name, MultiValueDictionary<QualifierId, object> valuesByQualifier)
+        private bool EqualMsBuildValues(MsbuildFile msbuildFile, object lhs, object rhs)
+        {
+            return
+                ValueToMsBuild(lhs, msbuildFile, isProperty: true) ==
+                ValueToMsBuild(rhs, msbuildFile, isProperty: true);
+        }
+
+        private IEnumerable<XElement> GetConditionedValues(VcxprojFile vcxprojFile, string name, MultiValueDictionary<Project, object> valuesByProject)
         {
             var xName = XName.Get(name);
             var builder = new StringBuilder();
 
             HashSet<object> unconditionedValues = null;
-            foreach (var qualifier in valuesByQualifier.Keys)
+            foreach (var qualifier in valuesByProject.Keys)
             {
-                var values = valuesByQualifier[qualifier];
+                var values = valuesByProject[qualifier];
                 if (unconditionedValues == null)
                 {
                     unconditionedValues = new HashSet<object>(values);
@@ -182,9 +201,9 @@ namespace BuildXL.Ide.Generator
 
             var qualifiers = new HashSet<string>();
 
-            foreach (var qualifier in valuesByQualifier.Keys)
+            foreach (var project in valuesByProject.Keys)
             {
-                var conditionedValues = valuesByQualifier[qualifier].Except(unconditionedValues);
+                var conditionedValues = valuesByProject[project].Except(unconditionedValues);
                 if (conditionedValues.Any())
                 {
                     builder.Clear();
@@ -197,14 +216,14 @@ namespace BuildXL.Ide.Generator
                     builder.Append($"%({name})");
                     yield return new XElement(
                         xName,
-                        new XAttribute("Condition", vcxprojFile.GenerateConditionalForQualifier(qualifier)),
+                        new XAttribute("Condition", vcxprojFile.GenerateConditionalForProject(project)),
                         builder.ToString());
                 }
             }
         }
 
         [SuppressMessage("Microsoft.Globalization", "CA1305")]
-        private IEnumerable<XElement> GetItems(MsbuildFile msbuildFile, Project project, QualifierId qualifierId)
+        private IEnumerable<XElement> GetItems(MsbuildFile msbuildFile, Project project)
         {
             if (project.Items.Count == 0)
             {
@@ -214,7 +233,7 @@ namespace BuildXL.Ide.Generator
             var items = project.Items.OrderBy(grouping => grouping.Key).Select(
                 grouping => new XElement(
                     ItemGroupXName,
-                    new XAttribute("Condition", msbuildFile.GenerateConditionalForQualifier(qualifierId)),
+                    new XAttribute("Condition", msbuildFile.GenerateConditionalForProject(project)),
                     grouping
                         .Where(item => !IsExcludedItemInclude(ValueToMsBuild(item.Include, msbuildFile)))
                         .OrderBy(item => ValueToMsBuild(item.Include, msbuildFile), StringComparer.OrdinalIgnoreCase)
@@ -229,18 +248,19 @@ namespace BuildXL.Ide.Generator
             return items;
         }
 
-        private IEnumerable<XElement> GetProperties(MsbuildFile msbuildFile, Project project, QualifierId qualifierId)
+        private IEnumerable<XElement> GetProperties(MsbuildFile msbuildFile, IEnumerable<KeyValuePair<string, object>> properties, string condition = null)
         {
-            var properties = new XElement(
-                PropertyGroupXName,
-                new XAttribute("Condition", msbuildFile.GenerateConditionalForQualifier(qualifierId)),
-                project.Properties.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
-                    .Select(kv => new XElement(XName.Get(kv.Key), ValueToMsBuild(kv.Value, msbuildFile, true))));
+            return properties
+                .OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(kv => new XElement(XName.Get(kv.Key), ValueToMsBuild(kv.Value, msbuildFile, true)));
+        }
 
-            if (properties.HasElements)
-            {
-                yield return properties;
-            }
+        private XElement GetPropertyGroup(string condition, IEnumerable<XElement> properties)
+        {
+            return new XElement(
+                PropertyGroupXName,
+                condition != null ? new[] { new XAttribute("Condition", condition) } : new XAttribute[0],
+                properties);
         }
 
         [SuppressMessage("Microsoft.Performance", "CA1800")]
@@ -311,7 +331,7 @@ namespace BuildXL.Ide.Generator
             var rootSettingsFile = new XDocument(
                 new XElement(
                     ProjectXName,
-                    new XAttribute("Sdk", "Microsoft.NET.Sdk"),
+                    //new XAttribute("Sdk", "Microsoft.NET.Sdk"),
                     new XElement(
                         PropertyGroupXName,
                         new XElement(
