@@ -198,8 +198,9 @@ namespace BuildXL.Ide.Generator
                 {
                     foreach (var reference in project.RawReferences)
                     {
-                        var referenceName = reference.Path.GetName(m_context.PathTable).RemoveExtension(m_context.StringTable);
-                        var pip = m_context.PipGraph.TryFindProducer(reference.Path, VersionDisposition.Latest, null);
+                        var referencePath = reference.Key;
+                        var referenceName = referencePath.GetName(m_context.PathTable).RemoveExtension(m_context.StringTable);
+                        var pip = m_context.PipGraph.TryFindProducer(referencePath, VersionDisposition.Latest, null);
                         var producerSpecFilePath = pip?.Provenance?.Token.Path;
                         MsbuildFile referencedMsbuildFile;
                         if (producerSpecFilePath.HasValue && msbuildFilesBySpecFiles.TryGetValue(producerSpecFilePath.Value, out referencedMsbuildFile) && referencedMsbuildFile != msbuildFile)
@@ -212,10 +213,11 @@ namespace BuildXL.Ide.Generator
                         else if (msbuildFile is CsprojFile)
                         {
                             var item = project.AddItem("Reference", referenceName);
-                            item.SetMetadata("HintPath", reference.Path);
-                            if (reference.Alias != null)
+                            item.SetMetadata("HintPath", referencePath);
+                            var aliases = string.Join(",", reference.Value.Distinct());
+                            if (aliases != Project.GlobalAliasName)
                             {
-                                item.SetMetadata("Aliases", reference.Alias);
+                                item.SetMetadata("Aliases", aliases);
                             }
                             item.SetMetadata("NuGetPackageId", referenceName); // it doesn't matter what this value is
                         }

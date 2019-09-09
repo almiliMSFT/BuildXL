@@ -287,7 +287,7 @@ namespace BuildXL.Ide.Generator
                             break;
                         case "/r:":
                         case "/link:":
-                            action = (obj) => project.RawReferences.Add((null, (AbsolutePath)obj));
+                            action = (obj) => project.AddRawReference((AbsolutePath)obj);
                             break;
                         case "/langversion:":
                             action = (obj) => project.SetProperty("LangVersion", (string)obj);
@@ -389,7 +389,7 @@ namespace BuildXL.Ide.Generator
                                 strValue.EndsWith("="))
                             {
                                 string alias = strValue.Substring(Reference.Length).Split('=')[0];
-                                action = (obj) => project.RawReferences.Add((alias, (AbsolutePath)obj));
+                                action = (obj) => project.AddRawReference((AbsolutePath)obj, alias);
                                 break;
                             }
 

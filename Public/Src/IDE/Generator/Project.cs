@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.ContractsLight;
 using System.Linq;
 using BuildXL.Utilities;
+using BuildXL.Utilities.Collections;
 
 namespace BuildXL.Ide.Generator
 {
@@ -22,10 +23,10 @@ namespace BuildXL.Ide.Generator
         public QualifierId QualifierId { get; }
 
         private readonly ConcurrentDictionary<string, object> m_properties;
-        private readonly ConcurrentDictionary<string, ConcurrentQueue<Item>> m_items;
+        private readonly ConcurrentDictionary<string, ConcurrentDictionary<object, Item>> m_items;
 
-        // temporary
-        public List<(string Alias, AbsolutePath Path)> RawReferences { get; private set; }
+        // temporary (path -> alias[])
+        public MultiValueDictionary<AbsolutePath, string> RawReferences { get; private set; }
 
         /// <summary>
         /// The output directory type
@@ -38,9 +39,9 @@ namespace BuildXL.Ide.Generator
         public Project(QualifierId friendlyQualifier)
         {
             QualifierId = friendlyQualifier;
-            RawReferences = new List<(string Alias, AbsolutePath Path)>();
+            RawReferences = new MultiValueDictionary<AbsolutePath, string>();
             m_properties = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-            m_items = new ConcurrentDictionary<string, ConcurrentQueue<Item>>(StringComparer.OrdinalIgnoreCase);
+            m_items = new ConcurrentDictionary<string, ConcurrentDictionary<object, Item>>(StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -135,8 +136,9 @@ namespace BuildXL.Ide.Generator
             Contract.Requires(!string.IsNullOrEmpty(name));
             Contract.Requires(item != null);
 
-            var items = m_items.GetOrAdd(name, key => new ConcurrentQueue<Item>());
-            items.Enqueue(item);
+            var items = m_items.GetOrAdd(name, key => new ConcurrentDictionary<object, Item>());
+
+            items.TryAdd(item.Include, item);
         }
 
         /// <summary>
@@ -147,11 +149,10 @@ namespace BuildXL.Ide.Generator
             Contract.Requires(!string.IsNullOrEmpty(name));
             Contract.Requires(path != AbsolutePath.Invalid);
 
-            var items = m_items.GetOrAdd(name, key => new ConcurrentQueue<Item>());
+            var items = m_items.GetOrAdd(name, key => new ConcurrentDictionary<object, Item>());
 
             var newItem = new Item(path);
-            items.Enqueue(newItem);
-            return newItem;
+            return items.GetOrAdd(newItem.Include, newItem);
         }
 
         /// <summary>
@@ -163,11 +164,10 @@ namespace BuildXL.Ide.Generator
             Contract.Requires(!string.IsNullOrEmpty(name));
             Contract.Requires(path != RelativePath.Invalid);
 
-            var items = m_items.GetOrAdd(name, key => new ConcurrentQueue<Item>());
+            var items = m_items.GetOrAdd(name, key => new ConcurrentDictionary<object, Item>());
 
             var newItem = new Item(path);
-            items.Enqueue(newItem);
-            return newItem;
+            return items.GetOrAdd(newItem.Include, newItem);
         }
 
         /// <summary>
@@ -178,11 +178,10 @@ namespace BuildXL.Ide.Generator
             Contract.Requires(!string.IsNullOrEmpty(name));
             Contract.Requires(path != PathAtom.Invalid);
 
-            var items = m_items.GetOrAdd(name, key => new ConcurrentQueue<Item>());
+            var items = m_items.GetOrAdd(name, key => new ConcurrentDictionary<object, Item>());
 
             var newItem = new Item(path);
-            items.Enqueue(newItem);
-            return newItem;
+            return items.GetOrAdd(newItem.Include, newItem);
         }
 
         /// <summary>
@@ -193,11 +192,10 @@ namespace BuildXL.Ide.Generator
             Contract.Requires(!string.IsNullOrEmpty(name));
             Contract.Requires(!string.IsNullOrEmpty(str));
 
-            var items = m_items.GetOrAdd(name, key => new ConcurrentQueue<Item>());
+            var items = m_items.GetOrAdd(name, key => new ConcurrentDictionary<object, Item>());
 
             var newItem = new Item(str);
-            items.Enqueue(newItem);
-            return newItem;
+            return items.GetOrAdd(newItem.Include, newItem);
         }
 
         /// <summary>
@@ -210,7 +208,14 @@ namespace BuildXL.Ide.Generator
         /// </summary>
         public ILookup<string, Item> Items
         {
-            get { return m_items.SelectMany(kv => kv.Value.Select(value => new { kv.Key, Value = value })).ToLookup(kv => kv.Key, kv => kv.Value); }
+            get { return m_items.SelectMany(kv => kv.Value.Values.Select(value => new { kv.Key, Value = value })).ToLookup(kv => kv.Key, kv => kv.Value); }
+        }
+
+        internal const string GlobalAliasName = "global";
+
+        internal void AddRawReference(AbsolutePath path, string alias = null)
+        {
+            RawReferences.Add(path, alias ?? GlobalAliasName);
         }
     }
 }
