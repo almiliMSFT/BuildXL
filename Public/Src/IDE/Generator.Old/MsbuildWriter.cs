@@ -334,11 +334,11 @@ namespace BuildXL.Ide.Generator.Old
             // new XElement(XName.Get("BuildXLConfigFile", MsBuildNamespace), m_configFile))));
             rootSettingsFile.Save(rootSettingsPath);
 
-            WriteFile("BuildXL.Ide.Generator.CommonBuildFiles.CSharp.targets", Path.Combine(ideDir, "CSharp.targets"));
-            WriteFile("BuildXL.Ide.Generator.CommonBuildFiles.CSharp.props", Path.Combine(ideDir, "CSharp.props"));
-            WriteFile("BuildXL.Ide.Generator.CommonBuildFiles.Common.props", Path.Combine(ideDir, "Common.props"));
-            WriteFile("BuildXL.Ide.Generator.CommonBuildFiles.Common.targets", Path.Combine(ideDir, "Common.targets"));
-            WriteFile("BuildXL.Ide.Generator.CommonBuildFiles.NuGet.config", Path.Combine(ideDir, "NuGet.config"));
+            WriteFile("BuildXL.Ide.Generator.Old.CommonBuildFiles.CSharp.targets", Path.Combine(ideDir, "CSharp.targets"));
+            WriteFile("BuildXL.Ide.Generator.Old.CommonBuildFiles.CSharp.props", Path.Combine(ideDir, "CSharp.props"));
+            WriteFile("BuildXL.Ide.Generator.Old.CommonBuildFiles.Common.props", Path.Combine(ideDir, "Common.props"));
+            WriteFile("BuildXL.Ide.Generator.Old.CommonBuildFiles.Common.targets", Path.Combine(ideDir, "Common.targets"));
+            WriteFile("BuildXL.Ide.Generator.Old.CommonBuildFiles.NuGet.config", Path.Combine(ideDir, "NuGet.config"));
         }
 
         [SuppressMessage("Microsoft.Usage", "CA2202")]

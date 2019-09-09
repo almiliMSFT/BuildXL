@@ -62,7 +62,7 @@ namespace BuildXL.Ide.Generator
             if (!ProjectsByQualifier.TryGetValue(qualifier, out project))
             {
                 project = CreateProject(process);
-                project.SetProperty("PlatformToolset", "v140");
+                project.SetProperty("PlatformToolset", "v142");
 
                 FillProjectConfigurations(project);
                 AddHeaderFiles(project);

@@ -114,7 +114,7 @@ namespace BuildXL.Ide.Generator
                     targetImport = new XElement(ImportXName, new XAttribute("Project", Path.Combine("$(VCTargetsPath)", "Microsoft.Cpp.targets")));
                 }
 
-                var targetFrameworks = string.Empty;
+                string targetFrameworks = null;
                 if (msbuildFile is CsprojFile csprojFile)
                 {
                     targetFrameworks = string.Join(";", csprojFile.ProjectsByQualifier.Values
@@ -127,11 +127,11 @@ namespace BuildXL.Ide.Generator
                 var projectFile = new XDocument(
                     new XElement(
                         ProjectXName,
-                        new XAttribute("Sdk", "Microsoft.NET.Sdk"),
+                        targetFrameworks != null ? new[] { new XAttribute("Sdk", "Microsoft.NET.Sdk") } : new XAttribute[0],
                         new XElement(
                             PropertyGroupXName,
                             new XElement(XName.Get("SolutionRoot"), solutionRootExpression),
-                            new XElement(XName.Get("TargetFrameworks"), targetFrameworks)),
+                            targetFrameworks != null ? new[] { new XElement(XName.Get("TargetFrameworks"), targetFrameworks) } : new XElement[0]),
                         beforePropsImport,
                         GetPropertyGroup(condition: null, GetProperties(msbuildFile, commonPropertiesKvp)),
                         condProperties,

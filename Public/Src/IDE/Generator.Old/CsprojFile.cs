@@ -99,7 +99,7 @@ namespace BuildXL.Ide.Generator.Old
                 var projectDir = Path.GetParent(Context.PathTable).ToString(Context.PathTable);
                 Directory.CreateDirectory(projectDir);
                 var path = System.IO.Path.Combine(projectDir, "packages.config");
-                MsbuildWriter.WriteFile("BuildXL.Ide.Generator.CommonBuildFiles.packages.config", path);
+                MsbuildWriter.WriteFile("BuildXL.Ide.Generator.Old.CommonBuildFiles.packages.config", path);
                 m_isXunitTestProject = true;
             }
         }
