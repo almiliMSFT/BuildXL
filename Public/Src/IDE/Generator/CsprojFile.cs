@@ -16,8 +16,6 @@ namespace BuildXL.Ide.Generator
     /// </summary>
     internal sealed class CsprojFile : MsbuildFile
     {
-        internal const string OutputTypeProperty = "OutputType";
-
         /// <summary>
         /// Represents the resgen processes
         /// </summary>
@@ -46,8 +44,10 @@ namespace BuildXL.Ide.Generator
         {
             var qualifier = Context.QualifierTable.GetQualifier(process.Provenance.QualifierId);
 
-            // only consider processes targeting Windows in debug configuration
-            if (!QualifierPropertyEquals(qualifier, "targetRuntime", "win-x64")
+            // only consider processes targeting current os in debug configuration
+            // also, additionally exclude projects targeting net451
+            var currentRuntime = OperatingSystemHelper.IsMacOS ? "osx-x64" : "win-x64";
+            if (!QualifierPropertyEquals(qualifier, "targetRuntime", currentRuntime)
                 || !QualifierPropertyEquals(qualifier, QualifierConfigurationPropertyName, "debug")
                 || QualifierPropertyEquals(qualifier, QualifierTargetFrameworkPropertyName, "net451"))
             {
@@ -293,7 +293,7 @@ namespace BuildXL.Ide.Generator
                             action = (obj) => project.SetProperty("LangVersion", (string)obj);
                             break;
                         case "/target:":
-                            action = (obj) => project.SetProperty(OutputTypeProperty, (string)obj);
+                            action = (obj) => project.SetProperty("OutputType", (string)obj);
                             break;
                         case "/keyfile:":
                             action = (obj) =>

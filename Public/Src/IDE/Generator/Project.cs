@@ -52,9 +52,13 @@ namespace BuildXL.Ide.Generator
             if (outputDirectoryType > m_outputDirectoryType)
             {
                 m_outputDirectoryType = outputDirectoryType;
-                //SetProperty("OutputPath", outputDirectory);
-                //SetProperty("OutDir", outputDirectory);
                 SetProperty("DominoBuildFilter", buildFilter);
+                
+                // Intentionally not setting either "OutputPath" or "OutDir" because 'outputDirectory' 
+                // is a BuildXL folder and so if VS tries to write to it access will be denied.
+                //
+                // Instead, output folders are set in Directory.Build.props, which is automatically
+                // generated and placed in the root of the enlistment.
             }
         }
 
