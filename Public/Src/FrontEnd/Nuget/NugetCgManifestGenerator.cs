@@ -33,8 +33,8 @@ namespace BuildXL.FrontEnd.Nuget
             var components = packages
                 .Keys
                 .SelectMany(nugetName => packages[nugetName].Select(package => new NugetPackageAndVersionStore(nugetName, ExtractNugetVersion(package))))
-                .OrderBy(c => c.Name)
-                .ThenBy(c => c.Version)
+                .OrderBy(c => c.Name, StringComparer.Ordinal)
+                .ThenBy(c => c.Version, StringComparer.Ordinal)
                 .Select(c => ToNugetComponent(c.Name, c.Version))
                 .ToList();
 
@@ -44,7 +44,7 @@ namespace BuildXL.FrontEnd.Nuget
                 Registrations = components
             };
 
-            return JsonConvert.SerializeObject(cgmanifest, Formatting.Indented);
+            return JsonConvert.SerializeObject(cgmanifest, Formatting.Indented).Replace("\r", string.Empty);
         }
 
         /// <summary>
