@@ -10,7 +10,7 @@ namespace Npm {
             ? workingDirectory.root
             : Context.getNewOutputDirectory(`npm-${command}`);
         const nodeModulesPath = d`${wd}/node_modules`;
-        const npmCachePath = d`${wd}/npm-cache`;
+        const npmCachePath = Context.getNewOutputDirectory('npm-install-cache');
 
         const arguments: Argument[] = [
             Cmd.argument(Artifact.input(Node.npmCli)),
@@ -51,43 +51,26 @@ namespace Npm {
     @@public
     export function installFromPackageJson(workingStaticDirectory : StaticDirectory) : Result {
         return _install(workingStaticDirectory, "install");
-
-        // const workingDirectory = workingStaticDirectory.root;
-        // const nodeModulesPath = d`${workingDirectory}/node_modules`;
-        // const arguments: Argument[] = [
-        //     Cmd.argument(Artifact.input(Node.npmCli)),
-        //     Cmd.argument("install")
-        // ];
-
-        // const result = Node.run({
-        //     arguments: arguments,
-        //     workingDirectory: workingDirectory,
-        //     dependencies : [workingStaticDirectory],
-        //     outputs: [
-        //         {directory: nodeModulesPath, kind: "shared"}
-        //     ]
-        // });
-        
-        // return { nodeModules: result.getOutputDirectory(nodeModulesPath) };
     }
 
     @@public
-    export function runCompile(workingStaticDirectory : StaticDirectory) : OpaqueDirectory {
-        const workingDirectory = workingStaticDirectory.root;
-        const outPath = d`${workingDirectory}/out`;
+    export function runCompile(workingStaticDirectory: StaticDirectory, nodeModulesDir: StaticDirectory) : OpaqueDirectory {
+        const wd = workingStaticDirectory.root;
+        const outPath = d`${wd}/out`;
+        const npmCachePath = Context.getNewOutputDirectory('npm-compile-cache');
         const arguments: Argument[] = [
-            Cmd.argument(Artifact.input(Node.npmCli)),
-            Cmd.argument("run"),
-            Cmd.argument("--scripts-prepend-node-path=auto"),
-            Cmd.argument("compile"),
+            Cmd.argument(Artifact.none(f`${wd}/node_modules/typescript/lib/tsc.js`)),
+            Cmd.argument("-p"),
+            Cmd.argument("."),
         ];
 
         const result = Node.run({
             arguments: arguments,
-            workingDirectory: workingDirectory,
-            dependencies : [workingStaticDirectory],
+            workingDirectory: wd,
+            dependencies : [workingStaticDirectory, nodeModulesDir],
             outputs: [
-                {directory: outPath, kind: "shared"}
+                outPath,
+                npmCachePath
             ]
         });
 
@@ -103,5 +86,4 @@ namespace Npm {
     export interface Result {
         nodeModules: OpaqueDirectory,
     }
-
 }
