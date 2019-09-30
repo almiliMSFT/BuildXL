@@ -301,7 +301,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "node node_modules/typescript/lib/tsc.js -p ./",
+    "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "package": "vsce package"
   },
