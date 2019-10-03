@@ -374,7 +374,9 @@ namespace BuildXL.Execution.Analyzer
             return new ObjectInfo(elems
                 .GroupBy(t => "'" + toPath(t).GetName(PathTable).ToString(StringTable)[0].ToUpperInvariantFast() + "'")
                 .OrderBy(grp => grp.Key)
-                .Select(grp => new Property(name: grp.Key, value: grp.ToArray())));
+                .Select(grp => new Property(
+                    name: grp.Key, 
+                    value: grp.OrderBy(t => toPath(t).GetName(PathTable).ToString(StringTable).ToUpperInvariant()).ToArray())));
         }
 
         private class PipsScope { }
