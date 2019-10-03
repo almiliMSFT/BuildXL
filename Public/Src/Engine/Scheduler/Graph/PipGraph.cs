@@ -603,7 +603,7 @@ namespace BuildXL.Scheduler.Graph
             var potentialConsumers = HydratePips(
                 DataflowGraph.GetOutgoingEdges(producer.ToNodeId()).Cast<Edge>().Select(edge => edge.OtherNode), 
                 PipQueryContext.PipGraphGetConsumingPips);
-            
+
             return potentialConsumers
                 .Where(pip =>
                     (pip is Process proc && proc.DirectoryDependencies.Contains(dir)) ||
