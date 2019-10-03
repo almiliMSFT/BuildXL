@@ -12,6 +12,7 @@ using BuildXL.Scheduler.Tracing;
 using BuildXL.Storage;
 using BuildXL.ToolSupport;
 using BuildXL.Utilities;
+using BuildXL.Utilities.Collections;
 using BuildXL.Utilities.Tracing;
 using VSCode.DebugAdapter;
 using VSCode.DebugProtocol;
@@ -59,6 +60,7 @@ namespace BuildXL.Execution.Analyzer
         private readonly Lazy<Dictionary<PipId, PipExecutionPerformance>> m_lazyPipPerfDict;
         private readonly Lazy<Dictionary<long, PipId>> m_lazyPipsBySemiStableHash;
         private readonly Lazy<CriticalPathData> m_lazyCriticalPath;
+        private readonly MultiValueDictionary<AbsolutePath, DirectoryMembershipHashedEventData> m_dirData;
 
         private string[] m_workers;
         private PathTranslator m_pathTranslator;
@@ -80,6 +82,7 @@ namespace BuildXL.Execution.Analyzer
             : base(input)
         {
             XlgState = new XlgDebuggerState(this);
+            m_dirData = new MultiValueDictionary<AbsolutePath, DirectoryMembershipHashedEventData>();
             m_criticalPathAnalyzer = new CriticalPathAnalyzer(input, outputFilePath: null);
             m_lazyCriticalPath = Lazy.Create(() =>
             {
@@ -178,12 +181,30 @@ namespace BuildXL.Execution.Analyzer
         }
 
         /// <nodoc />
+        public IEnumerable<AbsolutePath> GetDirData(DirectoryArtifact dir, PipId dirProducer)
+        {
+            if (!m_dirData.TryGetValue(dir.Path, out var data))
+            {
+                return CollectionUtilities.EmptyArray<AbsolutePath>();
+            }
+
+            return data
+                .Where(d => d.PipId == dirProducer)
+                .SelectMany(d => d.Members);
+        }
+
+        /// <nodoc />
         public PipReference AsPipReference(PipId pipId)
         {
             return new PipReference(PipTable, pipId, PipQueryContext.ViewerAnalyzer);
         }
 
-        #region Log processing
+        #region Log processing        
+
+        public override void DirectoryMembershipHashed(DirectoryMembershipHashedEventData data)
+        {
+            m_dirData.Add(data.Directory, data);
+        }
 
         /// <inheritdoc />
         public override void ProcessExecutionMonitoringReported(ProcessExecutionMonitoringReportedEventData data)

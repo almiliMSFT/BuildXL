@@ -13,6 +13,7 @@ using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Scheduler.Graph;
 using BuildXL.Utilities;
+using BuildXL.Utilities.Collections;
 using static BuildXL.Execution.Analyzer.JPath.Evaluator;
 using static BuildXL.FrontEnd.Script.Debugger.Renderer;
 
@@ -311,6 +312,11 @@ namespace BuildXL.Execution.Analyzer
 
             var name = d.Path.GetName(PathTable).ToString(StringTable);
             var kind = d.IsSharedOpaque ? "shared opaque" : d.IsOutputDirectory() ? "exclusive opaque" : "source";
+            var members = d.IsOutputDirectory()
+                ? Analyzer.GetDirData(d, PipGraph.GetProducer(d))
+                : d.PartialSealId > 0
+                    ? PipGraph.ListSealedDirectoryContents(d).Select(f => f.Path)
+                    : CollectionUtilities.EmptyArray<AbsolutePath>();
             return new ObjectInfo(
                 preview: $"{name} [{kind}]",
                 properties: new[]
@@ -319,8 +325,8 @@ namespace BuildXL.Execution.Analyzer
                     new Property("PartialSealId", d.PartialSealId),
                     new Property("Kind", kind),
                     d.IsOutputDirectory() ? new Property("Producer", () => PipGraph.GetProducer(d)) : null,
-                    new Property("Consumers", PipGraph.GetConsumingPips(d.Path).ToArray()),
-                    d.PartialSealId > 0 ? new Property("Members", () => PipGraph.ListSealedDirectoryContents(d)) : null
+                    new Property("Consumers", PipGraph.GetConsumingPips(d)),
+                    d.PartialSealId > 0 ? new Property("Members", members) : null
                 }
                 .Where(p => p != null));
         }
