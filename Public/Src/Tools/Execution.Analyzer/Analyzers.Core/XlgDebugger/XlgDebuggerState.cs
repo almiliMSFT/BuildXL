@@ -210,6 +210,14 @@ namespace BuildXL.Execution.Analyzer
             }
         }
 
+        private ObjectInfo PipInfo(Pip pip)
+        {
+            var props = ExtractObjectProperties(pip)
+                .Concat(ExtractObjectFields(pip))
+                .Concat(GetPipDownAndUpStreamProperties(pip));
+            return new ObjectInfo(preview: PipPreview(pip), properties: props);
+        }
+
         private ObjectInfo AnalyzeCricialPathInfo()
         {
             return GenericObjectInfo(Analyzer.CriticalPath, preview: "");
@@ -272,7 +280,16 @@ namespace BuildXL.Execution.Analyzer
                 new Property("ExecutionPerformance", pipExePerf),
                 new Property("MonitoringData", () => Analyzer.TryGetProcessMonitoringData(proc.PipId)),
                 new Property("GenericInfo", () => GenericObjectInfo(proc, preview: ""))
-            });
+            }.Concat(GetPipDownAndUpStreamProperties(proc)));
+        }
+
+        private IEnumerable<Property> GetPipDownAndUpStreamProperties(Pip pip)
+        {
+            return new[]
+            {
+                new Property("DownstreamPips", CachedGraph.DataflowGraph.GetOutgoingEdges(pip.PipId.ToNodeId()).Cast<Edge>().Select(e => Analyzer.GetPip(e.OtherNode.ToPipId()))),
+                new Property("UpstreamPips", CachedGraph.DataflowGraph.GetIncomingEdges(pip.PipId.ToNodeId()).Cast<Edge>().Select(e => Analyzer.GetPip(e.OtherNode.ToPipId()))),
+            };
         }
 
         private string FileArtifactPreview(FileArtifact f)

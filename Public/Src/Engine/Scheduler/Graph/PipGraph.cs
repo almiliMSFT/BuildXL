@@ -597,16 +597,17 @@ namespace BuildXL.Scheduler.Graph
         /// <summary>
         /// Returns pips consuming given directory artifact.
         /// </summary>
-        public IEnumerable<Process> GetConsumingPips(DirectoryArtifact dir)
+        public IEnumerable<Pip> GetConsumingPips(DirectoryArtifact dir)
         {
             var producer = GetProducer(dir);
             var potentialConsumers = HydratePips(
                 DataflowGraph.GetOutgoingEdges(producer.ToNodeId()).Cast<Edge>().Select(edge => edge.OtherNode), 
                 PipQueryContext.PipGraphGetConsumingPips);
+            
             return potentialConsumers
-                .Where(pip => pip.PipType == PipType.Process)
-                .Cast<Process>()
-                .Where(proc => proc.DirectoryDependencies.Contains(dir));
+                .Where(pip =>
+                    (pip is Process proc && proc.DirectoryDependencies.Contains(dir)) ||
+                    (pip is SealDirectory sd && sd.Directory == dir));
         }
 
         /// <summary>
