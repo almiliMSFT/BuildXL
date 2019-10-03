@@ -59,7 +59,7 @@ namespace BuildXL.Execution.Analyzer
         {
             Analyzer = analyzer;
 
-            var logFile = Path.Combine(Path.GetDirectoryName(Analyzer.Input.ExecutionLogPath), "BuildXL.log");
+            var logFile = ""; //Path.Combine(Path.GetDirectoryName(Analyzer.Input.ExecutionLogPath), "BuildXL.log");
             StackTrace = new[]
             {
                 new DisplayStackTraceEntry(file: logFile, line: 1, position: 1, functionName: "<main>", entry: null)
