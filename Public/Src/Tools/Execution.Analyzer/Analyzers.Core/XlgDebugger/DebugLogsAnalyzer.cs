@@ -181,7 +181,13 @@ namespace BuildXL.Execution.Analyzer
         }
 
         /// <nodoc />
-        public IEnumerable<AbsolutePath> GetDirData(DirectoryArtifact dir, PipId dirProducer)
+        public IEnumerable<DirectoryMembershipHashedEventData> GetDirMembershipData()
+        {
+            return m_dirData.Values.SelectMany(d => d);
+        }
+
+        /// <nodoc />
+        public IEnumerable<AbsolutePath> GetDirMembers(DirectoryArtifact dir, PipId dirProducer)
         {
             if (!m_dirData.TryGetValue(dir.Path, out var data))
             {

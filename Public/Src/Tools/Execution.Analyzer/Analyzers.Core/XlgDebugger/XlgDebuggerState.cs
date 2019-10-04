@@ -12,6 +12,7 @@ using BuildXL.FrontEnd.Script.Debugger;
 using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Scheduler.Graph;
+using BuildXL.Scheduler.Tracing;
 using BuildXL.Utilities;
 using BuildXL.Utilities.Collections;
 using static BuildXL.Execution.Analyzer.JPath.Evaluator;
@@ -83,6 +84,7 @@ namespace BuildXL.Execution.Analyzer
                 new Property("Pips",          () => PipGraph.RetrieveAllPips()),
                 new Property("Files",         () => PipGraph.AllFiles),
                 new Property("Directories",   () => PipGraph.AllSealDirectories),
+                new Property("DirMembership", () => Analyzer.GetDirMembershipData()),
                 //new Property("CriticalPath",  new AnalyzeCricialPath()),
                 new Property("GroupedBy",     new ObjectInfo(new[]
                 {
@@ -331,7 +333,7 @@ namespace BuildXL.Execution.Analyzer
             var name = d.Path.GetName(PathTable).ToString(StringTable);
             var kind = d.IsSharedOpaque ? "shared opaque" : d.IsOutputDirectory() ? "exclusive opaque" : "source";
             var members = d.IsOutputDirectory()
-                ? Analyzer.GetDirData(d, PipGraph.GetProducer(d))
+                ? Analyzer.GetDirMembers(d, PipGraph.GetProducer(d))
                 : d.PartialSealId > 0
                     ? PipGraph.ListSealedDirectoryContents(d).Select(f => f.Path)
                     : CollectionUtilities.EmptyArray<AbsolutePath>();
