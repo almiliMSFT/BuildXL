@@ -108,7 +108,9 @@ namespace BuildXL.Execution.Analyzer
                 vars: LibraryFunctions.All.ToDictionary(f => '$' + f.Name, f => Result.Scalar(f)),
                 current: RootObject);
 
-            Evaluator = new Evaluator(new Env(parent: RootEnv, resolver: RootEnv.Resolver, current: RootEnv.Current));
+            Evaluator = new Evaluator(
+                new Env(parent: RootEnv, resolver: RootEnv.Resolver, current: RootEnv.Current),
+                Analyzer.EnableEvalCaching);
         }
 
         private IEnumerable<T> Concat<T>(params IEnumerable<T>[] list)

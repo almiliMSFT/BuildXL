@@ -427,16 +427,19 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public Env TopEnv => m_envStack.Peek();
 
-        public Evaluator(Env rootEnv)
+        privatebool EnableCaching { get; }
+
+        public Evaluator(Env rootEnv, bool enableCaching)
         {
             Contract.Requires(rootEnv != null);
             m_envStack.Push(rootEnv);
+            EnableCaching = enableCaching;
         }
 
         /// <nodoc />
         public Result Eval(Expr expr)
         {
-            if (EnableEvalCaching)
+            if (EnableCaching)
             {
                 var key = $"{expr.Print()}|{TopEnv.GetContentHash()}";
                 if (m_evalCache.TryGetValue(key, out var result))
