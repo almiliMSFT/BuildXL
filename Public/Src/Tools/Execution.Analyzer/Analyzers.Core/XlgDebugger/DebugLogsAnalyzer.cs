@@ -26,6 +26,7 @@ namespace BuildXL.Execution.Analyzer
         public Analyzer InitializeDebugLogsAnalyzer()
         {
             int port = XlgDebuggerPort;
+            bool enableCaching = true;
             foreach (var opt in AnalyzerOptions)
             {
                 if (opt.Name.Equals("port", StringComparison.OrdinalIgnoreCase) ||
@@ -33,13 +34,19 @@ namespace BuildXL.Execution.Analyzer
                 {
                     port = ParseInt32Option(opt, 0, 100000);
                 }
+                else if (
+                    opt.Name.Equals("evalCache-", StringComparison.OrdinalIgnoreCase) ||
+                    opt.Name.Equals("evalCache+", StringComparison.OrdinalIgnoreCase))
+                {
+                    enableCaching = ParseBooleanOption(opt);
+                }
                 else
                 {
                     throw Error("Unknown option for fingerprint text analysis: {0}", opt.Name);
                 }
             }
 
-            return new DebugLogsAnalyzer(GetAnalysisInput(), port);
+            return new DebugLogsAnalyzer(GetAnalysisInput(), port, enableCaching);
         }
 
         private static void WriteDebugLogsAnalyzerHelp(HelpWriter writer)
@@ -78,7 +85,7 @@ namespace BuildXL.Execution.Analyzer
         public bool IsDebugging => Debugger != null;
 
         /// <nodoc />
-        internal DebugLogsAnalyzer(AnalysisInput input, int port)
+        internal DebugLogsAnalyzer(AnalysisInput input, int port, bool enableCaching)
             : base(input)
         {
             XlgState = new XlgDebuggerState(this);
@@ -90,6 +97,7 @@ namespace BuildXL.Execution.Analyzer
                 return m_criticalPathAnalyzer.criticalPathData;
             });
             m_port = port;
+            EnableEvalCaching = enableCaching;
             m_state = new DebuggerState(PathTable, LoggingContext, XlgState.Render, XlgState);
             m_lazyPipPerfDict = new Lazy<Dictionary<PipId, PipExecutionPerformance>>(() =>
             {
