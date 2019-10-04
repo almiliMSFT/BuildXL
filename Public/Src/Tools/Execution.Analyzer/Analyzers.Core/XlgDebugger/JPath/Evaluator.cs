@@ -92,6 +92,8 @@ namespace BuildXL.Execution.Analyzer.JPath
 
             public override int GetHashCode()
             {
+                // TODO: this is not great as some structs (e.g., DirectoryMembershipHashedEventData)
+                //       seem to always return the same hash code.
                 return m_identity.GetHashCode();
             }
 
@@ -427,7 +429,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public Env TopEnv => m_envStack.Peek();
 
-        privatebool EnableCaching { get; }
+        private bool EnableCaching { get; }
 
         public Evaluator(Env rootEnv, bool enableCaching)
         {
