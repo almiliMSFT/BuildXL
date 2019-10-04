@@ -436,7 +436,7 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// <nodoc />
         public Result Eval(Expr expr)
         {
-            if (Analyzer.EnableExprCaching)
+            if (EnableEvalCaching)
             {
                 var key = $"{expr.Print()}|{TopEnv.GetContentHash()}";
                 if (m_evalCache.TryGetValue(key, out var result))
