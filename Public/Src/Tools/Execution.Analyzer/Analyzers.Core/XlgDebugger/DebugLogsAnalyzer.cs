@@ -85,6 +85,9 @@ namespace BuildXL.Execution.Analyzer
         public bool IsDebugging => Debugger != null;
 
         /// <nodoc />
+        public bool EnableEvalCaching { get; }
+
+        /// <nodoc />
         internal DebugLogsAnalyzer(AnalysisInput input, int port, bool enableCaching)
             : base(input)
         {

@@ -436,14 +436,22 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// <nodoc />
         public Result Eval(Expr expr)
         {
-            var key = $"{expr.Print()}|{TopEnv.GetContentHash()}";
-            if (m_evalCache.TryGetValue(key, out var result))
+            if (Analyzer.EnableExprCaching)
             {
-                Console.WriteLine("============== cached: " + key);
-                return result;
+                var key = $"{expr.Print()}|{TopEnv.GetContentHash()}";
+                if (m_evalCache.TryGetValue(key, out var result))
+                {
+                    return result;
+                }
+                else
+                {
+                    return m_evalCache[key] = EvalInternal(expr);
+                }
             }
-
-            return m_evalCache[key] = EvalInternal(expr);
+            else
+            {
+                return EvalInternal(expr);
+            }
         }
 
         private Result EvalInternal(Expr expr)
