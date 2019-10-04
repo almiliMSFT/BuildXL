@@ -656,7 +656,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             var rhsVal = ToScalar(rhs);
             switch (rhsVal)
             {
-                case string str: return lhsStr.Contains(str);
+                case string str: return lhsStr.ToUpperInvariant().Contains(str.ToUpperInvariant());
                 case Regex regex: return regex.Match(lhsStr).Success;
                 default:
                     throw TypeError(rhsVal, "string | Regex");

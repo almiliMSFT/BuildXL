@@ -201,7 +201,7 @@ namespace BuildXL.Execution.Analyzer
                 case PipId pipId:                  return renderer.GetObjectInfo(ctx, Analyzer.GetPip(pipId)).WithPreview(pipId.ToString());
                 case PipReference pipRef:          return renderer.GetObjectInfo(ctx, Analyzer.GetPip(pipRef.PipId));
                 case Process proc:                 return ProcessInfo(proc);
-                case Pip pip:                      return GenericObjectInfo(pip, preview: PipPreview(pip));
+                case Pip pip:                      return PipInfo(pip);
                 case FileArtifactWithAttributes f: return FileArtifactInfo(f.ToFileArtifact()); // return GenericObjectInfo(f, preview: FileArtifactPreview(f.ToFileArtifact()));
                 case ProcessMonitoringData m:      return ProcessMonitoringInfo(m);
                 case string s:                     return new ObjectInfo(s);
@@ -261,6 +261,7 @@ namespace BuildXL.Execution.Analyzer
             var pipExePerf = Analyzer.TryGetPipExePerf(proc.PipId);
             return new ObjectInfo(preview: PipPreview(proc), properties: new[]
             {
+                new Property("PipId", proc.PipId.Value),
                 new Property("PipType", proc.PipType),
                 new Property("SemiStableHash", proc.SemiStableHash),
                 new Property("Description", proc.GetDescription(PipGraph.Context)),
@@ -314,7 +315,7 @@ namespace BuildXL.Execution.Analyzer
                     new Property("Kind", f.IsSourceFile ? "source" : "output"),
                     new Property("RewriteCount", f.RewriteCount),
                     new Property("FileContentInfo", () => Analyzer.TryGetFileContentInfo(f)),
-                    f.IsOutputFile ? new Property("Producer", () => Analyzer.AsPipReference(PipGraph.GetProducer(f))) : null,
+                    f.IsOutputFile ? new Property("Producer", () => Analyzer.GetPip(PipGraph.GetProducer(f))) : null,
                     new Property("Consumers", () => PipGraph.GetConsumingPips(f.Path))
                 }
                 .Where(p => p != null));
@@ -341,9 +342,9 @@ namespace BuildXL.Execution.Analyzer
                     new Property("Path", d.Path.ToString(PathTable)),
                     new Property("PartialSealId", d.PartialSealId),
                     new Property("Kind", kind),
-                    d.IsOutputDirectory() ? new Property("Producer", () => PipGraph.GetProducer(d)) : null,
+                    d.IsOutputDirectory() ? new Property("Producer", () => Analyzer.GetPip(PipGraph.GetProducer(d))) : null,
                     new Property("Consumers", PipGraph.GetConsumingPips(d)),
-                    d.PartialSealId > 0 ? new Property("Members", members) : null
+                    new Property("Members", members)
                 }
                 .Where(p => p != null));
         }
