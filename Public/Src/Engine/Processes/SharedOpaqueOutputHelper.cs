@@ -19,7 +19,8 @@ namespace BuildXL.Processes
         private static class Win
         {
             /// <summary>
-            /// Flags the given path as being an output under a shared opaque by setting the creation time to <see cref="WellKnownTimestamps.OutputInSharedOpaqueTimestamp"/>
+            /// Flags the given path as being an output under a shared opaque by setting the creation time to 
+            /// <see cref="WellKnownTimestamps.OutputInSharedOpaqueTimestamp"/>.
             /// </summary>
             /// <exception cref="BuildXLException">When the timestamp cannot be set</exception>
             public static void SetPathAsSharedOpaqueOutput(string expandedPath)
@@ -79,9 +80,9 @@ namespace BuildXL.Processes
             }
         }
 
-        private static unsafe class Mac
+        private static unsafe class Unix
         {
-            private const string MY_XATTR_NAME = "com.microsoft.buildxl:shared_directory_output";
+            private const string MY_XATTR_NAME = "com.microsoft.buildxl:shared_opaque_output";
             private const long MY_XATTR_VALUE = 42;
 
             private const int XATTR_NOFOLLOW = 1;
@@ -122,9 +123,6 @@ namespace BuildXL.Processes
             /// Checks if the given path is an output under a shared opaque by checking if
             /// it contains extended attribute by <see cref="MY_XATTR_NAME"/> name.
             /// </summary>
-            /// <remarks>
-            /// If the given path is a directory, it is always considered part of a shared opaque
-            /// </remarks>
             public static bool IsSharedOpaqueOutput(string expandedPath)
             {
                 long value = 0;
@@ -134,19 +132,20 @@ namespace BuildXL.Processes
             }
         }
 
-
         /// <summary>
         /// Marks a given path as "shared opaque output"
         /// </summary>
         /// <exception cref="BuildXLException">When unsuccessful</exception>
         public static void SetPathAsSharedOpaqueOutput(string expandedPath)
         {
-#if PLATFORM_MAC
-            Mac
-#else
-            Win
-#endif
-                .SetPathAsSharedOpaqueOutput(expandedPath);
+            if (OperatingSystemHelper.IsUnixOS)
+            {
+                Unix.SetPathAsSharedOpaqueOutput(expandedPath);
+            }
+            else
+            {
+                Win.SetPathAsSharedOpaqueOutput(expandedPath);
+            }
         }
 
         /// <summary>
@@ -185,13 +184,9 @@ namespace BuildXL.Processes
                 return true;
             }
 
-            return
-#if PLATFORM_MAC
-                Mac
-#else
-                Win
-#endif
-                    .IsSharedOpaqueOutput(expandedPath);
+            return OperatingSystemHelper.IsUnixOS
+                ? Unix.IsSharedOpaqueOutput(expandedPath)
+                : Win.IsSharedOpaqueOutput(expandedPath);
         }
 
         /// <summary>
