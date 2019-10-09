@@ -778,14 +778,15 @@ namespace BuildXL.Engine
                 maxDegreeParallelism: Environment.ProcessorCount,
                 tempDirectoryCleaner: tempCleaner);
 
-            var journalDirectory = configuration.Layout.SharedOpaqueJournalDirectory.ToString(scheduler.Context.PathTable);
-            var journalFiles = SharedOpaqueJournal.FindAllJournalFiles(journalDirectory).ToArray();
+            var journalFiles = SharedOpaqueJournal
+                .FindAllJournalFiles(configuration.Layout.SharedOpaqueJournalDirectory.ToString(scheduler.Context.PathTable))
+                .ToArray();
             var distinctRecordedWrites = journalFiles
                 .AsParallel()
                 .WithDegreeOfParallelism(Environment.ProcessorCount)
                 .WithCancellation(scheduler.Context.CancellationToken)
-                .SelectMany(SharedOpaqueJournal.ReadRecordedWritesFromJournal)
-                .Distinct()
+                .SelectMany(SharedOpaqueJournal.ReadRecordedWritesFromJournalWrapExceptions)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Where(FileUtilities.FileExistsNoFollow)
                 .ToArray();
 

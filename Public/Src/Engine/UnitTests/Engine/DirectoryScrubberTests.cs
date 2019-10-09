@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using BuildXL.Engine;
+using BuildXL.Native.IO;
 using BuildXL.Pips.Builders;
 using BuildXL.Pips.Operations;
 using BuildXL.Scheduler.Graph;
@@ -19,14 +20,12 @@ using Test.BuildXL.TestUtilities.Xunit;
 using Xunit;
 using Xunit.Abstractions;
 using Mount=BuildXL.Utilities.Configuration.Mutable.Mount;
-using BuildXL.Native.IO;
-using BuildXL.FrontEnd.Script.Ambients.Exceptions;
 
-namespace Test.BuildXL.EngineTests
+namespace Test.BuildXL.Engine
 {
-    public class MountScrubberTests : XunitBuildXLTest
+    public class MountScrubberTests : TemporaryStorageTestBase
     {
-        private LoggingConfiguration m_loggingConfiguration = new LoggingConfiguration();
+        private readonly LoggingConfiguration m_loggingConfiguration = new LoggingConfiguration();
 
         private DirectoryScrubber Scrubber { get; }
 
@@ -47,7 +46,7 @@ namespace Test.BuildXL.EngineTests
         [Fact]
         public void DoNotScrubDeclaredOutputDirectories()
         {
-            string rootDirectory = Path.Combine(TestOutputDirectory, nameof(ScrubFilesAndDirectories));
+            string rootDirectory = Path.Combine(TemporaryDirectory, nameof(ScrubFilesAndDirectories));
             string a = WriteFile(Path.Combine(rootDirectory, "1", "1", "out.txt"));
             var inBuild = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Path.GetDirectoryName(a) };
             Scrubber.RemoveExtraneousFilesAndDirectories(
@@ -64,7 +63,7 @@ namespace Test.BuildXL.EngineTests
         {
             // Create a layout with various paths. We will clean at the root dir.
             // Some files will be in the build, some out, and some paths excluded
-            string rootDirectory = Path.Combine(TestOutputDirectory, nameof(ScrubFilesAndDirectories));
+            string rootDirectory = Path.Combine(TemporaryDirectory, nameof(ScrubFilesAndDirectories));
             string a = WriteFile(Path.Combine(rootDirectory, "1", "1", "out.txt"));
             string b = WriteFile(Path.Combine(rootDirectory, "1", "out.txt"));
             string c = WriteFile(Path.Combine(rootDirectory, "2", "1", "in.txt"));
@@ -104,7 +103,7 @@ namespace Test.BuildXL.EngineTests
         [Fact]
         public void ScrubbingDirectoriesWithMounts()
         {
-            string rootDirectory = Path.Combine(TestOutputDirectory, nameof(ScrubbingDirectoriesWithMounts));
+            string rootDirectory = Path.Combine(TemporaryDirectory, nameof(ScrubbingDirectoriesWithMounts));
             const string NonScrubbableMountName = "NonScrubbable";
             string nonScrubbableMountPath = Path.Combine(rootDirectory, NonScrubbableMountName);
             const string ScrubbableMountName = "Scrubbable";
@@ -156,7 +155,7 @@ namespace Test.BuildXL.EngineTests
         [Fact]
         public void ScrubFileDirectoriesWithPipGraph()
         {
-            string rootDirectory = Path.Combine(TestOutputDirectory, nameof(ScrubFileDirectoriesWithPipGraph));
+            string rootDirectory = Path.Combine(TemporaryDirectory, nameof(ScrubFileDirectoriesWithPipGraph));
             string sourceRoot = Path.Combine(rootDirectory, "Src");
             string outputRoot = Path.Combine(rootDirectory, "Out");
             string targetRoot = Path.Combine(rootDirectory, "Target");
@@ -168,7 +167,7 @@ namespace Test.BuildXL.EngineTests
                     new Mount()
                     {
                         Name = PathAtom.Create(pathTable.StringTable, "testRoot"),
-                        Path = AbsolutePath.Create(pathTable, TestOutputDirectory),
+                        Path = AbsolutePath.Create(pathTable, TemporaryDirectory),
                         IsWritable = true,
                         IsReadable = true,
                         IsScrubbable = true,
@@ -266,7 +265,7 @@ namespace Test.BuildXL.EngineTests
         [Fact]
         public void DontScrubBlockedPathsEvenIfAskedTo()
         {
-            string rootDirectory = Path.Combine(TestOutputDirectory, nameof(ScrubFilesAndDirectories));
+            string rootDirectory = Path.Combine(TemporaryDirectory, nameof(ScrubFilesAndDirectories));
             string a = WriteFile(Path.Combine(rootDirectory, "a", "b", "c", "out.txt"));
 
             var inBuild = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { };
@@ -284,7 +283,7 @@ namespace Test.BuildXL.EngineTests
         [Fact]
         public void DeleteFilesCanDeleteFile()
         {
-            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesCanDeleteFile));
+            string rootDir = Path.Combine(TemporaryDirectory, nameof(DeleteFilesCanDeleteFile));
             
             string fullFilePath = WriteFile(Path.Combine(rootDir, "out.txt"));
             XAssert.IsTrue(File.Exists(fullFilePath));
@@ -300,7 +299,7 @@ namespace Test.BuildXL.EngineTests
         [InlineData(false)]
         public void DeleteFilesDeletesSymlinkButNotTarget(bool useRelativeTargetForSymlink)
         {
-            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesDeletesSymlinkButNotTarget));
+            string rootDir = Path.Combine(TemporaryDirectory, nameof(DeleteFilesDeletesSymlinkButNotTarget));
 
             string fileBasename = "out.txt";
             string fullFilePath = WriteFile(Path.Combine(rootDir, fileBasename));
@@ -322,7 +321,7 @@ namespace Test.BuildXL.EngineTests
         [Fact]
         public void DeleteFilesCanDeleteDirectorySymlink()
         {
-            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesCanDeleteDirectorySymlink));
+            string rootDir = Path.Combine(TemporaryDirectory, nameof(DeleteFilesCanDeleteDirectorySymlink));
             string fullTargetDirPath = Path.Combine(rootDir, "target-dir");
             Directory.CreateDirectory(fullTargetDirPath);
             XAssert.IsTrue(Directory.Exists(fullTargetDirPath));
@@ -342,7 +341,7 @@ namespace Test.BuildXL.EngineTests
         [InlineData(false)]
         public void DeleteFilesCanDeleteSymlinkToAbsentFile(bool declareSymlinkTargetAsFile)
         {
-            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesCanDeleteSymlinkToAbsentFile));
+            string rootDir = Path.Combine(TemporaryDirectory, nameof(DeleteFilesCanDeleteSymlinkToAbsentFile));
             string fullSymlinkPath = WriteSymlink(Path.Combine(rootDir, "symlink-to-absent"), "non-existent-target", isTargetFile: declareSymlinkTargetAsFile);
             XAssert.IsTrue(FileUtilities.FileExistsNoFollow(fullSymlinkPath));
 
@@ -355,7 +354,7 @@ namespace Test.BuildXL.EngineTests
         [Fact]
         public void DeleteFilesCannotDeleteFolder()
         {
-            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesCannotDeleteFolder));
+            string rootDir = Path.Combine(TemporaryDirectory, nameof(DeleteFilesCannotDeleteFolder));
             Directory.CreateDirectory(rootDir);
             XAssert.IsTrue(Directory.Exists(rootDir));
 
@@ -367,7 +366,7 @@ namespace Test.BuildXL.EngineTests
         [Fact]
         public void DeleteFilesHandlesAbsentFiles()
         {
-            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesHandlesAbsentFiles));
+            string rootDir = Path.Combine(TemporaryDirectory, nameof(DeleteFilesHandlesAbsentFiles));
             Directory.CreateDirectory(rootDir);
             XAssert.IsTrue(Directory.Exists(rootDir));
             
@@ -382,7 +381,7 @@ namespace Test.BuildXL.EngineTests
         [Fact]
         public void DeleteFilesHandlesInvalidPaths()
         {
-            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesHandlesInvalidPaths));
+            string rootDir = Path.Combine(TemporaryDirectory, nameof(DeleteFilesHandlesInvalidPaths));
             Directory.CreateDirectory(rootDir);
             XAssert.IsTrue(Directory.Exists(rootDir));
 
@@ -394,7 +393,7 @@ namespace Test.BuildXL.EngineTests
         [Fact]
         public void DeleteFilesHandlesMixedEntries()
         {
-            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesHandlesMixedEntries));
+            string rootDir = Path.Combine(TemporaryDirectory, nameof(DeleteFilesHandlesMixedEntries));
             var files = new[]
             {
                 (delete: false, path: rootDir),                                                   // directory
@@ -417,7 +416,7 @@ namespace Test.BuildXL.EngineTests
         [InlineData(100)]
         public void DeleteFilesMiniStressTest(int numFiles)
         {
-            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesMiniStressTest));
+            string rootDir = Path.Combine(TemporaryDirectory, nameof(DeleteFilesMiniStressTest));
             var files = Enumerable.Range(0, numFiles).Select(i => WriteFile(Path.Combine(rootDir, $"file-{i}"))).ToArray();
 
             var numDeleted = Scrubber.DeleteFiles(files);

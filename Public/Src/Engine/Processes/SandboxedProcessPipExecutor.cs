@@ -747,7 +747,7 @@ namespace BuildXL.Processes
                     return SandboxedProcessPipExecutionResult.PreparationFailure();
                 }
 
-                using (var sharedOpaqueOutputsJournal = new SharedOpaqueJournal(m_pip, m_context, m_layoutConfiguration.SharedOpaqueJournalDirectory))
+                using (var sharedOpaqueOutputsJournal = new SharedOpaqueJournal(m_context, m_pip, m_layoutConfiguration.SharedOpaqueJournalDirectory))
                 using (var allInputPathsUnderSharedOpaquesWrapper = Pools.GetAbsolutePathSet())
                 {
                     // Here we collect all the paths representing inputs under shared opaques dependencies

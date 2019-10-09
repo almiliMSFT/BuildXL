@@ -20,25 +20,57 @@ namespace BuildXL.Processes
     /// </remarks>
     public sealed class SharedOpaqueJournal : IDisposable
     {
-        private readonly PipExecutionContext m_context;
-        private readonly DirectoryArtifact[] m_sharedOpaqueDirectories;
-        private readonly string m_journalPath;
+        private readonly PathTable m_pathTable;
+        private readonly AbsolutePath[] m_rootDirectories;
         private readonly BuildXLWriter m_bxlWriter;
 
-        /// <nodoc />
-        public SharedOpaqueJournal(Process process, PipExecutionContext context, AbsolutePath journalDirectory)
+        /// <summary>
+        /// Absolute path of this journal file.
+        /// </summary>
+        public string JournalPath { get; }
+
+        /// <summary>
+        /// Absolute path of the directory where this journal file is saved.
+        /// </summary>
+        public string JournalDirectory => Path.GetDirectoryName(JournalPath);
+
+        /// <summary>
+        /// Creates a journal for a given process.
+        /// 
+        /// Shared opaque directory outputs of <paramref name="process"/> are used as root directories and
+        /// <see cref="Pip.FormattedSemiStableHash"/> is used as journal base name.
+        ///
+        /// <seealso cref="SharedOpaqueJournal(PathTable, IEnumerable{AbsolutePath}, AbsolutePath)"/>
+        /// </summary>
+        public SharedOpaqueJournal(PipExecutionContext context, Process process, AbsolutePath journalDirectory)
+            : this(
+                  context.PathTable, 
+                  process.DirectoryOutputs.Where(d => d.IsSharedOpaque).Select(d => d.Path),
+                  journalDirectory.Combine(context.PathTable, process.FormattedSemiStableHash))
         {
             Contract.Requires(process != null);
             Contract.Requires(context != null);
             Contract.Requires(journalDirectory.IsValid);
             Contract.Requires(Directory.Exists(journalDirectory.ToString(context.PathTable)));
+        }
 
-            m_context = context;
-            m_sharedOpaqueDirectories = process.DirectoryOutputs.Where(d => d.IsSharedOpaque).ToArray();
+        /// <summary>
+        /// Creates a new journal.
+        /// </summary>
+        /// <param name="pathTable">Path table.</param>
+        /// <param name="rootDirectories">Only paths under one of the root directories are recorded in <see cref="RecordFileWrite(AbsolutePath)"/>.</param>
+        /// <param name="journalPath">File to which to write recorded accesses.</param>
+        public SharedOpaqueJournal(PathTable pathTable, IEnumerable<AbsolutePath> rootDirectories, AbsolutePath journalPath)
+        {
+            Contract.Requires(pathTable.IsValid);
+            Contract.Requires(rootDirectories != null);
 
-            m_journalPath = Path.Combine(journalDirectory.ToString(context.PathTable), process.FormattedSemiStableHash);
+            m_pathTable = pathTable;
+            m_rootDirectories = rootDirectories.ToArray();
+
+            JournalPath = journalPath.ToString(pathTable);
             m_bxlWriter = new BuildXLWriter(
-                stream: new FileStream(m_journalPath, FileMode.Create, FileAccess.Write, FileShare.Read | FileShare.Delete),
+                stream: new FileStream(JournalPath, FileMode.Create, FileAccess.Write, FileShare.Read | FileShare.Delete),
                 debug: false,
                 logStats: false,
                 leaveOpen: false);
@@ -64,7 +96,7 @@ namespace BuildXL.Processes
         ///   - an invalid path
         ///   - a path pointing to an absent file
         ///   - a path pointing to a file
-        ///   - a path poiting to a directory.
+        ///   - a path pointing to a directory.
         ///
         /// NOTE: the strings in the returned enumerable are neither sorted nor deduplicated.
         /// </remarks>
@@ -81,6 +113,52 @@ namespace BuildXL.Processes
             }
         }
 
+        /// <summary>
+        /// Same as <see cref="ReadRecordedWritesFromJournal(string)"/> except that all exceptions are wrapped in <see cref="BuildXLException"/>
+        /// </summary>
+        public static string[] ReadRecordedWritesFromJournalWrapExceptions(string journalFile)
+        {
+            try
+            {
+                return ReadRecordedWritesFromJournal(journalFile).ToArray();
+            }
+            catch (Exception e)
+            {
+                throw new BuildXLException("Failed to read from shared opaque journal", e);
+            }
+        }
+
+        /// <summary>
+        /// Records that the file at location <paramref name="path"/> was written to.
+        /// 
+        /// Returns whether the path was recorded or skipped.
+        /// </summary>
+        /// <returns>
+        /// <code>true</code> if <paramref name="path"/> was recorded, <code>false</code> 
+        /// if the path was filtered out because of <see cref="m_rootDirectories"/>.
+        /// </returns>
+        /// <remarks>
+        /// NOT THREAD-SAFE.
+        /// </remarks>
+        public bool RecordFileWrite(AbsolutePath path)
+        {
+            bool isUnderSharedOpaqueDirectory = m_rootDirectories.Any(dir => path.IsWithin(m_pathTable, dir));
+            if (!isUnderSharedOpaqueDirectory)
+            {
+                return false;
+            }
+
+            m_bxlWriter.Write(path.ToString(m_pathTable));
+            m_bxlWriter.Flush();
+            return true;
+        }
+
+        /// <nodoc />
+        public void Dispose()
+        {
+            m_bxlWriter?.Dispose();
+        }
+
         private static string ReadStringOrNull(BuildXLReader bxlReader)
         {
             try
@@ -91,30 +169,6 @@ namespace BuildXL.Processes
             {
                 return null;
             }
-        }
-
-        /// <summary>
-        /// Records that the file at location <paramref name="path"/> was written to.
-        /// </summary>
-        /// <remarks>
-        /// NOT THREAD-SAFE.
-        /// </remarks>
-        public void RecordFileWrite(AbsolutePath path)
-        {
-            bool isUnderSharedOpaqueDirectory = m_sharedOpaqueDirectories.Any(d => path.IsWithin(m_context.PathTable, d.Path));
-            if (!isUnderSharedOpaqueDirectory)
-            {
-                return;
-            }
-
-            m_bxlWriter.Write(path.ToString(m_context.PathTable));
-            m_bxlWriter.Flush();
-        }
-
-        /// <nodoc />
-        public void Dispose()
-        {
-            m_bxlWriter?.Dispose();
         }
     }
 }
