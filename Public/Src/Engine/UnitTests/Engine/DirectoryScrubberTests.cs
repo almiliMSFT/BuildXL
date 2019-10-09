@@ -19,20 +19,30 @@ using Test.BuildXL.TestUtilities.Xunit;
 using Xunit;
 using Xunit.Abstractions;
 using Mount=BuildXL.Utilities.Configuration.Mutable.Mount;
+using BuildXL.Native.IO;
+using BuildXL.FrontEnd.Script.Ambients.Exceptions;
 
 namespace Test.BuildXL.EngineTests
 {
-    public class MountScrubberTests : BuildXL.TestUtilities.Xunit.XunitBuildXLTest
+    public class MountScrubberTests : XunitBuildXLTest
     {
+        private LoggingConfiguration m_loggingConfiguration = new LoggingConfiguration();
+
+        private DirectoryScrubber Scrubber { get; }
+
         public MountScrubberTests(ITestOutputHelper output)
             : base(output)
         {
             RegisterEventSource(global::BuildXL.Engine.ETWLogger.Log);
             RegisterEventSource(global::BuildXL.Scheduler.ETWLogger.Log);
             RegisterEventSource(global::BuildXL.Processes.ETWLogger.Log);
-        }
 
-        private LoggingConfiguration m_loggingConfiguration = new LoggingConfiguration();
+            Scrubber = new DirectoryScrubber(
+               new CancellationToken(),
+               LoggingContext,
+               m_loggingConfiguration,
+               maxDegreeParallelism: 2);
+        }
 
         [Fact]
         public void DoNotScrubDeclaredOutputDirectories()
@@ -40,16 +50,12 @@ namespace Test.BuildXL.EngineTests
             string rootDirectory = Path.Combine(TestOutputDirectory, nameof(ScrubFilesAndDirectories));
             string a = WriteFile(Path.Combine(rootDirectory, "1", "1", "out.txt"));
             var inBuild = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Path.GetDirectoryName(a) };
-            var scrubber = new DirectoryScrubber(
-                LoggingContext,
-                m_loggingConfiguration,
-                path => inBuild.Contains(path),
+            Scrubber.RemoveExtraneousFilesAndDirectories(
+                isPathInBuild: path => inBuild.Contains(path),
                 pathsToScrub: new[] { Path.GetDirectoryName(a) },
                 blockedPaths: new string[] { },
-                nonDeletableRootDirectories: new string[0],
-                mountPathExpander: null,
-                maxDegreeParallelism: 2);
-            scrubber.RemoveExtraneousFilesAndDirectories(new CancellationToken());
+                nonDeletableRootDirectories: new string[0]);
+
             XAssert.IsTrue(File.Exists(a));
         }
 
@@ -71,16 +77,11 @@ namespace Test.BuildXL.EngineTests
 
             var inBuild = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { c, d, Path.GetDirectoryName(f) };
 
-            var scrubber = new DirectoryScrubber(
-                LoggingContext,
-                m_loggingConfiguration,
-                path => inBuild.Contains(path),
+            Scrubber.RemoveExtraneousFilesAndDirectories(
                 pathsToScrub: new[] { rootDirectory },
+                isPathInBuild: path => inBuild.Contains(path),
                 blockedPaths: new[] { Path.Combine(rootDirectory, "1"), Path.Combine(rootDirectory, "5", "6") },
-                nonDeletableRootDirectories: new string[0],
-                mountPathExpander: null,
-                maxDegreeParallelism: 2);
-            scrubber.RemoveExtraneousFilesAndDirectories(new CancellationToken());
+                nonDeletableRootDirectories: new string[0]);
 
             // Files in the "1" directory should still exist even though they were not in the build, since that directory was excluded.
             XAssert.IsTrue(File.Exists(a));
@@ -124,16 +125,12 @@ namespace Test.BuildXL.EngineTests
             string j = WriteFile(Path.Combine(nestedScrubbableMountPath, "D", "j"));
             var inBuild = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Path.Combine(scrubbableMountPath, "D", "E"), g1 };
 
-            var scrubber = new DirectoryScrubber(
-                LoggingContext,
-                m_loggingConfiguration,
+            Scrubber.RemoveExtraneousFilesAndDirectories(
                 path => inBuild.Contains(path),
                 pathsToScrub: new[] { Path.Combine(nonScrubbableMountPath, "D"), scrubbableMountPath },
                 blockedPaths: new string[0],
                 nonDeletableRootDirectories: new string[0],
-                mountPathExpander: mountPathExpander,
-                maxDegreeParallelism: 2);
-            scrubber.RemoveExtraneousFilesAndDirectories(new CancellationToken());
+                mountPathExpander: mountPathExpander);
 
             // NonScrubbable\D produces a warning.
             AssertWarningEventLogged(EventId.ScrubbingFailedBecauseDirectoryIsNotScrubbable);
@@ -177,7 +174,7 @@ namespace Test.BuildXL.EngineTests
                         IsScrubbable = true,
                         AllowCreateDirectory = true,
                     }
-                }, 
+                },
                 pathTable)
             )
             {
@@ -274,19 +271,162 @@ namespace Test.BuildXL.EngineTests
 
             var inBuild = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { };
 
-            var scrubber = new DirectoryScrubber(
-                LoggingContext,
-                m_loggingConfiguration,
+            Scrubber.RemoveExtraneousFilesAndDirectories(
                 path => inBuild.Contains(path),
                 pathsToScrub: new[] { rootDirectory },
                 blockedPaths: new[] { rootDirectory },
-                nonDeletableRootDirectories: new string[0],
-                mountPathExpander: null,
-                maxDegreeParallelism: 2);
-            scrubber.RemoveExtraneousFilesAndDirectories(new CancellationToken());
+                nonDeletableRootDirectories: new string[0]);
 
             // The file should still exist since it is under a blocked path
             XAssert.IsTrue(File.Exists(a));
+        }
+
+        [Fact]
+        public void DeleteFilesCanDeleteFile()
+        {
+            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesCanDeleteFile));
+            
+            string fullFilePath = WriteFile(Path.Combine(rootDir, "out.txt"));
+            XAssert.IsTrue(File.Exists(fullFilePath));
+
+            var numDeleted = Scrubber.DeleteFiles(new[] { fullFilePath });
+
+            XAssert.IsFalse(File.Exists(fullFilePath));
+            XAssert.AreEqual(1, numDeleted);
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void DeleteFilesDeletesSymlinkButNotTarget(bool useRelativeTargetForSymlink)
+        {
+            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesDeletesSymlinkButNotTarget));
+
+            string fileBasename = "out.txt";
+            string fullFilePath = WriteFile(Path.Combine(rootDir, fileBasename));
+            XAssert.IsTrue(File.Exists(fullFilePath));
+
+            string fullSymlinkPath = WriteSymlink(
+                Path.Combine(rootDir, $"sym-{fileBasename}"),
+                useRelativeTargetForSymlink ? fileBasename : fullFilePath,
+                isTargetFile: true);
+            XAssert.IsTrue(FileUtilities.FileExistsNoFollow(fullSymlinkPath));
+
+            var numDeleted = Scrubber.DeleteFiles(new[] { fullSymlinkPath });
+
+            XAssert.AreEqual(1, numDeleted);
+            XAssert.IsFalse(File.Exists(fullSymlinkPath));
+            XAssert.IsTrue(File.Exists(fullFilePath));
+        }
+
+        [Fact]
+        public void DeleteFilesCanDeleteDirectorySymlink()
+        {
+            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesCanDeleteDirectorySymlink));
+            string fullTargetDirPath = Path.Combine(rootDir, "target-dir");
+            Directory.CreateDirectory(fullTargetDirPath);
+            XAssert.IsTrue(Directory.Exists(fullTargetDirPath));
+
+            string fullSymlinkPath = WriteSymlink(Path.Combine(rootDir, "directory symlink"), fullTargetDirPath, isTargetFile: false);
+            XAssert.IsTrue(FileUtilities.FileExistsNoFollow(fullSymlinkPath));
+
+            var numDeleted = Scrubber.DeleteFiles(new[] { fullSymlinkPath });
+
+            XAssert.AreEqual(1, numDeleted);
+            XAssert.IsFalse(File.Exists(fullSymlinkPath));
+            XAssert.IsTrue(Directory.Exists(fullTargetDirPath));
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void DeleteFilesCanDeleteSymlinkToAbsentFile(bool declareSymlinkTargetAsFile)
+        {
+            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesCanDeleteSymlinkToAbsentFile));
+            string fullSymlinkPath = WriteSymlink(Path.Combine(rootDir, "symlink-to-absent"), "non-existent-target", isTargetFile: declareSymlinkTargetAsFile);
+            XAssert.IsTrue(FileUtilities.FileExistsNoFollow(fullSymlinkPath));
+
+            var numDeleted = Scrubber.DeleteFiles(new[] { fullSymlinkPath });
+
+            XAssert.AreEqual(1, numDeleted);
+            XAssert.IsFalse(File.Exists(fullSymlinkPath));
+        }
+
+        [Fact]
+        public void DeleteFilesCannotDeleteFolder()
+        {
+            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesCannotDeleteFolder));
+            Directory.CreateDirectory(rootDir);
+            XAssert.IsTrue(Directory.Exists(rootDir));
+
+            var numDeleted = Scrubber.DeleteFiles(new[] { rootDir });
+            XAssert.IsTrue(Directory.Exists(rootDir));
+            XAssert.AreEqual(0, numDeleted);
+        }
+
+        [Fact]
+        public void DeleteFilesHandlesAbsentFiles()
+        {
+            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesHandlesAbsentFiles));
+            Directory.CreateDirectory(rootDir);
+            XAssert.IsTrue(Directory.Exists(rootDir));
+            
+            var absentFile = Path.Combine(rootDir, "a b s e n t");
+            XAssert.IsFalse(File.Exists(absentFile));
+
+            var numDeleted = Scrubber.DeleteFiles(new[] { absentFile });
+            XAssert.IsFalse(File.Exists(absentFile));
+            XAssert.AreEqual(0, numDeleted);
+        }
+
+        [Fact]
+        public void DeleteFilesHandlesInvalidPaths()
+        {
+            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesHandlesInvalidPaths));
+            Directory.CreateDirectory(rootDir);
+            XAssert.IsTrue(Directory.Exists(rootDir));
+
+            var invalidPath = Path.Combine(rootDir, "~!@#$%^&*()_+{}[]|\n\r");
+            var numDeleted = Scrubber.DeleteFiles(new[] { invalidPath });
+            XAssert.AreEqual(0, numDeleted);
+        }
+
+        [Fact]
+        public void DeleteFilesHandlesMixedEntries()
+        {
+            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesHandlesMixedEntries));
+            var files = new[]
+            {
+                (delete: false, path: rootDir),                                                   // directory
+                (delete: true,  path: WriteFile(Path.Combine(rootDir, "file"))),                  // file
+                (delete: false, path: Path.Combine(rootDir, "absent-file")),                      // absent
+                (delete: true,  path: WriteSymlink(Path.Combine(rootDir, "sym-file"), "file")),   // symlink to file
+                (delete: true,  path: WriteSymlink(Path.Combine(rootDir, "sym-abs"), "abent")),   // symlink to absent
+            };
+
+            var numDeleted = Scrubber.DeleteFiles(files.Select(t => t.path).ToArray());
+            var expectedNumDeleted = files.Where(t => t.delete).Count();
+            XAssert.AreEqual(expectedNumDeleted, numDeleted);
+            foreach (var tuple in files.Where(t => t.delete))
+            {
+                XAssert.IsFalse(File.Exists(tuple.path));
+            }
+        }
+
+        [Theory]
+        [InlineData(100)]
+        public void DeleteFilesMiniStressTest(int numFiles)
+        {
+            string rootDir = Path.Combine(TestOutputDirectory, nameof(DeleteFilesMiniStressTest));
+            var files = Enumerable.Range(0, numFiles).Select(i => WriteFile(Path.Combine(rootDir, $"file-{i}"))).ToArray();
+
+            var numDeleted = Scrubber.DeleteFiles(files);
+
+            XAssert.AreEqual(numFiles, numDeleted);
+            foreach (var file in files)
+            {
+                XAssert.IsFalse(File.Exists(file));
+            }
         }
 
         private void RunScrubberWithPipGraph(
@@ -295,17 +435,12 @@ namespace Test.BuildXL.EngineTests
             string[] pathsToScrub,
             MountPathExpander mountPathExpander = null)
         {
-            var scrubber = new DirectoryScrubber(
-                LoggingContext,
-                m_loggingConfiguration,
+            bool removed = Scrubber.RemoveExtraneousFilesAndDirectories(
                 isPathInBuild: p => pipGraph.IsPathInBuild(env.Paths.CreateAbsolutePath(p)),
                 pathsToScrub: pathsToScrub,
                 blockedPaths: new string[0],
                 nonDeletableRootDirectories: pipGraph.AllDirectoriesContainingOutputs().Select(p => env.Paths.Expand(p)),
-                mountPathExpander: mountPathExpander,
-                maxDegreeParallelism: 2);
-
-            bool removed = scrubber.RemoveExtraneousFilesAndDirectories(new CancellationToken());
+                mountPathExpander: mountPathExpander);
             XAssert.IsTrue(removed);
         }
 
@@ -315,6 +450,13 @@ namespace Test.BuildXL.EngineTests
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllText(path, "file");
             return path;
+        }
+
+        private static string WriteSymlink(string symlinkPath, string target, bool isTargetFile = true)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(symlinkPath));
+            XAssert.IsTrue(FileUtilities.TryCreateSymbolicLink(symlinkPath, target, isTargetFile).Succeeded);
+            return symlinkPath;
         }
 
         [Flags]

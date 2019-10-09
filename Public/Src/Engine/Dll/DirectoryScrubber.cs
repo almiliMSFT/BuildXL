@@ -21,52 +21,33 @@ namespace BuildXL.Engine
     /// <summary>
     /// Class for scrubbing extraneous files in directories.
     /// </summary>
-    internal sealed class DirectoryScrubber
+    public sealed class DirectoryScrubber
     {
         private const string Category = "Scrubbing";
         private readonly CancellationToken m_cancellationToken;
         private readonly LoggingContext m_loggingContext;
         private readonly ILoggingConfiguration m_loggingConfiguration;
-        private readonly HashSet<string> m_blockedPaths;
+        //private readonly HashSet<string> m_blockedPaths;
         private readonly int m_maxDegreeParallelism;
         private readonly ITempCleaner m_tempDirectoryCleaner;
 
         // Directories that can be scrubbed but cannot be deleted.
-        private readonly HashSet<string> m_nonDeletableRootDirectories;
+        //private readonly HashSet<string> m_nonDeletableRootDirectories;
 
         /// <summary>
         /// Creates an instance of <see cref="DirectoryScrubber"/>.
         /// </summary>
-        /// <remarks>
-        /// <paramref name="isPathInBuild"/> is a delegate that returns true if a given path is in the build.
-        /// Basically, a path is in a build if it points to an artifact in the pip graph, i.e., path to a source file, or
-        /// an output file, or a sealed directory. Paths that are in the build should not be deleted.
-        /// 
-        /// <paramref name="pathsToScrub"/> contains a list of paths, including their child paths, that need to be
-        /// scrubbed. Basically, the directory scrubber enumerates those paths recursively for removing extraneous files
-        /// or directories in those list.
-        /// 
-        /// <paramref name="blockedPaths"/> stop the above enumeration performed by directory scrubber. All file/directories
-        /// underneath a blocked path should not be removed.
-        /// 
-        /// <paramref name="nonDeletableRootDirectories"/> contains list of directory paths that can never be deleted, however,
-        /// the contents of the directory can be scrubbed. For example, mount roots should not be deleted.
-        /// </remarks>
         public DirectoryScrubber(
             CancellationToken cancellationToken,
             LoggingContext loggingContext,
             ILoggingConfiguration loggingConfiguration,
-            IEnumerable<string> blockedPaths,
-            IEnumerable<string> nonDeletableRootDirectories,
             int maxDegreeParallelism,
             ITempCleaner tempDirectoryCleaner = null)
         {
             m_cancellationToken = cancellationToken;
             m_loggingContext = loggingContext;
             m_loggingConfiguration = loggingConfiguration;
-            m_blockedPaths = new HashSet<string>(blockedPaths, StringComparer.OrdinalIgnoreCase);
             m_maxDegreeParallelism = maxDegreeParallelism;
-            m_nonDeletableRootDirectories = new HashSet<string>(nonDeletableRootDirectories, StringComparer.OrdinalIgnoreCase);
             m_tempDirectoryCleaner = tempDirectoryCleaner;
         }
 
@@ -108,22 +89,56 @@ namespace BuildXL.Engine
         /// <summary>
         /// Scrubs extraneous files and directories.
         /// </summary>
+        /// <param name="isPathInBuild">
+        /// A function that returns true if a given path is in the build.
+        /// Basically, a path is in a build if it points to an artifact in the pip graph, i.e., path to a source file, or
+        /// an output file, or a sealed directory. Paths that are in the build should not be deleted.
+        /// </param>
+        /// <param name="pathsToScrub">
+        /// Contains a list of paths, including their child paths, that need to be
+        /// scrubbed. Basically, the directory scrubber enumerates those paths recursively for removing extraneous files
+        /// or directories in those list.
+        /// </param>
+        /// <param name="blockedPaths">
+        /// Stop the above enumeration performed by directory scrubber. All file/directories underneath a blocked path should not be removed.
+        /// </param>
+        /// <param name="nonDeletableRootDirectories">
+        /// Contains list of directory paths that can never be deleted, however,
+        /// the contents of the directory can be scrubbed. For example, mount roots should not be deleted.
+        /// </param>
+        /// <param name="mountPathExpander">
+        /// Optional mount path expander.  When used, its roots are treated as non-deletable.
+        /// </param>
         public bool RemoveExtraneousFilesAndDirectories(
             Func<string, bool> isPathInBuild,
             IEnumerable<string> pathsToScrub,
-            MountPathExpander mountPathExpander)
+            IEnumerable<string> blockedPaths,
+            IEnumerable<string> nonDeletableRootDirectories,
+            MountPathExpander mountPathExpander = null)
         {
+            var finalPathsToScrub = CollapsePaths(pathsToScrub).ToList();
+            var finalBlockedPaths = new HashSet<string>(blockedPaths, StringComparer.OrdinalIgnoreCase);
+            var finalNnonDeletableRootDirectories = new HashSet<string>(nonDeletableRootDirectories, StringComparer.OrdinalIgnoreCase);
+            if (mountPathExpander != null)
+            {
+                finalNnonDeletableRootDirectories.UnionWith(mountPathExpander.GetAllRoots().Select(p => p.ToString(mountPathExpander.PathTable)));
+            }
+
+            return RemoveExtraneousFilesAndDirectories(isPathInBuild, finalPathsToScrub, finalBlockedPaths, finalNnonDeletableRootDirectories, mountPathExpander);
+        }
+
+        private bool RemoveExtraneousFilesAndDirectories(
+            Func<string, bool> isPathInBuild,
+            List<string> pathsToScrub,
+            HashSet<string> blockedPaths,
+            HashSet<string> nonDeletableRootDirectories,
+            MountPathExpander mountPathExpander = null)
+        { 
             int directoriesEncountered = 0;
             int filesEncountered = 0;
             int filesRemoved = 0;
             int directoriesRemovedRecursively = 0;
 
-            var finalPathsToScrub = CollapsePaths(pathsToScrub).ToList();
-            var finalNonDeletableRootDirectories = mountPathExpander == null
-                ? m_nonDeletableRootDirectories
-                : new HashSet<string>(
-                    m_nonDeletableRootDirectories.Union(mountPathExpander.GetAllRoots().Select(p => p.ToString(mountPathExpander.PathTable))),
-                    StringComparer.OrdinalIgnoreCase);
 
             using (var pm = PerformanceMeasurement.Start(
                 m_loggingContext,
@@ -158,11 +173,11 @@ namespace BuildXL.Engine
                 var nondeletableDirectories = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
                 var directoriesToEnumerate = new BlockingCollection<string>();
 
-                foreach (var path in finalPathsToScrub)
+                foreach (var path in pathsToScrub)
                 {
                     SemanticPathInfo foundSemanticPathInfo;
 
-                    if (m_blockedPaths.Contains(path))
+                    if (blockedPaths.Contains(path))
                     {
                         continue;
                     }
@@ -221,7 +236,7 @@ namespace BuildXL.Engine
                                         string fullPath = Path.Combine(dir, fileName);
 
                                         // Skip specifically blocked paths.
-                                        if (m_blockedPaths.Contains(fullPath))
+                                        if (blockedPaths.Contains(fullPath))
                                         {
                                             shouldDeleteCurrentDirectory = false;
                                             return;
@@ -242,7 +257,7 @@ namespace BuildXL.Engine
                                                 Interlocked.Increment(ref pending);
                                                 directoriesToEnumerate.Add(fullPath);
 
-                                                if (!finalNonDeletableRootDirectories.Contains(fullPath))
+                                                if (!nonDeletableRootDirectories.Contains(fullPath))
                                                 {
                                                     // Current directory can be deleted, then it is a candidate to be deleted.
                                                     deletableDirectoryCandidates.TryAdd(fullPath, true);
@@ -368,15 +383,11 @@ namespace BuildXL.Engine
         /// Deletion failures are handled gracefully (by logging a warning).
         /// Returns the number of successfully deleted files.
         /// </summary>
-        public int DeleteFilesInParallel(string[] filePaths, string d)
+        public int DeleteFiles(string[] filePaths)
         {
             int numRemoved = 0;
             using (var timer = new Timer(
-                o =>
-                {
-                    // We don't have a good proxy for how much scrubbing is left. Instead we use the file counters to at least show progress
-                    Tracing.Logger.Log.ScrubbingProgress(m_loggingContext, d, numRemoved, filePaths.Length);
-                },
+                _ => Tracing.Logger.Log.ScrubbingProgress(m_loggingContext, "", numRemoved, filePaths.Length),
                 null,
                 dueTime: BuildXLEngine.GetTimerUpdatePeriodInMs(m_loggingConfiguration),
                 period: BuildXLEngine.GetTimerUpdatePeriodInMs(m_loggingConfiguration)))
@@ -387,7 +398,7 @@ namespace BuildXL.Engine
                     .WithCancellation(m_cancellationToken)
                     .ForAll(path =>
                     {
-                        if (TryScrubFile(m_loggingContext, path))
+                        if (FileUtilities.FileExistsNoFollow(path) && TryScrubFile(m_loggingContext, path))
                         {
                             Interlocked.Increment(ref numRemoved);
                         }
@@ -397,11 +408,11 @@ namespace BuildXL.Engine
             }
         }
 
-        private static bool TryScrubFile(LoggingContext loggingContext, string path)
+        private bool TryScrubFile(LoggingContext loggingContext, string path)
         {
             try
             {
-                FileUtilities.DeleteFile(path, waitUntilDeletionFinished: true);
+                FileUtilities.DeleteFile(path, waitUntilDeletionFinished: true, tempDirectoryCleaner: m_tempDirectoryCleaner);
                 Tracing.Logger.Log.ScrubbingFile(loggingContext, path);
                 return true;
             }

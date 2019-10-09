@@ -44,6 +44,9 @@ namespace BuildXL.Processes
                 leaveOpen: false);
         }
 
+        /// <summary>
+        /// Finds and returns all journal files that exist in directory denoted by <paramref name="directory"/>
+        /// </summary>
         public static IEnumerable<string> FindAllJournalFiles(string directory)
         {
             return Directory.Exists(directory)
@@ -51,7 +54,21 @@ namespace BuildXL.Processes
                 : CollectionUtilities.EmptyArray<string>();
         }
 
-        public static IEnumerable<string> GetRecordedWrites(string journalFile)
+        /// <summary>
+        /// Returns all paths recorded in the journal file <paramref name="journalFile"/>.
+        /// </summary>
+        /// <remarks>
+        /// Those paths are expected to be absolute paths of files/directories that were written to by the previous build.
+        ///
+        /// NOTE: this method does not validate the recorded paths in any way.  That means that each returned string may be
+        ///   - an invalid path
+        ///   - a path pointing to an absent file
+        ///   - a path pointing to a file
+        ///   - a path poiting to a directory.
+        ///
+        /// NOTE: the strings in the returned enumerable are neither sorted nor deduplicated.
+        /// </remarks>
+        public static IEnumerable<string> ReadRecordedWritesFromJournal(string journalFile)
         {
             using (var fileStream = new FileStream(journalFile, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete))
             using (var bxlReader = new BuildXLReader(stream: fileStream, debug: false, leaveOpen: false))

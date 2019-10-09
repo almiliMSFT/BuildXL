@@ -775,9 +775,6 @@ namespace BuildXL.Engine
                 cancellationToken: scheduler.Context.CancellationToken,
                 loggingContext: loggingContext,
                 loggingConfiguration: configuration.Logging,
-                blockedPaths: nonScrubbablePaths,
-                nonDeletableRootDirectories: outputDirectories,
-                mountPathExpander: mountPathExpander,
                 maxDegreeParallelism: Environment.ProcessorCount,
                 tempDirectoryCleaner: tempCleaner);
 
@@ -787,16 +784,16 @@ namespace BuildXL.Engine
                 .AsParallel()
                 .WithDegreeOfParallelism(Environment.ProcessorCount)
                 .WithCancellation(scheduler.Context.CancellationToken)
-                .SelectMany(SharedOpaqueJournal.GetRecordedWrites)
+                .SelectMany(SharedOpaqueJournal.ReadRecordedWritesFromJournal)
                 .Distinct()
                 .Where(FileUtilities.FileExistsNoFollow)
                 .ToArray();
 
             Logger.Log.ScrubbingOutputsFromJournalStarted(loggingContext);
-            DirectoryScrubber.DeleteFilesInParallel(loggingContext, distinctRecordedWrites, scheduler.Context.CancellationToken);
+            scrubber.DeleteFiles(distinctRecordedWrites);
 
             Logger.Log.ScrubbingSharedOpaqueJournalFilesStarted(loggingContext);
-            DirectoryScrubber.DeleteFilesInParallel(loggingContext, journalFiles, scheduler.Context.CancellationToken);
+            scrubber.DeleteFiles(journalFiles);
 
             if (pathsToScrub.Count > 0)
             {
@@ -804,6 +801,8 @@ namespace BuildXL.Engine
                 scrubber.RemoveExtraneousFilesAndDirectories(
                     isPathInBuild: path => scheduler.PipGraph.IsPathInBuild(AbsolutePath.Create(scheduler.Context.PathTable, path)),
                     pathsToScrub: pathsToScrub,
+                    blockedPaths: nonScrubbablePaths,
+                    nonDeletableRootDirectories: outputDirectories,
                     mountPathExpander: mountPathExpander);
             }
 
@@ -827,6 +826,8 @@ namespace BuildXL.Engine
                         !SharedOpaqueOutputHelper.IsSharedOpaqueOutput(path) ||
                         ShouldRemoveEmptyDirectories(configuration, path),
                     pathsToScrub: sharedOpaqueDirectories.Select(directory => directory.Path.ToString(scheduler.Context.PathTable)),
+                    blockedPaths: nonScrubbablePaths,
+                    nonDeletableRootDirectories: outputDirectories,
                     // Mounts don't need to be scrubbable for this operation to take place.
                     mountPathExpander: null);
             }
