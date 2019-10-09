@@ -790,11 +790,17 @@ namespace BuildXL.Engine
                 .Where(FileUtilities.FileExistsNoFollow)
                 .ToArray();
 
-            Logger.Log.ScrubbingOutputsFromJournalStarted(loggingContext);
-            scrubber.DeleteFiles(distinctRecordedWrites);
+            if (distinctRecordedWrites.Any())
+            {
+                Logger.Log.ScrubbingOutputsFromJournalStarted(loggingContext);
+                scrubber.DeleteFiles(distinctRecordedWrites);
+            }
 
-            Logger.Log.ScrubbingSharedOpaqueJournalFilesStarted(loggingContext);
-            scrubber.DeleteFiles(journalFiles);
+            if (journalFiles.Any())
+            {
+                Logger.Log.ScrubbingSharedOpaqueJournalFilesStarted(loggingContext);
+                scrubber.DeleteFiles(journalFiles);
+            }
 
             if (pathsToScrub.Count > 0)
             {
