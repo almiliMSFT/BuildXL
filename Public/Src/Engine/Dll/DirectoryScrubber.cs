@@ -24,14 +24,11 @@ namespace BuildXL.Engine
     internal sealed class DirectoryScrubber
     {
         private const string Category = "Scrubbing";
-
+        private readonly CancellationToken m_cancellationToken;
         private readonly LoggingContext m_loggingContext;
         private readonly ILoggingConfiguration m_loggingConfiguration;
-        private readonly Func<string, bool> m_isPathInBuild;
-        private readonly IEnumerable<string> m_pathsToScrub;
         private readonly HashSet<string> m_blockedPaths;
         private readonly int m_maxDegreeParallelism;
-        private readonly MountPathExpander m_mountPathExpander;
         private readonly ITempCleaner m_tempDirectoryCleaner;
 
         // Directories that can be scrubbed but cannot be deleted.
@@ -56,30 +53,20 @@ namespace BuildXL.Engine
         /// the contents of the directory can be scrubbed. For example, mount roots should not be deleted.
         /// </remarks>
         public DirectoryScrubber(
+            CancellationToken cancellationToken,
             LoggingContext loggingContext,
             ILoggingConfiguration loggingConfiguration,
-            Func<string, bool> isPathInBuild,
-            IEnumerable<string> pathsToScrub,
             IEnumerable<string> blockedPaths,
             IEnumerable<string> nonDeletableRootDirectories,
-            MountPathExpander mountPathExpander,
             int maxDegreeParallelism,
             ITempCleaner tempDirectoryCleaner = null)
         {
+            m_cancellationToken = cancellationToken;
             m_loggingContext = loggingContext;
             m_loggingConfiguration = loggingConfiguration;
-            m_isPathInBuild = isPathInBuild;
-            m_pathsToScrub = CollapsePaths(pathsToScrub).ToList();
             m_blockedPaths = new HashSet<string>(blockedPaths, StringComparer.OrdinalIgnoreCase);
-            m_mountPathExpander = mountPathExpander;
             m_maxDegreeParallelism = maxDegreeParallelism;
             m_nonDeletableRootDirectories = new HashSet<string>(nonDeletableRootDirectories, StringComparer.OrdinalIgnoreCase);
-
-            if (mountPathExpander != null)
-            {
-                m_nonDeletableRootDirectories.UnionWith(mountPathExpander.GetAllRoots().Select(p => p.ToString(mountPathExpander.PathTable)));
-            }
-
             m_tempDirectoryCleaner = tempDirectoryCleaner;
         }
 
@@ -111,22 +98,32 @@ namespace BuildXL.Engine
         /// <remarks>
         /// A directory path is valid to scrub if it is under a scrubbable mount.
         /// </remarks>
-        private bool ValidateDirectory(string directory, out SemanticPathInfo foundSemanticPathInfo)
+        private bool ValidateDirectory(MountPathExpander mpe, string directory, out SemanticPathInfo foundSemanticPathInfo)
         {
             foundSemanticPathInfo = SemanticPathInfo.Invalid;
-            return m_mountPathExpander == null ||
-                   (foundSemanticPathInfo = m_mountPathExpander.GetSemanticPathInfo(directory)).IsScrubbable;
+            return mpe == null ||
+                   (foundSemanticPathInfo = mpe.GetSemanticPathInfo(directory)).IsScrubbable;
         }
 
         /// <summary>
         /// Scrubs extraneous files and directories.
         /// </summary>
-        public bool RemoveExtraneousFilesAndDirectories(CancellationToken cancellationToken)
+        public bool RemoveExtraneousFilesAndDirectories(
+            Func<string, bool> isPathInBuild,
+            IEnumerable<string> pathsToScrub,
+            MountPathExpander mountPathExpander)
         {
             int directoriesEncountered = 0;
             int filesEncountered = 0;
             int filesRemoved = 0;
             int directoriesRemovedRecursively = 0;
+
+            var finalPathsToScrub = CollapsePaths(pathsToScrub).ToList();
+            var finalNonDeletableRootDirectories = mountPathExpander == null
+                ? m_nonDeletableRootDirectories
+                : new HashSet<string>(
+                    m_nonDeletableRootDirectories.Union(mountPathExpander.GetAllRoots().Select(p => p.ToString(mountPathExpander.PathTable))),
+                    StringComparer.OrdinalIgnoreCase);
 
             using (var pm = PerformanceMeasurement.Start(
                 m_loggingContext,
@@ -161,7 +158,7 @@ namespace BuildXL.Engine
                 var nondeletableDirectories = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
                 var directoriesToEnumerate = new BlockingCollection<string>();
 
-                foreach (var path in m_pathsToScrub)
+                foreach (var path in finalPathsToScrub)
                 {
                     SemanticPathInfo foundSemanticPathInfo;
 
@@ -170,9 +167,9 @@ namespace BuildXL.Engine
                         continue;
                     }
 
-                    if (ValidateDirectory(path, out foundSemanticPathInfo))
+                    if (ValidateDirectory(mountPathExpander, path, out foundSemanticPathInfo))
                     {
-                        if (!m_isPathInBuild(path))
+                        if (!isPathInBuild(path))
                         {
                             directoriesToEnumerate.Add(path);
                         }
@@ -186,10 +183,10 @@ namespace BuildXL.Engine
                         string mountName = "Invalid";
                         string mountPath = "Invalid";
 
-                        if (m_mountPathExpander != null && foundSemanticPathInfo.IsValid)
+                        if (mountPathExpander != null && foundSemanticPathInfo.IsValid)
                         {
-                            mountName = foundSemanticPathInfo.RootName.ToString(m_mountPathExpander.PathTable.StringTable);
-                            mountPath = foundSemanticPathInfo.Root.ToString(m_mountPathExpander.PathTable);
+                            mountName = foundSemanticPathInfo.RootName.ToString(mountPathExpander.PathTable.StringTable);
+                            mountPath = foundSemanticPathInfo.Root.ToString(mountPathExpander.PathTable);
                         }
 
                         Tracing.Logger.Log.ScrubbingFailedBecauseDirectoryIsNotScrubbable(pm.LoggingContext, path, mountName, mountPath);
@@ -208,7 +205,7 @@ namespace BuildXL.Engine
                 {
                     var t = new Thread(() =>
                     {
-                        while (!directoriesToEnumerate.IsCompleted && !cancellationToken.IsCancellationRequested)
+                        while (!directoriesToEnumerate.IsCompleted && !m_cancellationToken.IsCancellationRequested)
                         {
                             string currentDirectory;
                             if (directoriesToEnumerate.TryTake(out currentDirectory, Timeout.Infinite))
@@ -239,13 +236,13 @@ namespace BuildXL.Engine
                                                 shouldDeleteCurrentDirectory = false;
                                             }
 
-                                            if (!m_isPathInBuild(fullPath))
+                                            if (!isPathInBuild(fullPath))
                                             {
                                                 // Current directory is not in the build, then recurse to its members.
                                                 Interlocked.Increment(ref pending);
                                                 directoriesToEnumerate.Add(fullPath);
 
-                                                if (!m_nonDeletableRootDirectories.Contains(fullPath))
+                                                if (!finalNonDeletableRootDirectories.Contains(fullPath))
                                                 {
                                                     // Current directory can be deleted, then it is a candidate to be deleted.
                                                     deletableDirectoryCandidates.TryAdd(fullPath, true);
@@ -268,22 +265,12 @@ namespace BuildXL.Engine
                                         {
                                             Interlocked.Increment(ref filesEncountered);
 
-                                            if (!m_isPathInBuild(fullPath))
+                                            if (!isPathInBuild(fullPath))
                                             {
                                                 // File is not in the build, delete it.
-                                                try
+                                                if (TryScrubFile(pm.LoggingContext, fullPath))
                                                 {
-                                                    FileUtilities.DeleteFile(fullPath, tempDirectoryCleaner: m_tempDirectoryCleaner);
                                                     Interlocked.Increment(ref filesRemoved);
-
-                                                    Tracing.Logger.Log.ScrubbingFile(pm.LoggingContext, fullPath);
-                                                }
-                                                catch (BuildXLException ex)
-                                                {
-                                                    Tracing.Logger.Log.ScrubbingExternalFileOrDirectoryFailed(
-                                                        pm.LoggingContext,
-                                                        fullPath,
-                                                        ex.LogEventMessage);
                                                 }
                                             }
                                             else
@@ -353,7 +340,7 @@ namespace BuildXL.Engine
                         new ParallelOptions
                         {
                             MaxDegreeOfParallelism = m_maxDegreeParallelism,
-                            CancellationToken = cancellationToken,
+                            CancellationToken = m_cancellationToken,
                         },
                         directory =>
                         {
@@ -373,6 +360,55 @@ namespace BuildXL.Engine
                 }
                 catch (OperationCanceledException) { }
                 return true;
+            }
+        }
+
+        /// <summary>
+        /// Deletes a given array files in parallel.  
+        /// Deletion failures are handled gracefully (by logging a warning).
+        /// Returns the number of successfully deleted files.
+        /// </summary>
+        public int DeleteFilesInParallel(string[] filePaths, string d)
+        {
+            int numRemoved = 0;
+            using (var timer = new Timer(
+                o =>
+                {
+                    // We don't have a good proxy for how much scrubbing is left. Instead we use the file counters to at least show progress
+                    Tracing.Logger.Log.ScrubbingProgress(m_loggingContext, d, numRemoved, filePaths.Length);
+                },
+                null,
+                dueTime: BuildXLEngine.GetTimerUpdatePeriodInMs(m_loggingConfiguration),
+                period: BuildXLEngine.GetTimerUpdatePeriodInMs(m_loggingConfiguration)))
+            {
+                filePaths
+                    .AsParallel()
+                    .WithDegreeOfParallelism(m_maxDegreeParallelism)
+                    .WithCancellation(m_cancellationToken)
+                    .ForAll(path =>
+                    {
+                        if (TryScrubFile(m_loggingContext, path))
+                        {
+                            Interlocked.Increment(ref numRemoved);
+                        }
+                    });
+                Tracing.Logger.Log.ScrubbingFinished(m_loggingContext, 0, filePaths.Length, numRemoved, 0);
+                return numRemoved;
+            }
+        }
+
+        private static bool TryScrubFile(LoggingContext loggingContext, string path)
+        {
+            try
+            {
+                FileUtilities.DeleteFile(path, waitUntilDeletionFinished: true);
+                Tracing.Logger.Log.ScrubbingFile(loggingContext, path);
+                return true;
+            }
+            catch (BuildXLException ex)
+            {
+                Tracing.Logger.Log.ScrubbingExternalFileOrDirectoryFailed(loggingContext, path, ex.LogEventMessage);
+                return false;
             }
         }
     }

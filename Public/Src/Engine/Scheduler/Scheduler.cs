@@ -61,6 +61,7 @@ using static BuildXL.Scheduler.FileMonitoringViolationAnalyzer;
 using BuildXL.Utilities.VmCommandProxy;
 using BuildXL.Storage.InputChange;
 using BuildXL.ViewModel;
+using System.Runtime.CompilerServices;
 
 namespace BuildXL.Scheduler
 {
@@ -149,6 +150,11 @@ namespace BuildXL.Scheduler
         /// <see cref="FingerprintStore"/> directory name.
         /// </summary>
         public const string FingerprintStoreDirectory = "FingerprintStore";
+
+        /// <summary>
+        /// <see cref="ILayoutConfiguration.SharedOpaqueJournalDirectory"/> directory name.
+        /// </summary>
+        public const string SharedOpaqueJournalDirectory = "SharedOpaqueOutputsJournal";
 
         #endregion Constants
 
@@ -1182,6 +1188,9 @@ namespace BuildXL.Scheduler
                     m_fingerprintStoreCounters,
                     m_runnablePipPerformance,
                     m_testHooks?.FingerprintStoreTestHooks);
+
+            // create the directory where shared opaque outputs journals will be stored
+            FileUtilities.CreateDirectoryWithRetry(configuration.Layout.SharedOpaqueJournalDirectory.ToString(Context.PathTable));
 
             MasterSpecificExecutionLogTarget masterTarget = null;
 
