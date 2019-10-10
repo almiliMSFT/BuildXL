@@ -46,7 +46,7 @@ namespace BuildXL.Processes
             : this(
                   context.PathTable, 
                   process.DirectoryOutputs.Where(d => d.IsSharedOpaque).Select(d => d.Path),
-                  journalDirectory.Combine(context.PathTable, process.FormattedSemiStableHash))
+                  GetJournalFileForProcess(context.PathTable, journalDirectory, process))
         {
             Contract.Requires(process != null);
             Contract.Requires(context != null);
@@ -74,6 +74,15 @@ namespace BuildXL.Processes
                 debug: false,
                 logStats: false,
                 leaveOpen: false);
+        }
+
+        /// <summary>
+        /// Given a root directory (<paramref name="journalDirectory"/>), returns the full path to the journal corresponding to process <paramref name="process"/>.
+        /// </summary>
+        public static AbsolutePath GetJournalFileForProcess(PathTable pathTable, AbsolutePath journalDirectory, Process process)
+        {
+            Contract.Requires(journalDirectory.IsValid);
+            return journalDirectory.Combine(pathTable, process.FormattedSemiStableHash);
         }
 
         /// <summary>

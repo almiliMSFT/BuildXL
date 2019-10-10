@@ -11,6 +11,7 @@ using Test.BuildXL.TestUtilities.Xunit;
 using BuildXL.Utilities.Tracing;
 using BuildXL.Scheduler.Fingerprints;
 using BuildXL.Utilities.Instrumentation.Common;
+using BuildXL.Cache.ContentStore.Interfaces.FileSystem;
 
 namespace Test.BuildXL.Scheduler
 {
