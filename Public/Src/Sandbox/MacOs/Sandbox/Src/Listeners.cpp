@@ -16,6 +16,20 @@ int RELEVANT_KAUTH_VNODE_BITS =
 
 void *Listeners::g_dispatcher = nullptr;
 
+bool Match(const char *src, const char *name)
+{
+    if (0 == strncmp(src, "/B2/b/devmain/rawproduct/Debug/build/tmp/AccessibilityTest/AccessibilityTest.build/Debug/AccessibilityTest.build/Objects-normal-asan/x86_64/AccessibilityTest-master.swiftdeps~moduleonly", 1024))
+    {
+        pid_t pid = proc_selfpid();
+        char pname[1000];
+        proc_name(pid, pname, 1000);
+        log_debug("--------- %s strncmp match; Process: '%s'(%05X | %d)", name, pname, pid, pid);
+        return true;
+    }
+
+    return false;
+}
+
 bool MyStrEndsWith(const char *src, const char *find)
 {
     size_t findLen = strnlen(find, 1024);
@@ -108,9 +122,9 @@ int Listeners::buildxl_vnode_listener(kauth_cred_t credential,
     int len = MAXPATHLEN;
     char vpath[MAXPATHLEN];
     vn_getpath((vnode_t)arg1, vpath, &len);
-    if (MyStrEndsWith(vpath, "moduleonly"))
+    if (Match(vpath, "VNODE_*"))
     {
-        log_debug("========= VNODE_* on '%s', PID: %d, action: %d", vpath, proc_selfpid(), action);
+        log_debug("========= VNODE_* match, action: %d", action);
     }
 
     if (isVnodeAccess || !hasRelevantVnodeBits)
@@ -139,7 +153,7 @@ int Listeners::mpo_vnode_check_lookup_pre(kauth_cred_t cred,
                                           size_t _)
 {
     do
-    {
+    {        
         TrustedBsdHandler handler = TrustedBsdHandler((BuildXLSandbox*)g_dispatcher);
         if (!handler.TryInitializeWithTrackedProcess(proc_selfpid()))
         {
@@ -155,10 +169,7 @@ int Listeners::mpo_vnode_check_lookup_pre(kauth_cred_t cred,
             break;
         }
 
-        if (MyStrEndsWith(fullpath, "moduleonly"))
-        {
-            log_debug("========= MAC_LOOKUP on '%s', PID: %d", fullpath, proc_selfpid());
-        }
+        Match(fullpath, "MAC_LOOKUP");        
 
         handler.HandleLookup(fullpath);
     } while(false);
@@ -268,10 +279,7 @@ int Listeners::mpo_vnode_check_create(kauth_cred_t cred,
     // compute full path by getting the absolute path of 'dvp' and appending the component name provided by 'cnp'
     char path[MAXPATHLEN] = {0};
     ComputeAbsolutePath(dvp, cnp->cn_nameptr, cnp->cn_namelen, path, sizeof(path));
-    if (MyStrEndsWith(path, "moduleonly"))
-    {
-        log_debug("========= VNODE_CHECK_CREATE on '%s', PID: %d", path, proc_selfpid());
-    }
+    Match(path, "VNODE_CHECK_CREATE");
 
     TrustedBsdHandler handler = TrustedBsdHandler((BuildXLSandbox*)g_dispatcher);
     if (handler.TryInitializeWithTrackedProcess(proc_selfpid()))
@@ -292,16 +300,11 @@ int Listeners::mpo_vnode_check_write(kauth_cred_t active_cred,
     int len = MAXPATHLEN;
     char vpath[MAXPATHLEN];
     vn_getpath(vp, vpath, &len);
-    if (MyStrEndsWith(vpath, "moduleonly"))
-    {
-        log_debug("========= VNODE_CHECK_WRITE on '%s', PID: %d", vpath, proc_selfpid());
-    }
+    Match(vpath, "VNODE_CHECK_WRITE");
 
     TrustedBsdHandler handler = TrustedBsdHandler((BuildXLSandbox*)g_dispatcher);
     if (!handler.TryInitializeWithTrackedProcess(proc_selfpid()))
     {
-        log_debug("=========== testing 1: %s", "moduleonly");
-        log_debug("=========== testing 2: %s", "swiftdeps~moduleonly");
         return KERN_SUCCESS;
     }
 

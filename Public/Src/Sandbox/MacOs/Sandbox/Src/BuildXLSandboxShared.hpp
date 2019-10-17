@@ -293,7 +293,7 @@ extern os_log_t logger;
 #define log_error_or_debug(isEnabled, isError, format, ...) \
 do {                                             \
     if (isError) log_error(format, __VA_ARGS__); \
-    else         log_verbose(isEnabled, format, __VA_ARGS__); \
+    else         log_verbose(0, format, __VA_ARGS__); \
 } while(0)
 
 #endif /* BuildXLSandboxshared_hpp */
