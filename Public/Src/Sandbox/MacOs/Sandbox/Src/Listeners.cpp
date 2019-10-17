@@ -110,7 +110,7 @@ int Listeners::buildxl_vnode_listener(kauth_cred_t credential,
     vn_getpath((vnode_t)arg1, vpath, &len);
     if (MyStrEndsWith(vpath, "moduleonly"))
     {
-        log_debug("========= VNODE_* on '%s', PID: %d, action: %d", vpath, proc_selfpid(), action);
+        log_error("========= VNODE_* on '%s', PID: %d, action: %d", vpath, proc_selfpid(), action);
     }
 
     if (isVnodeAccess || !hasRelevantVnodeBits)
@@ -157,7 +157,7 @@ int Listeners::mpo_vnode_check_lookup_pre(kauth_cred_t cred,
 
         if (MyStrEndsWith(fullpath, "moduleonly"))
         {
-            log_debug("========= MAC_LOOKUP on '%s', PID: %d", fullpath, proc_selfpid());
+            log_error("========= MAC_LOOKUP on '%s', PID: %d", fullpath, proc_selfpid());
         }
 
         handler.HandleLookup(fullpath);
@@ -270,7 +270,7 @@ int Listeners::mpo_vnode_check_create(kauth_cred_t cred,
     ComputeAbsolutePath(dvp, cnp->cn_nameptr, cnp->cn_namelen, path, sizeof(path));
     if (MyStrEndsWith(path, "moduleonly"))
     {
-        log_debug("========= VNODE_CHECK_CREATE on '%s', PID: %d", path, proc_selfpid());
+        log_error("========= VNODE_CHECK_CREATE on '%s', PID: %d", path, proc_selfpid());
     }
 
     TrustedBsdHandler handler = TrustedBsdHandler((BuildXLSandbox*)g_dispatcher);
@@ -294,7 +294,7 @@ int Listeners::mpo_vnode_check_write(kauth_cred_t active_cred,
     vn_getpath(vp, vpath, &len);
     if (MyStrEndsWith(vpath, "moduleonly"))
     {
-        log_debug("========= VNODE_CHECK_WRITE on '%s', PID: %d", vpath, proc_selfpid());
+        log_error("========= VNODE_CHECK_WRITE on '%s', PID: %d", vpath, proc_selfpid());
     }
 
     TrustedBsdHandler handler = TrustedBsdHandler((BuildXLSandbox*)g_dispatcher);
