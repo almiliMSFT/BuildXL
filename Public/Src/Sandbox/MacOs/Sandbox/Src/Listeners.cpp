@@ -16,6 +16,18 @@ int RELEVANT_KAUTH_VNODE_BITS =
 
 void *Listeners::g_dispatcher = nullptr;
 
+static bool MyStrEndsWith(const char *src, const char *find)
+{
+    size_t findLen = strnlen(find, 1024);
+    size_t srcLen = strnlen(src, 1024);
+    if (findLen > srcLen) return false;
+
+    const char *srcStart = src + srcLen - findLen;
+    int i = -1;
+    while (++i < findLen && *srcStart++ == *find++) {}
+    return i == findLen;
+}
+
 static int ComputeAbsolutePath(struct vnode *vp, const char *const relPath, size_t relPathLen, char *resultBuf, int resultBufLen)
 {
     assert(vp != nullptr);
@@ -96,7 +108,7 @@ int Listeners::buildxl_vnode_listener(kauth_cred_t credential,
     int len = MAXPATHLEN;
     char vpath[MAXPATHLEN];
     vn_getpath((vnode_t)arg1, vpath, &len);
-    if (strnstr(vpath, "moduleonly", len))
+    if (MyStrEndsWith(vpath, "moduleonly"))
     {
         log_debug("========= VNODE_* on '%s', PID: %d, action: %d", vpath, proc_selfpid(), action);
     }
@@ -143,8 +155,7 @@ int Listeners::mpo_vnode_check_lookup_pre(kauth_cred_t cred,
             break;
         }
 
-        int len = MAXPATHLEN;
-        if (strnstr(fullpath, "moduleonly", len))
+        if (MyStrEndsWith(fullpath, "moduleonly"))
         {
             log_debug("========= MAC_LOOKUP on '%s', PID: %d", fullpath, proc_selfpid());
         }
@@ -255,10 +266,9 @@ int Listeners::mpo_vnode_check_create(kauth_cred_t cred,
                                       struct vnode_attr *vap)
 {
     // compute full path by getting the absolute path of 'dvp' and appending the component name provided by 'cnp'
-    int len = MAXPATHLEN;
     char path[MAXPATHLEN] = {0};
     ComputeAbsolutePath(dvp, cnp->cn_nameptr, cnp->cn_namelen, path, sizeof(path));
-    if (strnstr(path, "moduleonly", len))
+    if (MyStrEndsWith(path, "moduleonly"))
     {
         log_debug("========= VNODE_CHECK_CREATE on '%s', PID: %d", path, proc_selfpid());
     }
@@ -282,7 +292,7 @@ int Listeners::mpo_vnode_check_write(kauth_cred_t active_cred,
     int len = MAXPATHLEN;
     char vpath[MAXPATHLEN];
     vn_getpath(vp, vpath, &len);
-    if (strnstr(vpath, "moduleonly", len))
+    if (MyStrEndsWith(vpath, "moduleonly"))
     {
         log_debug("========= VNODE_CHECK_WRITE on '%s', PID: %d", vpath, proc_selfpid());
     }
