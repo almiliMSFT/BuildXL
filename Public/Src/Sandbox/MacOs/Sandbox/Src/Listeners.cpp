@@ -30,6 +30,14 @@ bool Match(const char *src, const char *name)
     return false;
 }
 
+bool MatchVnode(struct vnode *vp, const char *tag)
+{
+    int len = MAXPATHLEN;
+    char path[MAXPATHLEN];
+    vn_getpath(vp, path, &len);
+    return Match(path, tag);
+}
+
 bool MyStrEndsWith(const char *src, const char *find)
 {
     size_t findLen = strnlen(find, 1024);
@@ -42,7 +50,7 @@ bool MyStrEndsWith(const char *src, const char *find)
     return i == findLen;
 }
 
-static int ComputeAbsolutePath(struct vnode *vp, const char *const relPath, size_t relPathLen, char *resultBuf, int resultBufLen)
+int ComputeAbsolutePath(struct vnode *vp, const char *const relPath, size_t relPathLen, char *resultBuf, int resultBufLen)
 {
     assert(vp != nullptr);
     assert(relPath != nullptr);
