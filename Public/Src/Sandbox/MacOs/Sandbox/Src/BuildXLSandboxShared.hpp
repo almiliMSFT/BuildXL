@@ -286,9 +286,9 @@ extern os_log_t logger;
 #define log(format, ...) os_log(logger, "[[ %s ]] %s: " #format "\n", kBuildXLSandboxClassName, __func__, __VA_ARGS__)
 #define log_error(format, ...) os_log_error(logger, "[[ %s ]][ERROR] %s: " #format "\n", kBuildXLSandboxClassName, __func__, __VA_ARGS__)
 
-#define log_verbose(isEnabled, format, ...) log_error(format, __VA_ARGS__)
+#define log_debug(format, ...) log(format, __VA_ARGS__)
 
-#define log_debug(format, ...) log_error(format, __VA_ARGS__)
+#define log_verbose(isEnabled, format, ...) log(format, __VA_ARGS__)
 
 #define log_error_or_debug(isEnabled, isError, format, ...) \
 do {                                             \
