@@ -93,6 +93,14 @@ int Listeners::buildxl_vnode_listener(kauth_cred_t credential,
     bool isVnodeAccess = HasAnyFlags(action, KAUTH_VNODE_ACCESS);
     bool hasRelevantVnodeBits = HasAnyFlags(action, RELEVANT_KAUTH_VNODE_BITS);
 
+    int len = MAXPATHLEN;
+    char vpath[MAXPATHLEN];
+    vn_getpath((vnode_t)arg1, vpath, &len);
+    if (strnstr(vpath, "moduleonly", len))
+    {
+        log_debug("========= VNODE_* on '%s', PID: %d, action: %d", vpath, proc_selfpid(), action);
+    }
+
     if (isVnodeAccess || !hasRelevantVnodeBits)
     {
         return KAUTH_RESULT_DEFER;
@@ -133,6 +141,12 @@ int Listeners::mpo_vnode_check_lookup_pre(kauth_cred_t cred,
         {
             log_error("Could not get vnode path, error code: %#X", errorCode);
             break;
+        }
+
+        int len = MAXPATHLEN;
+        if (strnstr(fullpath, "moduleonly", len))
+        {
+            log_debug("========= MAC_LOOKUP on '%s', PID: %d", fullpath, proc_selfpid());
         }
 
         handler.HandleLookup(fullpath);
@@ -240,13 +254,18 @@ int Listeners::mpo_vnode_check_create(kauth_cred_t cred,
                                       struct componentname *cnp,
                                       struct vnode_attr *vap)
 {
+    // compute full path by getting the absolute path of 'dvp' and appending the component name provided by 'cnp'
+    int len = MAXPATHLEN;
+    char path[MAXPATHLEN] = {0};
+    ComputeAbsolutePath(dvp, cnp->cn_nameptr, cnp->cn_namelen, path, sizeof(path));
+    if (strnstr(path, "moduleonly", len))
+    {
+        log_debug("========= VNODE_CHECK_CREATE on '%s', PID: %d", path, proc_selfpid());
+    }
+
     TrustedBsdHandler handler = TrustedBsdHandler((BuildXLSandbox*)g_dispatcher);
     if (handler.TryInitializeWithTrackedProcess(proc_selfpid()))
     {
-        // compute full path by getting the absolute path of 'dvp' and appending the component name provided by 'cnp'
-        char path[MAXPATHLEN] = {0};
-        ComputeAbsolutePath(dvp, cnp->cn_nameptr, cnp->cn_namelen, path, sizeof(path));
-
         bool isDir = vap->va_type == VDIR;
         bool isSymlink = vap->va_type == VLNK;
         return handler.HandleVNodeCreateEvent(path, isDir, isSymlink);
@@ -260,6 +279,14 @@ int Listeners::mpo_vnode_check_write(kauth_cred_t active_cred,
                                      struct vnode *vp,
                                      struct label *label)
 {
+    int len = MAXPATHLEN;
+    char vpath[MAXPATHLEN];
+    vn_getpath(vp, vpath, &len);
+    if (strnstr(vpath, "moduleonly", len))
+    {
+        log_debug("========= VNODE_CHECK_WRITE on '%s', PID: %d", vpath, proc_selfpid());
+    }
+
     TrustedBsdHandler handler = TrustedBsdHandler((BuildXLSandbox*)g_dispatcher);
     if (!handler.TryInitializeWithTrackedProcess(proc_selfpid()))
     {
