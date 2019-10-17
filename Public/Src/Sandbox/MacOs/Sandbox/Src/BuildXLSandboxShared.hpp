@@ -288,7 +288,7 @@ extern os_log_t logger;
 
 #define log_verbose(isEnabled, format, ...) if (isEnabled) log(format, __VA_ARGS__)
 
-#define log_debug(format, ...) log_verbose(1, format, __VA_ARGS__)
+#define log_debug(format, ...) log_error(format, __VA_ARGS__)
 
 #define log_error_or_debug(isEnabled, isError, format, ...) \
 do {                                             \
