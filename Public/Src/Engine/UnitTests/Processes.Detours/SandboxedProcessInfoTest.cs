@@ -50,7 +50,8 @@ namespace Test.BuildXL.Processes.Detours
 
             var sidebandLogFile = A("C", "engine-cache", "sideband-logs", "log-1");
             var loggerRootDirs = new[] { A("C", "out", "dir1"), A("C", "out", "dir2") };
-            var sharedOpaqueOutputLogger = new SidebandWriter(sidebandLogFile, loggerRootDirs);
+
+            var sharedOpaqueOutputLogger = new SidebandWriter(DefaultSidebandMetadata, sidebandLogFile, loggerRootDirs);
 
             SandboxedProcessInfo info = new SandboxedProcessInfo(
                 pt,

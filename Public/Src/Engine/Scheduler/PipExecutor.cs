@@ -1821,14 +1821,14 @@ namespace BuildXL.Scheduler
             // if pip's semistable hash is 0 (happens only in tests where multiple pips can have this hash)
             var conf = env.Configuration.Layout;
             return conf?.SharedOpaqueSidebandDirectory.IsValid == true && pip.SemiStableHash != 0
-                ? new SidebandWriter(env.Context, pip, conf.SharedOpaqueSidebandDirectory, CreateSidbandMetadata(env, pip))
+                ? new SidebandWriter(CreateSidbandMetadata(env, pip), env.Context, pip, conf.SharedOpaqueSidebandDirectory)
                 : null;
         }
 
         private static SidebandMetadata CreateSidbandMetadata(IPipExecutionEnvironment env, Process pip)
         {
             var fp = env.ContentFingerprinter.StaticFingerprintLookup(pip.PipId);
-            return new SidebandMetadata(pip.PipId, fp.Length > 0 ? fp.ToByteArray() : new byte[0]);
+            return new SidebandMetadata(pip.PipId.Value, fp.Length > 0 ? fp.ToByteArray() : new byte[0]);
         }
 
         private static void ReportFileAccesses(ExecutionResult processExecutionResult, FileAccessReportingContext fileAccessReportingContext)

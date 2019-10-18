@@ -59,7 +59,7 @@ namespace Test.BuildXL.Engine
         [InlineData("file1", new[] { "dir1", "dir2" })]
         public void DeserializeIsInverseOfSerialize(string logFile, string[] rootDirs)
         {
-            using (var original = new SidebandWriter(logFile, rootDirs))
+            using (var original = new SidebandWriter(DefaultSidebandMetadata, logFile, rootDirs))
             using (var clone = CloneViaSerialization(original))
             {
                 XAssert.AreEqual(original.SidebandLogFile, clone.SidebandLogFile);
@@ -145,19 +145,20 @@ namespace Test.BuildXL.Engine
                 .ToArray();
 
             var logFile = Path.Combine(myDir, $"bogus-log-close_{closeLoggerCleanly}-append_{appendBogusBytes}");
-            var logger = CreateLogger(logFile);
+            var sidebandWriter = CreateWriter(logFile);
+            sidebandWriter.EnsureHeaderWritten();
             foreach (var path in validRecords)
             {
-                XAssert.IsTrue(logger.RecordFileWrite(PathTable, path));
+                XAssert.IsTrue(sidebandWriter.RecordFileWrite(PathTable, path));
             }
 
             if (closeLoggerCleanly)
             {
-                logger.Dispose();
+                sidebandWriter.Dispose();
             }
             else
             {
-                logger.CloseWriterWithoutFixingUpHeaderForTestingOnly();
+                sidebandWriter.CloseWriterWithoutFixingUpHeaderForTestingOnly();
             }
 
             if (appendBogusBytes)
@@ -202,7 +203,7 @@ namespace Test.BuildXL.Engine
             pathToTest = X(pathToTest);
 
             var logPath = Path.Combine(myDir, "Pip0");
-            using (var logger = CreateLogger(logPath, rootDirs))
+            using (var logger = CreateWriter(logPath, rootDirs))
             {
                 bool recorded = logger.RecordFileWrite(PathTable, pathToTest);
                 XAssert.AreEqual(expectedToBeRecorded, recorded);
@@ -215,7 +216,7 @@ namespace Test.BuildXL.Engine
 
         private void CreateOutputLoggerAndRecordPaths(string logPath, IEnumerable<string> pathsToRecord, IReadOnlyList<string> rootDirs = null)
         {
-            using (var logger = CreateLogger(logPath, rootDirs))
+            using (var logger = CreateWriter(logPath, rootDirs))
             {
                 XAssert.AreEqual(logPath, logger.SidebandLogFile);
 
@@ -226,15 +227,14 @@ namespace Test.BuildXL.Engine
             }
         }
 
-        private SidebandWriter CreateLogger(string logPath = null, IReadOnlyList<string> rootDirs = null, SidebandMetadata metadata = null)
+        private SidebandWriter CreateWriter(string logPath = null, IReadOnlyList<string> rootDirs = null, SidebandMetadata metadata = null)
         {
             logPath = logPath ?? Path.Combine(TemporaryDirectory, $"{s_logDirectoryCounter++}", "log");
             Directory.CreateDirectory(Path.GetDirectoryName(logPath));
-            var writer = new SidebandWriter(
+            return new SidebandWriter(
+                metadata: metadata ?? DefaultSidebandMetadata,
                 sidebandLogFile: logPath,
                 rootDirectories: rootDirs);
-            writer.WriteMetadata(metadata ?? new SidebandMetadata(new global::BuildXL.Pips.PipId(1), new byte[] { 1, 2, 3 }));
-            return writer;
         }
 
         private static SidebandWriter CloneViaSerialization(SidebandWriter original)
