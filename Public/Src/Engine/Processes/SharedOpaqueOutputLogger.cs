@@ -8,11 +8,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Utilities;
 using BuildXL.Utilities.Collections;
-using BuildXL.Utilities.Tasks;
 using JetBrains.Annotations;
 
 using static BuildXL.Processes.SidebandUtils;
@@ -196,7 +194,6 @@ namespace BuildXL.Processes
 
         private readonly HashSet<AbsolutePath> m_recordedPathsCache;
         private readonly Lazy<BuildXLWriter> m_lazyBxlWriter;
-        private readonly Lazy<Unit> m_lazyWriteHeader;
         private readonly FileEnvelopeId m_envelopeId;
 
         private IReadOnlyList<AbsolutePath> m_convertedRootDirectories = null;
@@ -274,18 +271,17 @@ namespace BuildXL.Processes
             m_lazyBxlWriter = Lazy.Create(() =>
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(SidebandLogFile));
-                return new BuildXLWriter(
+                var writer = new BuildXLWriter(
                     stream: new FileStream(SidebandLogFile, FileMode.Create, FileAccess.Write, FileShare.Read | FileShare.Delete),
                     debug: false,
                     logStats: false,
                     leaveOpen: false);
-            });
 
-            m_lazyWriteHeader = Lazy.Create(() =>
-            {
-                FileEnvelope.WriteHeader(m_lazyBxlWriter.Value.BaseStream, m_envelopeId);
-                Metadata.Serialize(m_lazyBxlWriter.Value);
-                return Unit.Void;
+                // write header and metadata before anything else
+                FileEnvelope.WriteHeader(writer.BaseStream, m_envelopeId);
+                Metadata.Serialize(writer);
+
+                return writer;
             });
         }
 
@@ -348,7 +344,7 @@ namespace BuildXL.Processes
         /// </summary>
         public void EnsureHeaderWritten()
         {
-            Analysis.IgnoreResult(m_lazyWriteHeader.Value);
+            Analysis.IgnoreResult(m_lazyBxlWriter.Value);
         }
 
         /// <summary>
@@ -374,7 +370,6 @@ namespace BuildXL.Processes
             {
                 if (m_recordedPathsCache.Add(path))
                 {
-                    EnsureHeaderWritten();
                     m_lazyBxlWriter.Value.Write(path.ToString(pathTable));
                     m_lazyBxlWriter.Value.Flush();
                     return true;
