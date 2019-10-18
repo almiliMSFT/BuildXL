@@ -130,7 +130,7 @@ namespace BuildXL.Processes
                 info.PipDescription,
                 info.LoggingContext,
                 info.DetoursEventListener,
-                info.SharedOpaqueOutputLogger);
+                info.SidebandWriter);
 
             m_pendingReports = new ActionBlock<AccessReport>(
                 HandleAccessReport,

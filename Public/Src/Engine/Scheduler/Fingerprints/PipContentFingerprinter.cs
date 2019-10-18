@@ -1,7 +1,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using System.Diagnostics.ContractsLight;
+using BuildXL.Cache.MemoizationStore.Interfaces.Sessions;
+using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Utilities;
 
@@ -16,6 +19,10 @@ namespace BuildXL.Scheduler.Fingerprints
     /// </remarks>
     public sealed class PipContentFingerprinter : PipFingerprinter
     {
+        public delegate Fingerprint StaticHashLookup(PipId pipId);
+
+        public StaticHashLookup StaticFingerprintLookup { get; }
+
         /// <summary>
         /// Creates an instance of <see cref="PipContentFingerprinter"/>.
         /// </summary>
@@ -29,11 +36,14 @@ namespace BuildXL.Scheduler.Fingerprints
             PipFragmentRenderer.ContentHashLookup contentHashLookup,
             ExtraFingerprintSalts? extraFingerprintSalts = null,
             PathExpander pathExpander = null,
-            PipDataLookup pipDataLookup = null)
+            PipDataLookup pipDataLookup = null,
+            StaticHashLookup staticHashLookup = null)
             : base(pathTable, contentHashLookup, extraFingerprintSalts, pathExpander, pipDataLookup)
         {
             Contract.Requires(pathTable != null);
             Contract.Requires(contentHashLookup != null);
+
+            StaticFingerprintLookup = staticHashLookup;
         }
     }
 }

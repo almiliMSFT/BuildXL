@@ -780,12 +780,12 @@ namespace BuildXL.Engine
                 tempDirectoryCleaner: tempCleaner);
 
             var sharedOpaqueSidebandDirectory = configuration.Layout.SharedOpaqueSidebandDirectory.ToString(scheduler.Context.PathTable);
-            var sharedOpaqueSidebandFiles = SharedOpaqueOutputLogger.FindAllProcessPipSidebandFiles(sharedOpaqueSidebandDirectory);
+            var sharedOpaqueSidebandFiles = SidebandWriter.FindAllProcessPipSidebandFiles(sharedOpaqueSidebandDirectory);
             var distinctRecordedWrites = sharedOpaqueSidebandFiles
                 .AsParallel()
                 .WithDegreeOfParallelism(Environment.ProcessorCount)
                 .WithCancellation(scheduler.Context.CancellationToken)
-                .SelectMany(SharedOpaqueOutputLogger.ReadRecordedPathsFromSidebandFile)
+                .SelectMany(ReadSidebandFile)
                 .ToArray();
 
             if (distinctRecordedWrites.Any())
@@ -835,6 +835,16 @@ namespace BuildXL.Engine
                     nonDeletableRootDirectories: outputDirectories,
                     // Mounts don't need to be scrubbable for this operation to take place.
                     mountPathExpander: null);
+            }
+        }
+
+        private static string[] ReadSidebandFile(string sidebandFile)
+        {
+            using (var sidebandReader = new SidebandReader(sidebandFile))
+            {
+                bool integrityOk = sidebandReader.ReadHeader(ignoreChecksum: true);
+                sidebandReader.ReadMetadata();
+                return sidebandReader.ReadRecordedPaths().ToArray();
             }
         }
 

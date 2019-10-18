@@ -1400,7 +1400,20 @@ namespace BuildXL.Scheduler
                                     environment.SetMaxExternalProcessRan();
                                 }
 
-                                result = await executor.RunAsync(innerResourceLimitCancellationTokenSource.Token, sandboxConnection: environment.SandboxConnection);
+                                using (var sidebandWriter = CreateSidebandWriterIfConfigured(configuration.Layout, pip, context))
+                                {
+                                    if (sidebandWriter != null)
+                                    {
+                                        var fp = environment.ContentFingerprinter.StaticFingerprintLookup(pip.PipId);
+                                        var metadata = new SidebandMetadata(pip.PipId, fp.Length > 0 ? fp.ToByteArray() : new byte[0]);
+                                        sidebandWriter.WriteMetadata(metadata);
+                                    }
+
+                                    result = await executor.RunAsync(
+                                        innerResourceLimitCancellationTokenSource.Token, 
+                                        sandboxConnection: environment.SandboxConnection,
+                                        sidebandWriter: sidebandWriter);
+                                }
 
                                 ++retryCount;
 
@@ -1807,6 +1820,15 @@ namespace BuildXL.Scheduler
 
                 return processExecutionResult;
             }
+        }
+
+        private static SidebandWriter CreateSidebandWriterIfConfigured(ILayoutConfiguration conf, Process pip, PipExecutionContext context)
+        {
+            // don't use this writer if the root directory is not set up in the configuration layout or
+            // if pip's semistable hash is 0 (happens only in tests where multiple pips can have this hash)
+            return conf?.SharedOpaqueSidebandDirectory.IsValid == true && pip.SemiStableHash != 0
+                ? new SidebandWriter(context, pip, conf.SharedOpaqueSidebandDirectory)
+                : null;
         }
 
         private static void ReportFileAccesses(ExecutionResult processExecutionResult, FileAccessReportingContext fileAccessReportingContext)

@@ -7,25 +7,82 @@ using System.Diagnostics.ContractsLight;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Utilities;
 using BuildXL.Utilities.Collections;
 using BuildXL.Utilities.Tasks;
 using JetBrains.Annotations;
 
+using static BuildXL.Processes.SidebandUtils;
+
 namespace BuildXL.Processes
 {
+    internal static class SidebandUtils
+    {
+        public static void AssertOrder(ref int counter, Func<int, bool> condition, string errorMessage)
+        {
+            var currentValue = Interlocked.Increment(ref counter);
+            if (!condition(currentValue))
+            {
+                throw Contract.AssertFailure($"{errorMessage}. Current counter: " + currentValue);
+            }
+        }
+    }
+
+    public sealed class SidebandMetadata
+    {
+        private const int GlobalVersion = 1;
+        
+        private int Version { get; }
+        private PipId PipId { get; }
+        private byte[] StaticPipFingerprint { get; }
+
+        public SidebandMetadata(PipId pipId, byte[] staticPipFingerprint)
+            : this(GlobalVersion, pipId, staticPipFingerprint)
+        { }
+
+        private SidebandMetadata(int version, PipId pipId, byte[] staticPipFingerprint)
+        {
+            Contract.Requires(pipId.IsValid);
+            Contract.Requires(staticPipFingerprint != null);
+
+            Version = version;
+            PipId = pipId;
+            StaticPipFingerprint = staticPipFingerprint;
+        }
+
+        internal void Serialize(BuildXLWriter writer)
+        {
+            writer.WriteCompact(Version);
+            PipId.Serialize(writer);
+            writer.WriteCompact(StaticPipFingerprint.Length);
+            writer.Write(StaticPipFingerprint);
+        }
+
+        internal static SidebandMetadata Deserialize(BuildXLReader reader)
+        {
+            return new SidebandMetadata(
+                reader.ReadInt32Compact(),
+                PipId.Deserialize(reader),
+                reader.ReadBytes(reader.ReadInt32Compact()));
+        }
+    }
+
     /// <summary>
     /// A disposable reader for sideband files.
     /// 
     /// Uses <see cref="FileEnvelope"/> to check the integrity of the given file.
     /// </summary>
-    public sealed class SharedOpaqueSidebandFileReader : IDisposable
+    public sealed class SidebandReader : IDisposable
     {
         private readonly BuildXLReader m_bxlReader;
+        
+        private int m_readCounter = 0;
 
         /// <nodoc />
-        public SharedOpaqueSidebandFileReader(string sidebandFile)
+        public SidebandReader(string sidebandFile)
         {
             Contract.Requires(File.Exists(sidebandFile));
 
@@ -43,8 +100,15 @@ namespace BuildXL.Processes
         /// </summary>
         public bool ReadHeader(bool ignoreChecksum)
         {
-            var result = SharedOpaqueOutputLogger.FileEnvelope.TryReadHeader(m_bxlReader.BaseStream, ignoreChecksum);
+            AssertOrder(ref m_readCounter, cnt => cnt == 1, "Read header must be called first");
+            var result = SidebandWriter.FileEnvelope.TryReadHeader(m_bxlReader.BaseStream, ignoreChecksum);
             return result.Succeeded;
+        }
+
+        public SidebandMetadata ReadMetadata()
+        {
+            AssertOrder(ref m_readCounter, cnt => cnt == 2, "ReadMetadata must be called second, right after ReadHeader");
+            return SidebandMetadata.Deserialize(m_bxlReader);
         }
 
         /// <summary>
@@ -65,6 +129,7 @@ namespace BuildXL.Processes
         /// </remarks>
         public IEnumerable<string> ReadRecordedPaths()
         {
+            AssertOrder(ref m_readCounter, cnt => cnt > 2, "ReadRecordedPaths must be called after ReadHeader and ReadMetadata");
             string nextString = null;
             while ((nextString = ReadStringOrNull()) != null)
             {
@@ -107,7 +172,7 @@ namespace BuildXL.Processes
     /// NOTE: must be serializable in order to be compatible with VM execution; for this 
     ///       reason, this class must not have a field of type <see cref="PathTable"/>.
     /// </remarks>
-    public sealed class SharedOpaqueOutputLogger : IDisposable
+    public sealed class SidebandWriter : IDisposable
     {
         /// <summary>
         /// Envelope for serialization
@@ -116,8 +181,31 @@ namespace BuildXL.Processes
 
         private readonly HashSet<AbsolutePath> m_recordedPathsCache;
         private readonly Lazy<BuildXLWriter> m_lazyBxlWriter;
-        private readonly Lazy<Unit> m_lazyWriteHeader;
         private readonly FileEnvelopeId m_envelopeId;
+
+        private IReadOnlyList<AbsolutePath> m_convertedRootDirectories = null;
+        private int m_callCounter = 0;
+
+        private IReadOnlyList<AbsolutePath> GetConvertedRootDirectories(PathTable pathTable)
+        {
+            if (m_convertedRootDirectories == null)
+            {
+                lock (m_lazyBxlWriter)
+                {
+                    if (m_convertedRootDirectories == null)
+                    {
+                        m_convertedRootDirectories = RootDirectories.Select(dir => AbsolutePath.Create(pathTable, dir)).ToList();
+                    }
+                }
+            }
+
+            return m_convertedRootDirectories;
+        }
+
+        /// <summary>
+        /// Whether <see cref="WriteMetadata(SidebandMetadata)"/> has been called.
+        /// </summary>
+        public bool IsMetadataWritten => Volatile.Read(ref m_callCounter) >= 1;
 
         /// <summary>
         /// Absolute path of the sideband file this logger writes to.
@@ -138,9 +226,9 @@ namespace BuildXL.Processes
         /// Shared opaque directory outputs of <paramref name="process"/> are used as root directories and
         /// <see cref="GetSidebandFileForProcess"/> is used as log base name.
         ///
-        /// <seealso cref="SharedOpaqueOutputLogger(string, IReadOnlyList{string})"/>
+        /// <seealso cref="SidebandWriter(string, IReadOnlyList{string})"/>
         /// </summary>
-        public SharedOpaqueOutputLogger(PipExecutionContext context, Process process, AbsolutePath sidebandRootDirectory)
+        public SidebandWriter(PipExecutionContext context, Process process, AbsolutePath sidebandRootDirectory)
             : this(
                   GetSidebandFileForProcess(context.PathTable, sidebandRootDirectory, process),
                   process.DirectoryOutputs.Where(d => d.IsSharedOpaque).Select(d => d.Path.ToString(context.PathTable)).ToList())
@@ -158,7 +246,7 @@ namespace BuildXL.Processes
         /// </summary>
         /// <param name="sidebandLogFile">File to which to save the log.</param>
         /// <param name="rootDirectories">Only paths under one of the root directories are recorded in <see cref="RecordFileWrite(PathTable, AbsolutePath)"/>.</param>
-        public SharedOpaqueOutputLogger(string sidebandLogFile, [CanBeNull] IReadOnlyList<string> rootDirectories)
+        public SidebandWriter(string sidebandLogFile, [CanBeNull] IReadOnlyList<string> rootDirectories)
         {
             SidebandLogFile = sidebandLogFile;
             RootDirectories = rootDirectories;
@@ -173,12 +261,6 @@ namespace BuildXL.Processes
                     debug: false,
                     logStats: false,
                     leaveOpen: false);
-            });
-
-            m_lazyWriteHeader = Lazy.Create(() =>
-            {
-                FileEnvelope.WriteHeader(m_lazyBxlWriter.Value.BaseStream, m_envelopeId);
-                return Unit.Void;
             });
         }
 
@@ -212,21 +294,12 @@ namespace BuildXL.Processes
         }
 
         /// <summary>
-        /// Creates a reader for the given sideband file.
-        /// </summary>
-        public static SharedOpaqueSidebandFileReader CreateSidebandFileReader(string filePath)
-        {
-            Contract.Requires(File.Exists(filePath));
-            return new SharedOpaqueSidebandFileReader(filePath);
-        }
-
-        /// <summary>
         /// Returns all paths recorded in the <paramref name="filePath"/> file, even if the
         /// file appears to be corrupted.
         /// 
         /// If file at <paramref name="filePath"/> does not exist, returns an empty iterator.
         /// 
-        /// <seealso cref="SharedOpaqueSidebandFileReader.ReadRecordedPaths"/>
+        /// <seealso cref="SidebandReader.ReadRecordedPaths"/>
         /// </summary>
         public static string[] ReadRecordedPathsFromSidebandFile(string filePath)
         {
@@ -235,21 +308,20 @@ namespace BuildXL.Processes
                 return CollectionUtilities.EmptyArray<string>();
             }
 
-            using (var reader = CreateSidebandFileReader(filePath))
+            using (var reader = new SidebandReader(filePath))
             {
                 reader.ReadHeader(ignoreChecksum: true);
+                reader.ReadMetadata();
                 return reader.ReadRecordedPaths().ToArray();
             }
         }
 
-        /// <summary>
-        /// By calling this method a client can ensure that the sideband file will be created even
-        /// if 0 paths are recorded for it.  If this method is not explicitly called, the sideband
-        /// file will only be created if at least one write is recorded to it.
-        /// </summary>
-        public void EnsureHeaderWritten()
+        public void WriteMetadata(SidebandMetadata metadata)
         {
-            Analysis.IgnoreResult(m_lazyWriteHeader.Value);
+            AssertOrder(ref m_callCounter, cnt => cnt == 1, "WriteMetadata must be called exactly once at the very beginning");
+
+            FileEnvelope.WriteHeader(m_lazyBxlWriter.Value.BaseStream, m_envelopeId);
+            metadata.Serialize(m_lazyBxlWriter.Value);
         }
 
         /// <summary>
@@ -271,11 +343,12 @@ namespace BuildXL.Processes
         /// </remarks>
         public bool RecordFileWrite(PathTable pathTable, AbsolutePath path)
         {
-            if (RootDirectories == null || RootDirectories.Any(dir => path.IsWithin(pathTable, AbsolutePath.Create(pathTable, dir))))
+            AssertOrder(ref m_callCounter, cnt => cnt > 1, "Must call WriteHeader before calling this method");
+
+            if (RootDirectories == null || GetConvertedRootDirectories(pathTable).Any(dir => path.IsWithin(pathTable, dir)))
             {
                 if (m_recordedPathsCache.Add(path))
                 {
-                    EnsureHeaderWritten();
                     m_lazyBxlWriter.Value.Write(path.ToString(pathTable));
                     m_lazyBxlWriter.Value.Flush();
                     return true;
@@ -319,14 +392,17 @@ namespace BuildXL.Processes
         {
             writer.Write(SidebandLogFile);
             writer.Write(RootDirectories, (w, list) => w.WriteReadOnlyList(list, (w2, path) => w2.Write(path)));
+            writer.Write(m_callCounter);
         }
 
         /// <nodoc />
-        public static SharedOpaqueOutputLogger Deserialize(BuildXLReader reader)
+        public static SidebandWriter Deserialize(BuildXLReader reader)
         {
-            return new SharedOpaqueOutputLogger(
+            var writer = new SidebandWriter(
                 sidebandLogFile: reader.ReadString(),
                 rootDirectories: reader.ReadNullable(r => r.ReadReadOnlyList(r2 => r2.ReadString())));
+            writer.m_callCounter = reader.ReadInt32();
+            return writer;
         }
         #endregion
     }
