@@ -181,10 +181,10 @@ namespace BuildXL.Processes
 
         private readonly HashSet<AbsolutePath> m_recordedPathsCache;
         private readonly Lazy<BuildXLWriter> m_lazyBxlWriter;
+        private readonly Lazy<Unit> m_lazyWriteHeader;
         private readonly FileEnvelopeId m_envelopeId;
 
         private IReadOnlyList<AbsolutePath> m_convertedRootDirectories = null;
-        private int m_callCounter = 0;
 
         private IReadOnlyList<AbsolutePath> GetConvertedRootDirectories(PathTable pathTable)
         {
@@ -203,14 +203,14 @@ namespace BuildXL.Processes
         }
 
         /// <summary>
-        /// Whether <see cref="WriteMetadata(SidebandMetadata)"/> has been called.
-        /// </summary>
-        public bool IsMetadataWritten => Volatile.Read(ref m_callCounter) >= 1;
-
-        /// <summary>
         /// Absolute path of the sideband file this logger writes to.
         /// </summary>
         public string SidebandLogFile { get; }
+
+        /// <summary>
+        /// Associated metadata
+        /// </summary>
+        public SidebandMetadata Metadata { get; }
 
         /// <summary>
         /// Only paths under these root directories will be recorded by <see cref="RecordFileWrite(PathTable, AbsolutePath)"/>
@@ -228,8 +228,9 @@ namespace BuildXL.Processes
         ///
         /// <seealso cref="SidebandWriter(string, IReadOnlyList{string})"/>
         /// </summary>
-        public SidebandWriter(PipExecutionContext context, Process process, AbsolutePath sidebandRootDirectory)
+        public SidebandWriter(PipExecutionContext context, Process process, AbsolutePath sidebandRootDirectory, SidebandMetadata metadata)
             : this(
+                  metadata,
                   GetSidebandFileForProcess(context.PathTable, sidebandRootDirectory, process),
                   process.DirectoryOutputs.Where(d => d.IsSharedOpaque).Select(d => d.Path.ToString(context.PathTable)).ToList())
         {
@@ -244,10 +245,12 @@ namespace BuildXL.Processes
         /// 
         /// The underlying file is created only upon first write.
         /// </summary>
+        /// <param name="metadata">Metadata</param>
         /// <param name="sidebandLogFile">File to which to save the log.</param>
         /// <param name="rootDirectories">Only paths under one of the root directories are recorded in <see cref="RecordFileWrite(PathTable, AbsolutePath)"/>.</param>
-        public SidebandWriter(string sidebandLogFile, [CanBeNull] IReadOnlyList<string> rootDirectories)
+        public SidebandWriter(SidebandMetadata metadata, string sidebandLogFile, [CanBeNull] IReadOnlyList<string> rootDirectories)
         {
+            Metadata = metadata;
             SidebandLogFile = sidebandLogFile;
             RootDirectories = rootDirectories;
             m_recordedPathsCache = new HashSet<AbsolutePath>();
@@ -256,11 +259,21 @@ namespace BuildXL.Processes
             m_lazyBxlWriter = Lazy.Create(() =>
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(SidebandLogFile));
-                return new BuildXLWriter(
+                var writer = new BuildXLWriter(
                     stream: new FileStream(SidebandLogFile, FileMode.Create, FileAccess.Write, FileShare.Read | FileShare.Delete),
                     debug: false,
                     logStats: false,
                     leaveOpen: false);
+                FileEnvelope.WriteHeader(writer.BaseStream, m_envelopeId);
+                metadata.Serialize(writer);
+                return writer;
+            });
+
+            m_lazyWriteHeader = Lazy.Create(() =>
+            {
+                FileEnvelope.WriteHeader(m_lazyBxlWriter.Value.BaseStream, m_envelopeId);
+                Metadata.Serialize(m_lazyBxlWriter.Value);
+                return Unit.Void;
             });
         }
 
@@ -316,12 +329,14 @@ namespace BuildXL.Processes
             }
         }
 
-        public void WriteMetadata(SidebandMetadata metadata)
+        /// <summary>
+        /// By calling this method a client can ensure that the sideband file will be created even
+        /// if 0 paths are recorded for it.  If this method is not explicitly called, the sideband
+        /// file will only be created if at least one write is recorded to it.
+        /// </summary>
+        public void EnsureHeaderWritten()
         {
-            AssertOrder(ref m_callCounter, cnt => cnt == 1, "WriteMetadata must be called exactly once at the very beginning");
-
-            FileEnvelope.WriteHeader(m_lazyBxlWriter.Value.BaseStream, m_envelopeId);
-            metadata.Serialize(m_lazyBxlWriter.Value);
+            Analysis.IgnoreResult(m_lazyWriteHeader.Value);
         }
 
         /// <summary>
@@ -343,12 +358,11 @@ namespace BuildXL.Processes
         /// </remarks>
         public bool RecordFileWrite(PathTable pathTable, AbsolutePath path)
         {
-            AssertOrder(ref m_callCounter, cnt => cnt > 1, "Must call WriteHeader before calling this method");
-
             if (RootDirectories == null || GetConvertedRootDirectories(pathTable).Any(dir => path.IsWithin(pathTable, dir)))
             {
                 if (m_recordedPathsCache.Add(path))
                 {
+                    EnsureHeaderWritten();
                     m_lazyBxlWriter.Value.Write(path.ToString(pathTable));
                     m_lazyBxlWriter.Value.Flush();
                     return true;
@@ -392,17 +406,15 @@ namespace BuildXL.Processes
         {
             writer.Write(SidebandLogFile);
             writer.Write(RootDirectories, (w, list) => w.WriteReadOnlyList(list, (w2, path) => w2.Write(path)));
-            writer.Write(m_callCounter);
+            
         }
 
         /// <nodoc />
         public static SidebandWriter Deserialize(BuildXLReader reader)
         {
-            var writer = new SidebandWriter(
+            return new SidebandWriter(
                 sidebandLogFile: reader.ReadString(),
                 rootDirectories: reader.ReadNullable(r => r.ReadReadOnlyList(r2 => r2.ReadString())));
-            writer.m_callCounter = reader.ReadInt32();
-            return writer;
         }
         #endregion
     }

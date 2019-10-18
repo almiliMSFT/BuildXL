@@ -723,8 +723,6 @@ namespace BuildXL.Processes
             ISandboxConnection sandboxConnection = null,
             SidebandWriter sidebandWriter = null)
         {
-            Contract.Requires(sidebandWriter == null || sidebandWriter.IsMetadataWritten, "Sideband metadata must be written before calling this method");
-
             try
             {
                 var sandboxPrepTime = System.Diagnostics.Stopwatch.StartNew();
