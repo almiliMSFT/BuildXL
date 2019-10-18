@@ -16,41 +16,7 @@ int RELEVANT_KAUTH_VNODE_BITS =
 
 void *Listeners::g_dispatcher = nullptr;
 
-bool Match(const char *src, const char *name)
-{
-    if (0 == strncmp(src, "/B2/b/devmain/rawproduct/Debug/build/tmp/AccessibilityTest/AccessibilityTest.build/Debug/AccessibilityTest.build/Objects-normal-asan/x86_64/AccessibilityTest-master.swiftdeps~moduleonly", 1024))
-    {
-        pid_t pid = proc_selfpid();
-        char pname[1000];
-        proc_name(pid, pname, 1000);
-        log_debug("--------- %s strncmp match; Process: '%s'(%05X | %d)", name, pname, pid, pid);
-        return true;
-    }
-
-    return false;
-}
-
-bool MatchVnode(struct vnode *vp, const char *tag)
-{
-    int len = MAXPATHLEN;
-    char path[MAXPATHLEN];
-    vn_getpath(vp, path, &len);
-    return Match(path, tag);
-}
-
-bool MyStrEndsWith(const char *src, const char *find)
-{
-    size_t findLen = strnlen(find, 1024);
-    size_t srcLen = strnlen(src, 1024);
-    if (findLen > srcLen) return false;
-
-    const char *srcStart = src + srcLen - findLen;
-    int i = -1;
-    while (++i < findLen && *srcStart++ == *find++) {}
-    return i == findLen;
-}
-
-int ComputeAbsolutePath(struct vnode *vp, const char *const relPath, size_t relPathLen, char *resultBuf, int resultBufLen)
+static int ComputeAbsolutePath(struct vnode *vp, const char *const relPath, size_t relPathLen, char *resultBuf, int resultBufLen)
 {
     assert(vp != nullptr);
     assert(relPath != nullptr);
@@ -127,14 +93,6 @@ int Listeners::buildxl_vnode_listener(kauth_cred_t credential,
     bool isVnodeAccess = HasAnyFlags(action, KAUTH_VNODE_ACCESS);
     bool hasRelevantVnodeBits = HasAnyFlags(action, RELEVANT_KAUTH_VNODE_BITS);
 
-    int len = MAXPATHLEN;
-    char vpath[MAXPATHLEN];
-    vn_getpath((vnode_t)arg1, vpath, &len);
-    if (Match(vpath, "VNODE_*"))
-    {
-        log_debug("========= VNODE_* match, action: %d", action);
-    }
-
     if (isVnodeAccess || !hasRelevantVnodeBits)
     {
         return KAUTH_RESULT_DEFER;
@@ -161,7 +119,7 @@ int Listeners::mpo_vnode_check_lookup_pre(kauth_cred_t cred,
                                           size_t _)
 {
     do
-    {        
+    {
         TrustedBsdHandler handler = TrustedBsdHandler((BuildXLSandbox*)g_dispatcher);
         if (!handler.TryInitializeWithTrackedProcess(proc_selfpid()))
         {
@@ -177,8 +135,6 @@ int Listeners::mpo_vnode_check_lookup_pre(kauth_cred_t cred,
             break;
         }
 
-        Match(fullpath, "MAC_LOOKUP");        
-
         handler.HandleLookup(fullpath);
     } while(false);
 
@@ -193,7 +149,7 @@ int Listeners::mpo_vnode_check_readlink(kauth_cred_t cred, struct vnode *vp, str
         return KERN_SUCCESS;
     }
 
-    return handler.HandleReadlink(vp);
+    return handler.HandleReadVnode(vp, kOpMacReadlink, /*isVnodDir*/ false);
 }
 
 /*!
@@ -284,14 +240,12 @@ int Listeners::mpo_vnode_check_create(kauth_cred_t cred,
                                       struct componentname *cnp,
                                       struct vnode_attr *vap)
 {
-    // compute full path by getting the absolute path of 'dvp' and appending the component name provided by 'cnp'
-    char path[MAXPATHLEN] = {0};
-    ComputeAbsolutePath(dvp, cnp->cn_nameptr, cnp->cn_namelen, path, sizeof(path));
-    Match(path, "VNODE_CHECK_CREATE");
-
     TrustedBsdHandler handler = TrustedBsdHandler((BuildXLSandbox*)g_dispatcher);
     if (handler.TryInitializeWithTrackedProcess(proc_selfpid()))
     {
+        // compute full path by getting the absolute path of 'dvp' and appending the component name provided by 'cnp'
+        char path[MAXPATHLEN] = {0};
+        ComputeAbsolutePath(dvp, cnp->cn_nameptr, cnp->cn_namelen, path, sizeof(path));
         bool isDir = vap->va_type == VDIR;
         bool isSymlink = vap->va_type == VLNK;
         return handler.HandleVNodeCreateEvent(path, isDir, isSymlink);
@@ -305,16 +259,51 @@ int Listeners::mpo_vnode_check_write(kauth_cred_t active_cred,
                                      struct vnode *vp,
                                      struct label *label)
 {
-    int len = MAXPATHLEN;
-    char vpath[MAXPATHLEN];
-    vn_getpath(vp, vpath, &len);
-    Match(vpath, "VNODE_CHECK_WRITE");
-
     TrustedBsdHandler handler = TrustedBsdHandler((BuildXLSandbox*)g_dispatcher);
     if (!handler.TryInitializeWithTrackedProcess(proc_selfpid()))
     {
         return KERN_SUCCESS;
     }
 
-    return handler.HandleVnodeWrite(vp);
+    return handler.HandleVnodeWrite(vp, kOpMacVNodeWrite);
+}
+
+
+int Listeners::mpo_vnode_check_clone(kauth_cred_t cred,
+                                     struct vnode *dvp,
+                                     struct label *dlabel,
+                                     struct vnode *vp,
+                                     struct label *label,
+                                     struct componentname *cnp)
+{
+    TrustedBsdHandler handler = TrustedBsdHandler((BuildXLSandbox*)g_dispatcher);
+    if (!handler.TryInitializeWithTrackedProcess(proc_selfpid()))
+    {
+        return KERN_SUCCESS;
+    }
+
+    int len = MAXPATHLEN;
+    char sourcePath[MAXPATHLEN];
+    int err = vn_getpath(vp, sourcePath, &len);
+    if (err != 0)
+    {
+        log_error("Could not obtain vnode path inside vnode_check_clone; error: %d", err);
+        return KERN_SUCCESS;
+    }
+
+    int result = handler.HandleReadVnode(vp, kOpMacVNodeCloneSource, /*isVnodeDir*/ false);
+    if (result != KERN_SUCCESS)
+    {
+        return KERN_SUCCESS;
+    }
+
+    char destPath[MAXPATHLEN];
+    err = ComputeAbsolutePath(dvp, cnp->cn_nameptr, cnp->cn_namelen, destPath, MAXPATHLEN);
+    if (err != 0)
+    {
+        log_error("Could not compute absolute path inside vnode_check_clone; error: %d", err);
+        return KERN_SUCCESS;
+    }
+
+    return handler.HandleWritePath(destPath, kOpMacVNodeCloneDest);
 }

@@ -101,25 +101,6 @@ void BuildXLSandbox::stop(IOService *provider)
     super::stop(provider);
 }
 
-extern bool Match(const char *src, const char *tag);
-extern bool MatchVnode(struct vnode *vp, const char *tag);
-extern int ComputeAbsolutePath(struct vnode *vp, const char *const relPath, size_t relPathLen, char *resultBuf, int resultBufLen);
-
-static int CheckClone(
-    kauth_cred_t cred,
-    struct vnode *dvp,
-    struct label *dlabel,
-    struct vnode *vp,
-    struct label *label,
-    struct componentname *cnp
-)
-{
-    char path[MAXPATHLEN];
-    ComputeAbsolutePath(dvp, cnp->cn_nameptr, cnp->cn_namelen, path, MAXPATHLEN);
-    Match(path, "CheckClone");
-    return KERN_SUCCESS;
-}
-
 void BuildXLSandbox::InitializePolicyStructures()
 {
     Listeners::g_dispatcher = this;
@@ -150,7 +131,7 @@ void BuildXLSandbox::InitializePolicyStructures()
 
         .mpo_vnode_check_readlink         = Listeners::mpo_vnode_check_readlink,
 
-        .mpo_vnode_check_clone            = CheckClone,
+        .mpo_vnode_check_clone            = Listeners::mpo_vnode_check_clone,
     };
 
     policyConfiguration_ =
