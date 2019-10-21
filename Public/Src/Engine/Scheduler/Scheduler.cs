@@ -4809,11 +4809,18 @@ namespace BuildXL.Scheduler
         /// <summary>
         /// Initialize runtime state, optionally apply a filter and schedule all ready pips
         /// </summary>
-        public bool InitForMaster(LoggingContext loggingContext, RootFilter filter = null, SchedulerState schedulerState = null, ISandboxConnection sandboxConnectionKext = null)
+        public bool InitForMaster(
+            LoggingContext loggingContext, 
+            RootFilter filter = null, 
+            RangedNodeSet filterPassingNodes = null,
+            SchedulerState schedulerState = null, 
+            ISandboxConnection sandboxConnectionKext = null)
         {
             Contract.Requires(loggingContext != null);
             Contract.Assert(!IsInitialized);
             Contract.Assert(!IsDistributedWorker);
+
+            RootFilter = filter;
 
             using (var pm = PerformanceMeasurement.Start(
                     loggingContext,
@@ -6193,36 +6200,16 @@ namespace BuildXL.Scheduler
         /// their dependencies and (if filter.DependencySelection == DependencySelection.DependenciesAndDependents)
         /// all their dependents.
         /// </summary>
-        private bool TryGetFilteredNodes(LoggingContext loggingContext, RootFilter filter, SchedulerState state, out IEnumerable<NodeId> includedNodes)
+        private bool TryGetFilteredNodes(LoggingContext loggingContext, RangedNodeSet filterPassingNodes, SchedulerState state, out IEnumerable<NodeId> includedNodes)
         {
-            Contract.Requires(filter != null);
             Contract.Assume(IsInitialized);
 
-            RangedNodeSet filterPassingNodesNotYetScheduled;
-
-            // If the previous state is not null and root filter matches, do not need to filter nodes again.
-            if (state?.RootFilter != null && state.RootFilter.Matches(filter))
-            {
-                filterPassingNodesNotYetScheduled = state.FilterPassingNodes;
-            }
-            else if (!PipGraph.FilterNodesToBuild(
-                loggingContext,
-                filter,
-                out filterPassingNodesNotYetScheduled))
-            {
-                // Find which nodes are in the set.
-                Contract.Assume(loggingContext.ErrorWasLogged, "PipGraph.FilterNodesToBuild returned false but didn't log an error");
-                includedNodes = new HashSet<NodeId>();
-                return false;
-            }
-
             // Save the filter and passing nodes for future builds (for SchedulerState in EngineState)
-            FilterPassingNodes = filterPassingNodesNotYetScheduled.Clone();
-            RootFilter = filter;
+            FilterPassingNodes = filterPassingNodes.Clone();
 
             m_explicitlyScheduledNodes = new HashSet<NodeId>();
             m_explicitlyScheduledProcessNodes = new HashSet<NodeId>();
-            foreach (var filteredNode in filterPassingNodesNotYetScheduled)
+            foreach (var filteredNode in filterPassingNodes)
             {
                 m_explicitlyScheduledNodes.Add(filteredNode);
                 if (m_pipTable.GetPipType(filteredNode.ToPipId()) == PipType.Process)

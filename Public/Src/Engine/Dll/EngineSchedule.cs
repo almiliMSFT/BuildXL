@@ -954,6 +954,15 @@ namespace BuildXL.Engine
                 return false;
             }
 
+            // The filter may or may not have already been computed depending on whether there was a graph hit or not.
+            if (filter == null && !TryGetPipFilter(loggingContext, Context, commandLineConfiguration, configuration, out filter))
+            {
+                return false;
+            }
+
+            LogPipFilter(loggingContext, filter);
+            Logger.Log.FilterDetails(loggingContext, filter.GetStatistics());
+
             // Do scrub before init (Scheduler.Init() and Scheduler.InitForWorker()) because init captures and tracks
             // filesystem state used later by the scheduler. Scrubbing modifies the filesystem and would make the state that init captures
             // incorrect if they were to be interleaved.
@@ -966,20 +975,29 @@ namespace BuildXL.Engine
                 return Scheduler.InitForWorker(loggingContext);
             }
 
-            // The filter may or may not have already been computed depending on whether there was a graph hit or not.
-            if (filter == null && !TryGetPipFilter(loggingContext, Context, commandLineConfiguration, configuration, out filter))
-            {
-                return false;
-            }
-
-            LogPipFilter(loggingContext, filter);
-            Logger.Log.FilterDetails(loggingContext, filter.GetStatistics());
-
             var initStopwatch = System.Diagnostics.Stopwatch.StartNew();
             bool initResult = Scheduler.InitForMaster(loggingContext, filter, schedulerState);
             enginePerformanceInfo.SchedulerInitDurationMs = initStopwatch.ElapsedMilliseconds;
 
             return initResult;
+        }
+
+        private RangedNodeSet GetFilteredNodes(LoggingContext loggingContext, SchedulerState state, RootFilter filter)
+        {
+            // If the previous state is not null and root filter matches, do not need to filter nodes again.
+            if (state?.RootFilter != null && state.RootFilter.Matches(filter))
+            {
+                return state.FilterPassingNodes;
+            }
+            else if (Scheduler.PipGraph.FilterNodesToBuild(loggingContext, filter, out var filterPassingNodes))
+            {
+                return filterPassingNodes;
+            }
+            else
+            {
+                Contract.Assume(loggingContext.ErrorWasLogged, "PipGraph.FilterNodesToBuild returned false but didn't log an error");
+                return null;
+            }
         }
 
         /// <summary>
