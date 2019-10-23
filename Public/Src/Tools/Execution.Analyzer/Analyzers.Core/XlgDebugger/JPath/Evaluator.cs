@@ -307,6 +307,20 @@ namespace BuildXL.Execution.Analyzer.JPath
             /// <summary>Switch value or null if no switch is present</summary>
             public Result GetSwitch(string switchName) => m_opts.FirstOrDefault(opt => opt.Name == switchName)?.Value;
 
+            /// <summary>Switch value as string or default value if no switch is present</summary>
+            public string GetStrSwitch(string switchName, string defaultValue) => GetSwitchOrDefault(switchName, sw => Eval.ToString(sw), defaultValue);
+
+            /// <summary>Switch value as number or default value if no switch is present</summary>
+            public long GetNumSwitch(string switchName, long defaultValue) => GetSwitchOrDefault(switchName, sw => Eval.ToNumber(sw), defaultValue);
+
+            private T GetSwitchOrDefault<T>(string switchName, Func<Result, T> eval, T defaultValue)
+            {
+                Result sw = GetSwitch(switchName);
+                return sw != null
+                    ? eval(sw)
+                    : defaultValue;
+            }
+
             /// <summary>
             /// Returns all objects from all args
             /// </summary>
@@ -352,7 +366,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
             #region Helper methods delegating to Eval
 
-            public long ToInt(object obj) => Eval.ToInt(obj);
+            public long ToNumber(object obj) => Eval.ToNumber(obj);
             public bool ToBool(object obj) => Eval.ToBool(obj);
             public string ToString(object obj) => Eval.ToString(obj);
             public object ToScalar(Result res) => Eval.ToScalar(res);
@@ -520,7 +534,7 @@ namespace BuildXL.Execution.Analyzer.JPath
                             return Result.Empty;
                         }
 
-                        return array.ToList().GetRange(index: begin, count: end - begin + 1);
+                        return array.ToList().GetRange(index: (int)begin, count: (int)(end - begin + 1));
 
                     case FilterExpr filterExpr:
                         if (filterExpr.Lhs != null)
@@ -535,6 +549,9 @@ namespace BuildXL.Execution.Analyzer.JPath
 
                     case MapExpr mapExpr:
                         return InNewEnv(mapExpr.Lhs, mapExpr.PropertySelector);
+
+                    case FuncObj funcObj:
+                        return funcObj.Function;
 
                     case FuncAppExpr funcExpr:
                         var funcResult = Eval(funcExpr.Func);
@@ -601,7 +618,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             }
         }
 
-        private long IEval(Expr expr) => ToInt(Eval(expr), source: expr);
+        private long IEval(Expr expr) => ToNumber(Eval(expr), source: expr);
         private bool BEval(Expr expr) => ToBool(Eval(expr), source: expr);
 
         private Result EvalUnaryExpr(UnaryExpr expr)
@@ -610,7 +627,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             switch (expr.Op.Type)
             {
                 case JPathLexer.NOT:   return !ToBool(result, expr);
-                case JPathLexer.MINUS: return -ToInt(result, expr);
+                case JPathLexer.MINUS: return -ToNumber(result, expr);
 
                 default:
                     throw ApplyError(expr.Op);
@@ -713,13 +730,13 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// A <see cref="Result"/> can be converted only if it is a scalar value.
         /// Other than that, only numeric values can be converted to int.
         /// </summary>
-        public long ToInt(object obj, Expr source = null)
+        public long ToNumber(object obj, Expr source = null)
         {
             checked
             {
                 switch (obj)
                 {
-                    case Result r when r.IsScalar: return ToInt(ToScalar(r), source);
+                    case Result r when r.IsScalar: return ToNumber(ToScalar(r), source);
                     case int i:                    return i;
                     case uint ui:                  return (long)ui;
                     case long l:                   return l;

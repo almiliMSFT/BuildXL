@@ -115,7 +115,12 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitStrLitExpr([NotNull] JPathParser.StrLitExprContext context)
         {
-            return new StrLit(context.Value.Text.Trim('"', '\''));
+            return new StrLit(ExtractStringFromStringLiteralToken(context.Value));
+        }
+
+        private string ExtractStringFromStringLiteralToken(IToken token)
+        {
+            return token.Text.Trim('"', '\'');
         }
 
         public override Expr VisitSubExpr([NotNull] JPathParser.SubExprContext context)
@@ -223,6 +228,22 @@ namespace BuildXL.Execution.Analyzer.JPath
                 name: context.Var.Text,
                 value: context.Val.Accept(this),
                 sub: null);
+        }
+
+        public override Expr VisitSaveToFileExpr([NotNull] JPathParser.SaveToFileExprContext context)
+            => SaveOrAppend(context.File, context.Input, append: false);
+        public override Expr VisitAppendToFileExpr([NotNull] JPathParser.AppendToFileExprContext context)
+            => SaveOrAppend(context.File, context.Input, append: true);
+
+        private Expr SaveOrAppend(IToken file, JPathParser.ExprContext input, bool append)
+        {
+            return new FuncAppExpr(
+                func: new FuncObj(append ? LibraryFunctions.AppendFunction : LibraryFunctions.SaveFunction),
+                args: new Expr[]
+                {
+                    new StrLit(ExtractStringFromStringLiteralToken(file)),
+                    input.Accept(this)
+                });
         }
     }
 }

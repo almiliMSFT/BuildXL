@@ -155,6 +155,24 @@ namespace BuildXL.Execution.Analyzer.JPath
     }
 
     /// <summary>
+    /// Wrapper around <see cref="Evaluator.Function"/>.
+    /// </summary>
+    public sealed class FuncObj : Expr
+    {
+        /// <nodoc />
+        public Evaluator.Function Function { get; }
+
+        /// <nodoc />
+        public FuncObj(Evaluator.Function func)
+        {
+            Function = func;
+        }
+
+        /// <inheritdoc />
+        public override string Print() => $"{Function.Name}(...)";
+    }
+
+    /// <summary>
     /// Selects a contiguous range from an array.
     /// 
     /// Syntax example 1: arrayExpr[-2..-1]
