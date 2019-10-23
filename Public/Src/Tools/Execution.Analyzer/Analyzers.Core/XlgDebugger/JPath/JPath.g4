@@ -127,13 +127,21 @@ literal
     | Value=IntLit                                    #IntLitExpr
     ;
 
+propValue
+    : (Name=prop ':')? Value=expr                     
+    ;
+
+objExpr
+    : '{' Props+=propValue (',' Props+=propValue)+ '}'
+    ;    
+
 expr
     : '$'                                             #RootExpr
     | Var=VarId                                       #VarExpr
     | Sub=selector                                    #SelectorExpr
+    | Obj=objExpr                                     #ObjectExpr
     | Lit=literal                                     #LiteralExpr
-    | Lhs=expr '.' Selector=selector                  #MapExpr
-    | Lhs=expr '.' '{' Sub=expr '}'                   #MapGenericExpr
+    | Lhs=expr '.' Sub=expr                           #MapExpr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
