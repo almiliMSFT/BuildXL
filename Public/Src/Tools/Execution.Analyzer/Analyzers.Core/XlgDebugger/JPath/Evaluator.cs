@@ -490,17 +490,16 @@ namespace BuildXL.Execution.Analyzer.JPath
                             .SelectMany(obj => obj.Properties.Where(p => selector.PropertyNames.Contains(p.Name)))
                             .SelectMany(prop =>
                             {
-                                // automatically flatten non-scalar results
                                 switch (prop.Value)
                                 {
                                     case IEnumerable<object> ie: return ie;
-                                    case string str:             return new[] { str }; // string is IEnumerable, so exclude it here
-                                    case IEnumerable ie2:        return ie2.Cast<object>();
+                                    case string str: return new[] { str }; // string is IEnumerable, so exclude it here
+                                    case IEnumerable ie2: return ie2.Cast<object>();
                                     default:
-                                        return new[] { prop.Value };
+                                    return new[] { prop.Value };
                                 }
                             })
-                            .ToList();
+                            .ToArray();
 
                     case RangeExpr rangeExpr:
                         if (rangeExpr.Array != null)
@@ -548,7 +547,12 @@ namespace BuildXL.Execution.Analyzer.JPath
                             .ToList();
 
                     case MapExpr mapExpr:
-                        return InNewEnv(mapExpr.Lhs, mapExpr.PropertySelector);
+                        var lhs = Eval(mapExpr.Lhs);
+                        return lhs
+                            .Select(obj => InNewEnv(Result.Scalar(obj), mapExpr.Sub))
+                            .SelectMany(result => result) // automatically flatten
+                            .ToArray();
+                        //return InNewEnv(mapExpr.Lhs, mapExpr.Sub);
 
                     case FuncObj funcObj:
                         return funcObj.Function;
