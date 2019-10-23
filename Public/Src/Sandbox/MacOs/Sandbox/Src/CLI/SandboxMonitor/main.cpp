@@ -89,7 +89,6 @@ vector<vector<HeaderColumn<Tuple>>> getStackedHeaders(const Config &cfg)
             {   6, "#Forks",  to_getter(t.pip.counters.numForks) },
             {   8, "#C+",     to_getter(t.pip.counters.numCacheHits) },
             {   8, "#C-",     to_getter(t.pip.counters.numCacheMisses) },
-            {   8, "#C",      to_getter(t.pip.cacheSize) },
             {   4, "C%",      to_getter((int)floor(PERCENT(t.pip.counters.numCacheHits.count(), t.pip.counters.numCacheMisses.count()))) },
             {   8, "avg(FP)", to_getter(t.pip.counters.findTrackedProcess) },
             {   8, "avg(SP)", to_getter(t.pip.counters.setLastLookedUpPath) },

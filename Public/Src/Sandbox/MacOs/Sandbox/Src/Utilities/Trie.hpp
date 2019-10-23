@@ -329,7 +329,8 @@ public:
      */
     OSObject* getOrAdd(const char *path, void *factoryArgs, factory_fn factory, TrieResult *result = nullptr)
     {
-        if (kind_ != kPathTrie) return nullptr;
+        if (kind_ != kPathTrie)
+            return nullptr;
         return getOrAdd(findOrCreateNodeForPath(path), factoryArgs, factory, result);
     }
 
@@ -368,7 +369,8 @@ public:
 
     OSObject* getOrAdd(uint64_t key, void *factoryArgs, factory_fn factory, TrieResult *result = nullptr)
     {
-        if (kind_ != kUintTrie) return nullptr;
+        if (kind_ != kUintTrie)
+            return nullptr;
         return getOrAdd(findOrCreateNodeForUint(key), factoryArgs, factory, result);
     }
 

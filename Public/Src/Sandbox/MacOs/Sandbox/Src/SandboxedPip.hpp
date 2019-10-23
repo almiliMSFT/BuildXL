@@ -20,6 +20,8 @@
 
 #define SandboxedPip BXL_CLASS(SandboxedPip)
 
+typedef CacheRecord* (*cache_lookup_fn)(void *state, const char *path, uint64_t pipId);
+
 /*!
  * Represents the root of the process tree being tracked.
  *
@@ -36,6 +38,8 @@ class SandboxedPip : public OSObject
 
 private:
 
+    uint32_t pipOrdinalId_;
+
     /*! Process id of the client tracking this process. */
     pid_t clientPid_;
 
@@ -51,19 +55,14 @@ private:
     /*! Number of processses in this pip's process tree */
     int processTreeCount_;
 
-    /*! Maps every accessed path to a 'CacheRecord' object (which contains caching information regarding that path) */
-    Trie *pathCache_;
-
     /*! A thread-local storage for remembering the last looked up path by every thread. */
     ThreadLocal *lastPathLookup_;
 
+    cache_lookup_fn cacheLookup_;
+    void *cacheLookupState_;
+
     /*! Various counters.  IMPORTANT: counters may be globally disabled so no logic may rely on their values. */
     AllCounters counters_;
-
-    static OSObject* CacheRecordFactory(void *)
-    {
-        return CacheRecord::create();
-    };
 
     bool init(pid_t clientPid, pid_t processPid, Buffer *payload);
 
@@ -141,14 +140,16 @@ public:
      */
     inline CacheRecord* cacheLookup(const char *path)
     {
-        OSObject *value = pathCache_->getOrAdd(path, nullptr, CacheRecordFactory);
-        return OSDynamicCast(CacheRecord, value);
+        return cacheLookup_ != nullptr
+            ? cacheLookup_(cacheLookupState_, path, pipOrdinalId_)
+            : nullptr;
     }
 
 #pragma mark Static Methods
 
     /*! Factory method. The caller is responsible for releasing the returned object. */
-    static SandboxedPip* create(pid_t clientPid, pid_t processPid, Buffer *payload);
+    static SandboxedPip* create(uint32_t pipOrdinalId, pid_t clientPid, pid_t processPid, Buffer *payload,
+                                void *cacheLookupState, cache_lookup_fn cacheLookup);
 };
 
 #endif /* SandboxedPip_hpp */

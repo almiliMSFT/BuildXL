@@ -22,6 +22,10 @@ private:
     BuildXLSandbox *sandbox_;
     task_t task_;
     int detached_;
+    int pipCounter_;
+
+    /*! Maps every accessed path to a PipId -> CacheRecord concurrent dictionary */
+    Trie *pathCache_;
 
     static IOExternalMethodDispatch ipcMethods[kSandboxMethodCount];
 
@@ -69,6 +73,8 @@ protected:
     IOReturn SetFailureNotificationHandler(OSAsyncReference64 ref);
 
 public:
+
+    CacheRecord* CacheLookup(const char *path, uint64_t pipId);
 
     IOReturn SendAsyncResult(OSAsyncReference64 ref, IOReturn result);
 };

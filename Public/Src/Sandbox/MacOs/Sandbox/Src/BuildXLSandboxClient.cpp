@@ -20,13 +20,19 @@ OSDefineMetaClassAndStructors(BuildXLSandboxClient, IOUserClient)
 #define kNotDetached 0
 #define kDetached    1
 
+static CacheRecord* CacheLookupFunction(void *state, const char *path, uint64_t pipId)
+{
+    return ((BuildXLSandboxClient*)state)->CacheLookup(path, pipId);
+}
+
 bool BuildXLSandboxClient::initWithTask(task_t owningTask,
                                     void *securityToken,
                                     UInt32 type)
 {
-    task_     = owningTask;
-    sandbox_  = nullptr;
-    detached_ = kNotDetached;
+    task_       = owningTask;
+    sandbox_    = nullptr;
+    detached_   = kNotDetached;
+    pipCounter_ = 0;
 
     return super::initWithTask(owningTask, securityToken, type);
 }
@@ -37,6 +43,12 @@ bool BuildXLSandboxClient::start(IOService *provider)
     // Verify that the provider is the BuildXLSandbox, otherwise fail!
     sandbox_ = OSDynamicCast(BuildXLSandbox, provider);
     if (sandbox_ == nullptr)
+    {
+        return false;
+    }
+
+    pathCache_ = Trie::createPathTrie();
+    if (pathCache_ == nullptr)
     {
         return false;
     }
@@ -58,6 +70,8 @@ void BuildXLSandboxClient::detach(IOService *provider)
         pid_t clientPid = proc_selfpid();
         LogVerbose("Releasing resources for client PID(%d)", clientPid);
         sandbox_->DeallocateClient(clientPid);
+        OSSafeReleaseNULL(pathCache_);
+        pipCounter_ = 0;
         super::detach(provider);
     }
 }
@@ -336,7 +350,9 @@ IOReturn BuildXLSandboxClient::ProcessPipStarted(PipStateChangedRequest *data)
     }
 
     // Create a SandboxedPip
-    SandboxedPip *pip = SandboxedPip::create(data->clientPid, data->processId, ioBuffer);
+    uint32_t pipOrdinalId = OSIncrementAtomic(&pipCounter_);
+    SandboxedPip *pip = SandboxedPip::create(pipOrdinalId, data->clientPid, data->processId, ioBuffer,
+                                             this, CacheLookupFunction);
     AutoRelease _p(pip);
     if (pip == nullptr)
     {
@@ -393,5 +409,34 @@ IOReturn BuildXLSandboxClient::SendAsyncResult(OSAsyncReference64 ref, IOReturn 
     // We can extend this method and the actual call to pass along more context if needed later
     return sendAsyncResult64(ref, result, NULL, 0);
 }
+
+static OSObject* PipIdToCacheRecordFactory(void *data)
+{
+    return Trie::createUintTrie();
+}
+
+static OSObject* CacheRecordFactory(void *data)
+{
+    return CacheRecord::create();
+}
+
+CacheRecord* BuildXLSandboxClient::CacheLookup(const char *path, uint64_t pipId)
+{
+    OSObject *dict = pathCache_->getOrAdd(path, nullptr, PipIdToCacheRecordFactory);
+    if (dict == nullptr)
+    {
+        return nullptr;
+    }
+
+    OSObject *cr = OSDynamicCast(Trie, dict)->getOrAdd(pipId, nullptr, CacheRecordFactory);
+    if (cr == nullptr)
+    {
+        log_error("==== CacheRecord could not be created for path '%s' and pip id: %lld", path, pipId);
+        return nullptr;
+    }
+
+    return OSDynamicCast(CacheRecord, cr);
+}
+
 
 #undef super

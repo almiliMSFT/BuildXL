@@ -187,9 +187,16 @@ OSObject* Trie::get(Node *node)
 
 OSObject* Trie::getOrAdd(Node *node, void *factoryArgs, factory_fn factory, TrieResult *result)
 {
-    if (node == nullptr) return nullptr;
+    if (node == nullptr)
+    {
+        return nullptr;
+    }
     auto sentinelResult = makeSentinel(node, factoryArgs, factory);
     if (result) *result = sentinelResult;
+    if (node->record_ == nullptr)
+    {
+        log_error("==== No record created; result: %d", sentinelResult);
+    }
     return node->record_;
 }
 
@@ -558,6 +565,8 @@ Node* Trie::findPathNode(const char *path, bool createIfMissing)
         int idx = s_char2idx[ch];
         if (!findChildNode(currNode, idx, createIfMissing))
         {
+            if (createIfMissing)
+                log_error("==== Could not find a node for path %s; ch: %c, idx: %d", path, ch, idx);
             return nullptr;
         }
         currNode = currNode->children()[idx];
@@ -577,6 +586,8 @@ Node* Trie::findUintNode(uint64_t key, bool createIfMissing)
 
         if (!findChildNode(currNode, lsd, createIfMissing))
         {
+            if (createIfMissing)
+                log_error("==== Could not find a node for key %lld; lsd: %d, createIfMissing: %d", key, lsd, createIfMissing);
             return nullptr;
         }
 

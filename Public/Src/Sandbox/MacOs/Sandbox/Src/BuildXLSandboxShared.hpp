@@ -210,7 +210,6 @@ typedef struct {
     pid_t pid;
     pid_t clientPid;
     pipid_t pipId;
-    uint64_t cacheSize;
     int32_t treeSize;
     AllCounters counters;
     int8_t numReportedChildren;

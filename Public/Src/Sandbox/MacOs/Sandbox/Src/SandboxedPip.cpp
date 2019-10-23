@@ -29,12 +29,6 @@ bool SandboxedPip::init(pid_t clientPid, pid_t processPid, Buffer *payload)
         return false;
     }
 
-    pathCache_ = Trie::createPathTrie();
-    if (!pathCache_)
-    {
-        return false;
-    }
-    
     lastPathLookup_ = ThreadLocal::create();
     if (!lastPathLookup_)
     {
@@ -46,22 +40,22 @@ bool SandboxedPip::init(pid_t clientPid, pid_t processPid, Buffer *payload)
 
 void SandboxedPip::free()
 {
-    if (pathCache_ != nullptr && lastPathLookup_ != nullptr)
+    if (lastPathLookup_ != nullptr)
     {
         log_verbose(
             g_bxl_verbose_logging,
-           "Process Stats PID(%d) :: #cache hits = %d, #cache misses = %d, cache size = %d, thread local size = %d",
+           "Process Stats PID(%d) :: #cache hits = %d, #cache misses = %d, thread local size = %d",
             processId_, counters_.numCacheHits.count(), counters_.numCacheMisses.count(),
-            pathCache_->getCount(), lastPathLookup_->getCount());
+            lastPathLookup_->getCount());
     }
 
     OSSafeReleaseNULL(payload_);
     OSSafeReleaseNULL(lastPathLookup_);
-    OSSafeReleaseNULL(pathCache_);
     super::free();
 }
 
-SandboxedPip* SandboxedPip::create(pid_t clientPid, pid_t processPid, Buffer *payload)
+SandboxedPip* SandboxedPip::create(uint32_t pipOrdinalId, pid_t clientPid, pid_t processPid, Buffer *payload,
+                                   void *cacheLookupState, cache_lookup_fn cacheLookup)
 {
     SandboxedPip *instance = new SandboxedPip;
     if (instance == nullptr)
@@ -77,6 +71,10 @@ SandboxedPip* SandboxedPip::create(pid_t clientPid, pid_t processPid, Buffer *pa
         OSSafeReleaseNULL(instance);
         return nullptr;
     }
+
+    instance->pipOrdinalId_ = pipOrdinalId;
+    instance->cacheLookupState_ = cacheLookupState;
+    instance->cacheLookup_ = cacheLookup;
     
     return instance;
 }
@@ -88,7 +86,6 @@ PipInfo SandboxedPip::introspect() const
         .pid                 = getProcessId(),
         .clientPid           = getClientPid(),
         .pipId               = getPipId(),
-        .cacheSize           = pathCache_->getCount(),
         .treeSize            = getTreeSize(),
         .counters            = counters_,
         .numReportedChildren = 0,
