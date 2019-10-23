@@ -400,6 +400,20 @@ public partial class JPathBaseListener : IJPathListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitCardinalityExpr([NotNull] JPathParser.CardinalityExprContext context) { }
 	/// <summary>
+	/// Enter a parse tree produced by the <c>SaveToFileExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterSaveToFileExpr([NotNull] JPathParser.SaveToFileExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>SaveToFileExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitSaveToFileExpr([NotNull] JPathParser.SaveToFileExprContext context) { }
+	/// <summary>
 	/// Enter a parse tree produced by the <c>LetExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// <para>The default implementation does nothing.</para>
@@ -427,6 +441,20 @@ public partial class JPathBaseListener : IJPathListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitSubExpr([NotNull] JPathParser.SubExprContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>AppendToFileExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterAppendToFileExpr([NotNull] JPathParser.AppendToFileExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>AppendToFileExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitAppendToFileExpr([NotNull] JPathParser.AppendToFileExprContext context) { }
 	/// <summary>
 	/// Enter a parse tree produced by the <c>BinExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.

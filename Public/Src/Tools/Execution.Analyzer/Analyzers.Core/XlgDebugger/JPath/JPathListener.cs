@@ -342,6 +342,18 @@ public interface IJPathListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitCardinalityExpr([NotNull] JPathParser.CardinalityExprContext context);
 	/// <summary>
+	/// Enter a parse tree produced by the <c>SaveToFileExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterSaveToFileExpr([NotNull] JPathParser.SaveToFileExprContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>SaveToFileExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitSaveToFileExpr([NotNull] JPathParser.SaveToFileExprContext context);
+	/// <summary>
 	/// Enter a parse tree produced by the <c>LetExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
@@ -365,6 +377,18 @@ public interface IJPathListener : IParseTreeListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void ExitSubExpr([NotNull] JPathParser.SubExprContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>AppendToFileExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterAppendToFileExpr([NotNull] JPathParser.AppendToFileExprContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>AppendToFileExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitAppendToFileExpr([NotNull] JPathParser.AppendToFileExprContext context);
 	/// <summary>
 	/// Enter a parse tree produced by the <c>BinExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
