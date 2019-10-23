@@ -100,6 +100,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             // implicit conversions
 
             public static implicit operator Result(int scalar)       => Scalar(scalar);
+            public static implicit operator Result(long scalar)      => Scalar(scalar);
             public static implicit operator Result(bool scalar)      => Scalar(scalar);
             public static implicit operator Result(string scalar)    => Scalar(scalar);
             public static implicit operator Result(Regex scalar)     => Scalar(scalar);
@@ -351,7 +352,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
             #region Helper methods delegating to Eval
 
-            public int ToInt(object obj) => Eval.ToInt(obj);
+            public long ToInt(object obj) => Eval.ToInt(obj);
             public bool ToBool(object obj) => Eval.ToBool(obj);
             public string ToString(object obj) => Eval.ToString(obj);
             public object ToScalar(Result res) => Eval.ToScalar(res);
@@ -600,7 +601,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             }
         }
 
-        private int IEval(Expr expr) => ToInt(Eval(expr), source: expr);
+        private long IEval(Expr expr) => ToInt(Eval(expr), source: expr);
         private bool BEval(Expr expr) => ToBool(Eval(expr), source: expr);
 
         private Result EvalUnaryExpr(UnaryExpr expr)
@@ -712,17 +713,22 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// A <see cref="Result"/> can be converted only if it is a scalar value.
         /// Other than that, only numeric values can be converted to int.
         /// </summary>
-        public int ToInt(object obj, Expr source = null)
+        public long ToInt(object obj, Expr source = null)
         {
-            switch (obj)
+            checked
             {
-                case Result r when r.IsScalar: return ToInt(ToScalar(r), source);
-                case int i:                    return i;
-                case long l:                   return (int)l;
-                case byte b:                   return b;
-                case short s:                  return s;
-                default:
-                    throw TypeError(obj, "int", source);
+                switch (obj)
+                {
+                    case Result r when r.IsScalar: return ToInt(ToScalar(r), source);
+                    case int i:                    return i;
+                    case uint ui:                  return (long)ui;
+                    case long l:                   return l;
+                    case ulong ul:                 return (long)ul;
+                    case byte b:                   return b;
+                    case short s:                  return s;
+                    default:
+                        throw TypeError(obj, "int", source);
+                }
             }
         }
 
