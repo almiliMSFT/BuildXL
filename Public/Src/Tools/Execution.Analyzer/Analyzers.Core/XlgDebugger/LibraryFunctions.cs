@@ -13,7 +13,7 @@ namespace BuildXL.Execution.Analyzer
     public static class LibraryFunctions
     {
         public static readonly Function SaveFunction = new Function(name: "save", minArity: 2, func: Save);
-        public static readonly Function AppendFunction = new Function(name: "save", minArity: 2, func: Append);
+        public static readonly Function AppendFunction = new Function(name: "append", minArity: 2, func: Append);
 
         public static readonly IReadOnlyList<Function> All = new List<Function>
         {

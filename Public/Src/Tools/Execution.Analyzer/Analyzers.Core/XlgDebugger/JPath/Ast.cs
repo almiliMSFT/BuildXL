@@ -222,18 +222,20 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// <summary>Collection to map <see cref="PropertySelector"/> over.</summary>
         public Expr Lhs { get; }
 
-        /// <summary>Property to select from each value in <see cref="Lhs"/></summary>
-        public Selector PropertySelector { get; }
+        /// <summary>Expression to evaluato against each value in <see cref="Lhs"/></summary>
+        public Expr Sub { get; }
 
         /// <nodoc />
-        public MapExpr(Expr lhs, Selector propertyName)
+        public MapExpr(Expr lhs, Expr sub)
         {
             Lhs = lhs;
-            PropertySelector = propertyName;
+            Sub = sub;
         }
 
         /// <inheritdoc />
-        public override string Print() => $"{Lhs.Print()}.{PropertySelector.Print()}";
+        public override string Print() => Sub is Selector
+            ? $"{Lhs.Print()}.{Sub.Print()}"
+            : $"{Lhs.Print()}.{{{Sub.Print()}}}";
     }
 
     /// <summary>
