@@ -40,7 +40,7 @@ CONCAT    : '++' ;
 INTERSECT : '&'  ;
 
 IntLit
-    : [0-9]+ ;
+    : '-'?[0-9]+ ;
 
 StrLit
     : '\'' ~[']* '\''
@@ -141,6 +141,8 @@ expr
     | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExprParen
     | Func=expr OptName=Opt (OptValue=literal)?       #FuncOptExpr
     | Input=expr '|' Func=expr                        #PipeExpr
+    | Input=expr '|>' File=StrLit                     #SaveToFileExpr
+    | Input=expr '|>>' File=StrLit                    #AppendToFileExpr
     | Lhs=expr Op=anyBinaryOp Rhs=expr                #BinExpr
     | '(' Sub=expr ')'                                #SubExpr
     | 'let' Var=VarId ':=' Val=expr 'in' Sub=expr?    #LetExpr 
