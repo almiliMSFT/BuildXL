@@ -132,7 +132,7 @@ propVal
     ;
 
 objLit
-    : '{' Props+=propVal (',' Props+=propVal)+ '}'    #ObjLitProps
+    : '{' Props+=propVal (',' Props+=propVal)* '}'    #ObjLitProps
     ;    
 
 expr
