@@ -48,7 +48,7 @@ typedef struct {
 #define to_getter(x) [](Tuple t) { return to_string(x); }
 #define DIV(a, b) (((b) == 0) ? 0 : ((a) / (b)))
 #define DIV2(a, b) (((b) == 0) ? 0.00 : ((a) / (1.0 * (b))))
-#define PERCENT(a, b) DIV2(a * 100, a + b)
+#define PERCENT(a, b) DIV2(a, a/100.0 + b/100.0)
 
 string renderDouble(double d, int precision = 2)
 {
