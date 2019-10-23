@@ -44,12 +44,24 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         public override Expr VisitMapExpr([NotNull] JPathParser.MapExprContext context)
         {
-            return new MapExpr(context.Lhs.Accept(this), context.Selector.Accept(this));
+            return new MapExpr(context.Lhs.Accept(this), context.Sub.Accept(this));
         }
 
-        public override Expr VisitMapGenericExpr([NotNull] JPathParser.MapGenericExprContext context)
+        public override Expr VisitObjLitExpr([NotNull] JPathParser.ObjLitExprContext context)
         {
-            return new MapExpr(context.Lhs.Accept(this), context.Sub.Accept(this));
+            return context.Obj.Accept(this);
+        }
+
+        public override Expr VisitObjLitProps([NotNull] JPathParser.ObjLitPropsContext context)
+        {
+            return new ObjLit(props: context._Props.Select(p => p.Accept(this)).Cast<PropVal>());
+        }
+
+        public override Expr VisitPropertyValue([NotNull] JPathParser.PropertyValueContext context)
+        {
+            return new PropVal(
+                name: (context.Name?.Accept(this) as Selector)?.PropertyNames?.First(),
+                value: context.Value.Accept(this));
         }
 
         public override Expr VisitRangeExpr([NotNull] JPathParser.RangeExprContext context)

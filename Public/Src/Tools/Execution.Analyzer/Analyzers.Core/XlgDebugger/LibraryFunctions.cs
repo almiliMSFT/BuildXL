@@ -24,7 +24,7 @@ namespace BuildXL.Execution.Analyzer
              new Function(name: "sort",   minArity: 1, func: Sort),
              new Function(name: "join",   minArity: 1, func: Join),
              new Function(name: "grep",   minArity: 2, func: Grep),
-             new Function(name: "strcat", minArity: 2, func: StrCat),
+             new Function(name: "strcat", minArity: 1, func: StrCat),
              new Function(name: "head",   minArity: 1, func: Head),
              new Function(name: "tail",   minArity: 1, func: Tail),
              SaveFunction,

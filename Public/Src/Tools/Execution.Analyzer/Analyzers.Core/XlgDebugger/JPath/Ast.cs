@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Antlr4.Runtime;
 using BuildXL.Utilities.Collections;
+using JetBrains.Annotations;
 
 namespace BuildXL.Execution.Analyzer.JPath
 {
@@ -171,6 +172,40 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// <inheritdoc />
         public override string Print() => $"{Function.Name}(...)";
     }
+
+    public sealed class PropVal : Expr
+    {
+        [CanBeNull] public string Name { get; }
+        public Expr Value { get; }
+
+        public PropVal([CanBeNull] string name, Expr value)
+        {
+            Contract.Requires(value != null);
+            Name = name;
+            Value = value;
+        }
+
+        public override string Print() => Name != null 
+            ? $"{Name}: {Value.Print()}"
+            : $"{Value.Print()}";
+    }
+
+    public sealed class ObjLit : Expr
+    {
+        public IReadOnlyList<PropVal> Props { get; }
+
+        public ObjLit(IEnumerable<PropVal> props)
+        {
+            Props = new List<PropVal>(props);
+        }
+
+        public override string Print()
+        {
+            var props = string.Join(", ", Props.Select(p => p.Print()));
+            return $"{{ {props} }}";
+        }
+    }
+
 
     /// <summary>
     /// Selects a contiguous range from an array.

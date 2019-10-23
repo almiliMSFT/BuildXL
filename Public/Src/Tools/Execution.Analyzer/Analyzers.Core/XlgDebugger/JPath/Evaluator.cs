@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Antlr4.Runtime;
 using BuildXL.FrontEnd.Script.Debugger;
+using BuildXL.FrontEnd.Script.Values;
 using BuildXL.Utilities;
 using BuildXL.Utilities.Collections;
 using JetBrains.Annotations;
@@ -552,7 +553,14 @@ namespace BuildXL.Execution.Analyzer.JPath
                             .Select(obj => InNewEnv(Result.Scalar(obj), mapExpr.Sub))
                             .SelectMany(result => result) // automatically flatten
                             .ToArray();
-                        //return InNewEnv(mapExpr.Lhs, mapExpr.Sub);
+
+                    case ObjLit objLit:
+                        var props = objLit.Props
+                            .Select((prop, idx) => new Property(
+                                name: prop.Name ?? $"Item{idx}",
+                                value: Eval(prop.Value)))
+                            .ToArray();
+                        return new ObjectInfo(properties: props);
 
                     case FuncObj funcObj:
                         return funcObj.Function;
