@@ -133,6 +133,7 @@ expr
     | Sub=selector                                    #SelectorExpr
     | Lit=literal                                     #LiteralExpr
     | Lhs=expr '.' Selector=selector                  #MapExpr
+    | Lhs=expr '.' '{' E=expr '}'                     #Map2Expr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
     | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
     | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr

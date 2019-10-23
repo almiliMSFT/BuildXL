@@ -319,5 +319,12 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitFuncAppExprParen([NotNull] JPathParser.FuncAppExprParenContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Map2Expr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitMap2Expr([NotNull] JPathParser.Map2ExprContext context);
 }
 } // namespace BuildXL.Execution.Analyzer.JPath
