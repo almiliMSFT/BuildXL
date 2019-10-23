@@ -194,17 +194,19 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitIntLitExpr([NotNull] JPathParser.IntLitExprContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="JPathParser.propValue"/>.
+	/// Visit a parse tree produced by the <c>PropertyValue</c>
+	/// labeled alternative in <see cref="JPathParser.propVal"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitPropValue([NotNull] JPathParser.PropValueContext context);
+	Result VisitPropertyValue([NotNull] JPathParser.PropertyValueContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="JPathParser.objExpr"/>.
+	/// Visit a parse tree produced by the <c>ObjLitProps</c>
+	/// labeled alternative in <see cref="JPathParser.objLit"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitObjExpr([NotNull] JPathParser.ObjExprContext context);
+	Result VisitObjLitProps([NotNull] JPathParser.ObjLitPropsContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>MapExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
@@ -297,19 +299,19 @@ public interface IJPathVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitFilterExpr([NotNull] JPathParser.FilterExprContext context);
 	/// <summary>
-	/// Visit a parse tree produced by the <c>ObjectExpr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitObjectExpr([NotNull] JPathParser.ObjectExprContext context);
-	/// <summary>
 	/// Visit a parse tree produced by the <c>RootExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitRootExpr([NotNull] JPathParser.RootExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ObjLitExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitObjLitExpr([NotNull] JPathParser.ObjLitExprContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>PipeExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
