@@ -697,31 +697,22 @@ namespace BuildXL.Execution.Analyzer.JPath
         public bool Matches(string lhsStr, Result rhs)
         {
             var rhsVal = ToScalar(rhs);
-            switch (rhsVal)
+            return rhsVal switch
             {
-                case string str: return lhsStr.ToUpperInvariant().Contains(str.ToUpperInvariant());
-                case Regex regex: return regex.Match(lhsStr).Success;
-                default:
-                    throw TypeError(rhsVal, "string | Regex");
-            }
+                string str  => lhsStr.ToUpperInvariant().Contains(str.ToUpperInvariant()),
+                Regex regex => regex.Match(lhsStr).Success,
+                _           => throw TypeError(rhsVal, "string | Regex")
+            };
         }
 
         /// <summary>
-        /// Uses the current environment to resolve <paramref name="obj"/> and returns its "preview" string.
+        /// Uses the current environment to resolve <paramref name="obj"/>.
         /// 
         /// Every object can be resolved to something, so this function never fails.
         /// </summary>
-        public string PreviewObj(object obj)
-        {
-            var env = TopEnv;
-            if (env == null)
-            {
-                return obj?.ToString() ?? "<null>";
-            }
+        public string PreviewObj(object obj) => Resolve(obj)?.Preview ?? obj?.ToString() ?? "<null>";
 
-            var objInfo = env.Resolver(obj);
-            return objInfo.Preview;
-        }
+        internal ObjectInfo Resolve(object obj) => TopEnv?.Resolver?.Invoke(obj);
 
         /// <summary>
         /// Returns the single value if <paramref name="value"/> is scalar; otherwise throws.

@@ -27,6 +27,8 @@ namespace BuildXL.Execution.Analyzer
              new Function(name: "strcat", minArity: 1, func: StrCat),
              new Function(name: "head",   minArity: 1, func: Head),
              new Function(name: "tail",   minArity: 1, func: Tail),
+             new Function(name: "toJson", minArity: 1, func: ToJson),
+             new Function(name: "toCsv",  minArity: 1, func: ToCsv),
              SaveFunction,
              AppendFunction
         };
@@ -123,6 +125,43 @@ namespace BuildXL.Execution.Analyzer
             var numElements = (int)args.GetNumSwitch("n", 10);
             var flattened = args.Flatten().ToList();
             return flattened.Skip(flattened.Count - numElements).ToArray();
+        }
+
+        private static Result ToJson(Evaluator.Args args)
+        {
+            return Newtonsoft.Json.JsonConvert.SerializeObject(ExtractObjects(args), Newtonsoft.Json.Formatting.Indented);
+        }
+
+        private static Result ToCsv(Evaluator.Args args)
+        {
+            return string.Join(
+                Environment.NewLine,
+                ExtractObjects(args).Select(dict => string.Join(
+                    ",", 
+                    dict.Values.Select(v => v?.ToString()).Select(csvEscape))));
+
+            static string csvEscape(string str)
+            {
+                return '"' + str?.Replace("\"", "\"\"") ?? string.Empty + '"';
+            }
+        }
+
+        private static Dictionary<string, object>[] ExtractObjects(Evaluator.Args args)
+        {
+            return args
+                .Flatten()
+                .Select(o => args.Eval.Resolve(o))
+                .Select(o => o.Properties.ToDictionary(p => p.Name, p => extractValue(p.Value)))
+                .ToArray();
+
+            static object extractValue(object val)
+            {
+                return val switch
+                {
+                    Result r => r.IsScalar ? r.Value.First() : r.Value.ToArray(),
+                    _        => val,
+                };
+            }
         }
 
         private static Result Grep(Evaluator.Args args)
