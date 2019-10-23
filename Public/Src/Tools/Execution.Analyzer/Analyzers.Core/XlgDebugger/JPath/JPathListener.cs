@@ -438,6 +438,18 @@ public interface IJPathListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitAssignExpr([NotNull] JPathParser.AssignExprContext context);
 	/// <summary>
+	/// Enter a parse tree produced by the <c>MapGenericExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterMapGenericExpr([NotNull] JPathParser.MapGenericExprContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>MapGenericExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitMapGenericExpr([NotNull] JPathParser.MapGenericExprContext context);
+	/// <summary>
 	/// Enter a parse tree produced by the <c>SelectorExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// </summary>
@@ -521,17 +533,5 @@ public interface IJPathListener : IParseTreeListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void ExitFuncAppExprParen([NotNull] JPathParser.FuncAppExprParenContext context);
-	/// <summary>
-	/// Enter a parse tree produced by the <c>Map2Expr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterMap2Expr([NotNull] JPathParser.Map2ExprContext context);
-	/// <summary>
-	/// Exit a parse tree produced by the <c>Map2Expr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitMap2Expr([NotNull] JPathParser.Map2ExprContext context);
 }
 } // namespace BuildXL.Execution.Analyzer.JPath

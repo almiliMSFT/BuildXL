@@ -512,6 +512,20 @@ public partial class JPathBaseListener : IJPathListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitAssignExpr([NotNull] JPathParser.AssignExprContext context) { }
 	/// <summary>
+	/// Enter a parse tree produced by the <c>MapGenericExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterMapGenericExpr([NotNull] JPathParser.MapGenericExprContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>MapGenericExpr</c>
+	/// labeled alternative in <see cref="JPathParser.expr"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitMapGenericExpr([NotNull] JPathParser.MapGenericExprContext context) { }
+	/// <summary>
 	/// Enter a parse tree produced by the <c>SelectorExpr</c>
 	/// labeled alternative in <see cref="JPathParser.expr"/>.
 	/// <para>The default implementation does nothing.</para>
@@ -609,20 +623,6 @@ public partial class JPathBaseListener : IJPathListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitFuncAppExprParen([NotNull] JPathParser.FuncAppExprParenContext context) { }
-	/// <summary>
-	/// Enter a parse tree produced by the <c>Map2Expr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void EnterMap2Expr([NotNull] JPathParser.Map2ExprContext context) { }
-	/// <summary>
-	/// Exit a parse tree produced by the <c>Map2Expr</c>
-	/// labeled alternative in <see cref="JPathParser.expr"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void ExitMap2Expr([NotNull] JPathParser.Map2ExprContext context) { }
 
 	/// <inheritdoc/>
 	/// <remarks>The default implementation does nothing.</remarks>

@@ -1585,6 +1585,30 @@ public partial class JPathParser : Parser {
 			else return visitor.VisitChildren(this);
 		}
 	}
+	public partial class MapGenericExprContext : ExprContext {
+		public ExprContext Lhs;
+		public ExprContext Sub;
+		public ExprContext[] expr() {
+			return GetRuleContexts<ExprContext>();
+		}
+		public ExprContext expr(int i) {
+			return GetRuleContext<ExprContext>(i);
+		}
+		public MapGenericExprContext(ExprContext context) { CopyFrom(context); }
+		public override void EnterRule(IParseTreeListener listener) {
+			IJPathListener typedListener = listener as IJPathListener;
+			if (typedListener != null) typedListener.EnterMapGenericExpr(this);
+		}
+		public override void ExitRule(IParseTreeListener listener) {
+			IJPathListener typedListener = listener as IJPathListener;
+			if (typedListener != null) typedListener.ExitMapGenericExpr(this);
+		}
+		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
+			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
+			if (typedVisitor != null) return typedVisitor.VisitMapGenericExpr(this);
+			else return visitor.VisitChildren(this);
+		}
+	}
 	public partial class SelectorExprContext : ExprContext {
 		public SelectorContext Sub;
 		public SelectorContext selector() {
@@ -1729,30 +1753,6 @@ public partial class JPathParser : Parser {
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitFuncAppExprParen(this);
-			else return visitor.VisitChildren(this);
-		}
-	}
-	public partial class Map2ExprContext : ExprContext {
-		public ExprContext Lhs;
-		public ExprContext E;
-		public ExprContext[] expr() {
-			return GetRuleContexts<ExprContext>();
-		}
-		public ExprContext expr(int i) {
-			return GetRuleContext<ExprContext>(i);
-		}
-		public Map2ExprContext(ExprContext context) { CopyFrom(context); }
-		public override void EnterRule(IParseTreeListener listener) {
-			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.EnterMap2Expr(this);
-		}
-		public override void ExitRule(IParseTreeListener listener) {
-			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.ExitMap2Expr(this);
-		}
-		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitMap2Expr(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
@@ -1918,14 +1918,14 @@ public partial class JPathParser : Parser {
 						break;
 					case 4:
 						{
-						_localctx = new Map2ExprContext(new ExprContext(_parentctx, _parentState));
-						((Map2ExprContext)_localctx).Lhs = _prevctx;
+						_localctx = new MapGenericExprContext(new ExprContext(_parentctx, _parentState));
+						((MapGenericExprContext)_localctx).Lhs = _prevctx;
 						PushNewRecursionContext(_localctx, _startState, RULE_expr);
 						State = 155;
 						if (!(Precpred(Context, 14))) throw new FailedPredicateException(this, "Precpred(Context, 14)");
 						State = 156; Match(T__3);
 						State = 157; Match(T__4);
-						State = 158; ((Map2ExprContext)_localctx).E = expr(0);
+						State = 158; ((MapGenericExprContext)_localctx).Sub = expr(0);
 						State = 159; Match(T__5);
 						}
 						break;
