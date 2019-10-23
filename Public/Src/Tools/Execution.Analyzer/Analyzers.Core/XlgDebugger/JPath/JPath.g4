@@ -127,19 +127,19 @@ literal
     | Value=IntLit                                    #IntLitExpr
     ;
 
-propValue
-    : (Name=prop ':')? Value=expr                     
+propVal
+    : (Name=prop ':')? Value=expr                     #PropertyValue
     ;
 
-objExpr
-    : '{' Props+=propValue (',' Props+=propValue)+ '}'
+objLit
+    : '{' Props+=propVal (',' Props+=propVal)+ '}'    #ObjLitProps
     ;    
 
 expr
     : '$'                                             #RootExpr
     | Var=VarId                                       #VarExpr
     | Sub=selector                                    #SelectorExpr
-    | Obj=objExpr                                     #ObjectExpr
+    | Obj=objLit                                      #ObjLitExpr
     | Lit=literal                                     #LiteralExpr
     | Lhs=expr '.' Sub=expr                           #MapExpr
     | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr

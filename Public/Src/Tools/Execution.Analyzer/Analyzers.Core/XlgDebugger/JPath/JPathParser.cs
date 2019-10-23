@@ -47,11 +47,11 @@ public partial class JPathParser : Parser {
 		RULE_intBinaryOp = 0, RULE_intUnaryOp = 1, RULE_boolBinaryOp = 2, RULE_logicBinaryOp = 3, 
 		RULE_logicUnaryOp = 4, RULE_arrayBinaryOp = 5, RULE_anyBinaryOp = 6, RULE_intExpr = 7, 
 		RULE_boolExpr = 8, RULE_logicExpr = 9, RULE_prop = 10, RULE_selector = 11, 
-		RULE_literal = 12, RULE_propValue = 13, RULE_objExpr = 14, RULE_expr = 15;
+		RULE_literal = 12, RULE_propVal = 13, RULE_objLit = 14, RULE_expr = 15;
 	public static readonly string[] ruleNames = {
 		"intBinaryOp", "intUnaryOp", "boolBinaryOp", "logicBinaryOp", "logicUnaryOp", 
 		"arrayBinaryOp", "anyBinaryOp", "intExpr", "boolExpr", "logicExpr", "prop", 
-		"selector", "literal", "propValue", "objExpr", "expr"
+		"selector", "literal", "propVal", "objLit", "expr"
 	};
 
 	private static readonly string[] _LiteralNames = {
@@ -1311,7 +1311,19 @@ public partial class JPathParser : Parser {
 		return _localctx;
 	}
 
-	public partial class PropValueContext : ParserRuleContext {
+	public partial class PropValContext : ParserRuleContext {
+		public PropValContext(ParserRuleContext parent, int invokingState)
+			: base(parent, invokingState)
+		{
+		}
+		public override int RuleIndex { get { return RULE_propVal; } }
+	 
+		public PropValContext() { }
+		public virtual void CopyFrom(PropValContext context) {
+			base.CopyFrom(context);
+		}
+	}
+	public partial class PropertyValueContext : PropValContext {
 		public PropContext Name;
 		public ExprContext Value;
 		public ExprContext expr() {
@@ -1320,31 +1332,28 @@ public partial class JPathParser : Parser {
 		public PropContext prop() {
 			return GetRuleContext<PropContext>(0);
 		}
-		public PropValueContext(ParserRuleContext parent, int invokingState)
-			: base(parent, invokingState)
-		{
-		}
-		public override int RuleIndex { get { return RULE_propValue; } }
+		public PropertyValueContext(PropValContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
 			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.EnterPropValue(this);
+			if (typedListener != null) typedListener.EnterPropertyValue(this);
 		}
 		public override void ExitRule(IParseTreeListener listener) {
 			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.ExitPropValue(this);
+			if (typedListener != null) typedListener.ExitPropertyValue(this);
 		}
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitPropValue(this);
+			if (typedVisitor != null) return typedVisitor.VisitPropertyValue(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 
 	[RuleVersion(0)]
-	public PropValueContext propValue() {
-		PropValueContext _localctx = new PropValueContext(Context, State);
-		EnterRule(_localctx, 26, RULE_propValue);
+	public PropValContext propVal() {
+		PropValContext _localctx = new PropValContext(Context, State);
+		EnterRule(_localctx, 26, RULE_propVal);
 		try {
+			_localctx = new PropertyValueContext(_localctx);
 			EnterOuterAlt(_localctx, 1);
 			{
 			State = 125;
@@ -1352,12 +1361,12 @@ public partial class JPathParser : Parser {
 			switch ( Interpreter.AdaptivePredict(TokenStream,10,Context) ) {
 			case 1:
 				{
-				State = 122; _localctx.Name = prop();
+				State = 122; ((PropertyValueContext)_localctx).Name = prop();
 				State = 123; Match(T__2);
 				}
 				break;
 			}
-			State = 127; _localctx.Value = expr(0);
+			State = 127; ((PropertyValueContext)_localctx).Value = expr(0);
 			}
 		}
 		catch (RecognitionException re) {
@@ -1371,46 +1380,55 @@ public partial class JPathParser : Parser {
 		return _localctx;
 	}
 
-	public partial class ObjExprContext : ParserRuleContext {
-		public PropValueContext _propValue;
-		public IList<PropValueContext> _Props = new List<PropValueContext>();
-		public PropValueContext[] propValue() {
-			return GetRuleContexts<PropValueContext>();
-		}
-		public PropValueContext propValue(int i) {
-			return GetRuleContext<PropValueContext>(i);
-		}
-		public ObjExprContext(ParserRuleContext parent, int invokingState)
+	public partial class ObjLitContext : ParserRuleContext {
+		public ObjLitContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
-		public override int RuleIndex { get { return RULE_objExpr; } }
+		public override int RuleIndex { get { return RULE_objLit; } }
+	 
+		public ObjLitContext() { }
+		public virtual void CopyFrom(ObjLitContext context) {
+			base.CopyFrom(context);
+		}
+	}
+	public partial class ObjLitPropsContext : ObjLitContext {
+		public PropValContext _propVal;
+		public IList<PropValContext> _Props = new List<PropValContext>();
+		public PropValContext[] propVal() {
+			return GetRuleContexts<PropValContext>();
+		}
+		public PropValContext propVal(int i) {
+			return GetRuleContext<PropValContext>(i);
+		}
+		public ObjLitPropsContext(ObjLitContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
 			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.EnterObjExpr(this);
+			if (typedListener != null) typedListener.EnterObjLitProps(this);
 		}
 		public override void ExitRule(IParseTreeListener listener) {
 			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.ExitObjExpr(this);
+			if (typedListener != null) typedListener.ExitObjLitProps(this);
 		}
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitObjExpr(this);
+			if (typedVisitor != null) return typedVisitor.VisitObjLitProps(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 
 	[RuleVersion(0)]
-	public ObjExprContext objExpr() {
-		ObjExprContext _localctx = new ObjExprContext(Context, State);
-		EnterRule(_localctx, 28, RULE_objExpr);
+	public ObjLitContext objLit() {
+		ObjLitContext _localctx = new ObjLitContext(Context, State);
+		EnterRule(_localctx, 28, RULE_objLit);
 		int _la;
 		try {
+			_localctx = new ObjLitPropsContext(_localctx);
 			EnterOuterAlt(_localctx, 1);
 			{
 			State = 129; Match(T__3);
-			State = 130; _localctx._propValue = propValue();
-			_localctx._Props.Add(_localctx._propValue);
+			State = 130; ((ObjLitPropsContext)_localctx)._propVal = propVal();
+			((ObjLitPropsContext)_localctx)._Props.Add(((ObjLitPropsContext)_localctx)._propVal);
 			State = 133;
 			ErrorHandler.Sync(this);
 			_la = TokenStream.LA(1);
@@ -1418,8 +1436,8 @@ public partial class JPathParser : Parser {
 				{
 				{
 				State = 131; Match(T__4);
-				State = 132; _localctx._propValue = propValue();
-				_localctx._Props.Add(_localctx._propValue);
+				State = 132; ((ObjLitPropsContext)_localctx)._propVal = propVal();
+				((ObjLitPropsContext)_localctx)._Props.Add(((ObjLitPropsContext)_localctx)._propVal);
 				}
 				}
 				State = 135;
@@ -1758,26 +1776,6 @@ public partial class JPathParser : Parser {
 			else return visitor.VisitChildren(this);
 		}
 	}
-	public partial class ObjectExprContext : ExprContext {
-		public ObjExprContext Obj;
-		public ObjExprContext objExpr() {
-			return GetRuleContext<ObjExprContext>(0);
-		}
-		public ObjectExprContext(ExprContext context) { CopyFrom(context); }
-		public override void EnterRule(IParseTreeListener listener) {
-			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.EnterObjectExpr(this);
-		}
-		public override void ExitRule(IParseTreeListener listener) {
-			IJPathListener typedListener = listener as IJPathListener;
-			if (typedListener != null) typedListener.ExitObjectExpr(this);
-		}
-		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitObjectExpr(this);
-			else return visitor.VisitChildren(this);
-		}
-	}
 	public partial class RootExprContext : ExprContext {
 		public RootExprContext(ExprContext context) { CopyFrom(context); }
 		public override void EnterRule(IParseTreeListener listener) {
@@ -1791,6 +1789,26 @@ public partial class JPathParser : Parser {
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitRootExpr(this);
+			else return visitor.VisitChildren(this);
+		}
+	}
+	public partial class ObjLitExprContext : ExprContext {
+		public ObjLitContext Obj;
+		public ObjLitContext objLit() {
+			return GetRuleContext<ObjLitContext>(0);
+		}
+		public ObjLitExprContext(ExprContext context) { CopyFrom(context); }
+		public override void EnterRule(IParseTreeListener listener) {
+			IJPathListener typedListener = listener as IJPathListener;
+			if (typedListener != null) typedListener.EnterObjLitExpr(this);
+		}
+		public override void ExitRule(IParseTreeListener listener) {
+			IJPathListener typedListener = listener as IJPathListener;
+			if (typedListener != null) typedListener.ExitObjLitExpr(this);
+		}
+		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
+			IJPathVisitor<TResult> typedVisitor = visitor as IJPathVisitor<TResult>;
+			if (typedVisitor != null) return typedVisitor.VisitObjLitExpr(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
@@ -1929,10 +1947,10 @@ public partial class JPathParser : Parser {
 				break;
 			case 4:
 				{
-				_localctx = new ObjectExprContext(_localctx);
+				_localctx = new ObjLitExprContext(_localctx);
 				Context = _localctx;
 				_prevctx = _localctx;
-				State = 143; ((ObjectExprContext)_localctx).Obj = objExpr();
+				State = 143; ((ObjLitExprContext)_localctx).Obj = objLit();
 				}
 				break;
 			case 5:
