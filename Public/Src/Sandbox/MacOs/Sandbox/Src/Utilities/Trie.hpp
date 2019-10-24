@@ -48,11 +48,11 @@ private:
      * Pre-allocated pointers to all possible children nodes.
      * IMPORTANT: always use the 'chilren()' accessor method to access this field.
      */
-    Node **children_;
-
-    uint length()     const { return childrenLength_; }
+    Node * volatile *children_;
 
     Node** children();
+    uint length() const       { return childrenLength_; }
+    uint actualLength() const { return children_ == nullptr ? 0 : childrenLength_; }
 
     bool init(uint numChildren);
     static Node* create(uint numChildren);

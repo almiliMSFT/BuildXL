@@ -37,8 +37,11 @@ bool Node::init(uint numChildren)
     }
 
     record_ = nullptr;
-    childrenLength_ = numChildren;
     children_ = nullptr; // initialized lazily later on
+    childrenLength_ = numChildren;
+
+    //children();
+    // IONew(Node*, childrenLength_); for (int i = 0; i < childrenLength_; i++) children_[i] = nullptr;
 
     return true;
 }
@@ -48,22 +51,22 @@ Node** Node::children()
     if (children_ == nullptr)
     {
         Node **childrenArray = IONew(Node*, childrenLength_);
-        if (!OSCompareAndSwapPtr(nullptr, childrenArray, &children_))
+        assert(childrenArray != nullptr);
+        for (int i = 0; i < childrenLength_; i++) childrenArray[i] = nullptr;
+
+        if (!OSCompareAndSwapPtr(nullptr, (void*)childrenArray, &children_))
         {
             // someone else came in first --> deallocate childrenArray
+            assert(children_ != nullptr);
             IODelete(childrenArray, Node*, childrenLength_);
         }
         else
         {
-            // we set the value for children_ --> null-out the initialized array
-            for (int i = 0; i < childrenLength_; i++)
-            {
-                children_[i] = nullptr;
-            }
+            assert(children_ == childrenArray);
         }
     }
 
-    return children_;
+    return (Node**)children_;
 }
 
 void Node::free()
@@ -75,7 +78,7 @@ void Node::free()
             children_[i] = nullptr;
         }
 
-        IODelete(children_, Node*, childrenLength_);
+        IODelete((Node**)children_, Node*, childrenLength_);
         children_ = nullptr;
     }
 
@@ -733,7 +736,7 @@ void Trie::traverse(bool computeKey, void *callbackArgs, traverse_fn callback)
         uint32_t depth = stack->depth;
 
         Node *curr = pop(&stack);
-        for (int i = 0; i < curr->length(); ++i)
+        for (int i = 0; i < curr->actualLength(); ++i)
         {
             push(&stack, curr->children()[i], computeKey ? (i * pow10(depth) + key) : 0, depth + 1);
         }
