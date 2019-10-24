@@ -11,6 +11,8 @@ OSDefineMetaClassAndStructors(Node, OSObject)
 
 uint Node::s_numUintNodes = 0;
 uint Node::s_numPathNodes = 0;
+uint Node::s_totalPathNodes = 0;
+uint Node::s_totalAllocPathChildren = 0;
 
 Node* Node::create(uint numChildren)
 {
@@ -50,8 +52,10 @@ bool Node::init(uint numChildren)
 
 void Node::free()
 {
+    uint numAllocChildren = 0;
     for (int i = 0; i < childrenLength_; i++)
     {
+        numAllocChildren += children_[i] != nullptr;
         children_[i] = nullptr;
     }
 
@@ -59,6 +63,12 @@ void Node::free()
     children_ = nullptr;
 
     OSSafeReleaseNULL(record_);
+
+    if (length() == s_pathNodeChildrenCount && numAllocChildren > 0)
+    {
+        OSIncrementAtomic(&s_totalPathNodes);
+        OSAddAtomic(numAllocChildren, &s_totalAllocPathChildren);
+    }
 
     if (length() == s_uintNodeChildrenCount)      OSDecrementAtomic(&s_numUintNodes);
     else if (length() == s_pathNodeChildrenCount) OSDecrementAtomic(&s_numPathNodes);

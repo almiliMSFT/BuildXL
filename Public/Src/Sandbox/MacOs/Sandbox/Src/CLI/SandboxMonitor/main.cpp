@@ -48,7 +48,7 @@ typedef struct {
 #define to_getter(x) [](Tuple t) { return to_string(x); }
 #define DIV(a, b) (((b) == 0) ? 0 : ((a) / (b)))
 #define DIV2(a, b) (((b) == 0) ? 0.00 : ((a) / (1.0 * (b))))
-#define PERCENT(a, b) DIV2(a * 100, a + b)
+#define PERCENT(a, b) DIV2(a, a/100.0 + b/100.0)
 
 string renderDouble(double d, int precision = 2)
 {
@@ -345,7 +345,9 @@ int main(int argc, const char * argv[])
                    << ", #CoalescedReports: " << to_string(response.counters.reportCounters.numCoalescedReports)
                    << " (" << renderDouble(PERCENT(response.counters.reportCounters.numCoalescedReports.count(), response.counters.reportCounters.totalNumSent.count())) << "%)"
                    << ", #UintTrieNodes: " << to_string(response.counters.numUintTrieNodes) << " (" << renderDouble(response.counters.uintTrieSizeMB) << " MB)"
-                   << ", #PathTrieNodes: " << to_string(response.counters.numPathTrieNodes) << " (" << renderDouble(response.counters.pathTrieSizeMB) << " MB)"
+                   << ", #PathTrieNodes: " << to_string(response.counters.numPathTrieNodes) << " (" << renderDouble(response.counters.pathTrieSizeMB) << " MB)" << " [Usage: " <<
+                       renderDouble(PERCENT(response.counters.numTotalAllocPathChildren, 65 * response.counters.numTotalPathTrieNodes)) << "%]"
+//                       renderDouble(PERCENT(response.counters.numTotalAllocPathChildren, response.counters.numTotalPathTrieNodes)) << " %]"
                    << ", #FreeListNodes: " << to_string(response.counters.reportCounters.freeListNodeCount)
                    << " (" << renderDouble(response.counters.reportCounters.freeListSizeMB) << " MB)"
                    << endl;

@@ -173,6 +173,8 @@ typedef struct {
     Counter numCacheMisses;
     uint numUintTrieNodes;
     uint numPathTrieNodes;
+    uint numTotalPathTrieNodes;
+    uint numTotalAllocPathChildren;
     double uintTrieSizeMB;
     double pathTrieSizeMB;
 } AllCounters;

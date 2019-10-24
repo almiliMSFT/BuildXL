@@ -25,7 +25,10 @@ private:
 
     static uint s_numUintNodes;
     static uint s_numPathNodes;
-
+public:
+    static uint s_totalPathNodes;
+    static uint s_totalAllocPathChildren;
+private:
     /*!
      * The value 65 is chosen so that all ASCII characters between 32 (' ') and 122 ('z')
      * get a unique entry in the 'children_' array.  The formula for mapping a character
