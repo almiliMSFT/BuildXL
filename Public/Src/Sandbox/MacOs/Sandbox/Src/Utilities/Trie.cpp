@@ -38,25 +38,46 @@ bool Node::init(uint numChildren)
 
     record_ = nullptr;
     childrenLength_ = numChildren;
-    children_ = IONew(Node*, numChildren);
-
-    for (int i = 0; i < childrenLength_; i++)
-    {
-        children_[i] = nullptr;
-    }
+    children_ = nullptr; // initialized lazily later on
 
     return true;
 }
 
-void Node::free()
+Node** Node::children()
 {
-    for (int i = 0; i < childrenLength_; i++)
+    if (children_ == nullptr)
     {
-        children_[i] = nullptr;
+        Node **childrenArray = IONew(Node*, childrenLength_);
+        if (!OSCompareAndSwapPtr(nullptr, childrenArray, &children_))
+        {
+            // someone else came in first --> deallocate childrenArray
+            IODelete(childrenArray, Node*, childrenLength_);
+        }
+        else
+        {
+            // we set the value for children_ --> null-out the initialized array
+            for (int i = 0; i < childrenLength_; i++)
+            {
+                children_[i] = nullptr;
+            }
+        }
     }
 
-    IODelete(children_, Node*, childrenLength_);
-    children_ = nullptr;
+    return children_;
+}
+
+void Node::free()
+{
+    if (children_ != nullptr)
+    {
+        for (int i = 0; i < childrenLength_; i++)
+        {
+            children_[i] = nullptr;
+        }
+
+        IODelete(children_, Node*, childrenLength_);
+        children_ = nullptr;
+    }
 
     OSSafeReleaseNULL(record_);
 

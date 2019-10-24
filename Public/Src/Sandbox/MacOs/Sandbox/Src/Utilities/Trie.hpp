@@ -44,11 +44,15 @@ private:
     /*! The length of the 'children_' array (i.e., the the number of allocated nodes) */
     uint childrenLength_;
 
-    /*! Pre-allocated pointers to all possible children nodes. */
+    /*!
+     * Pre-allocated pointers to all possible children nodes.
+     * IMPORTANT: always use the 'chilren()' accessor method to access this field.
+     */
     Node **children_;
 
     uint length()     const { return childrenLength_; }
-    Node** children() const { return children_; }
+
+    Node** children();
 
     bool init(uint numChildren);
     static Node* create(uint numChildren);
