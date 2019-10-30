@@ -432,11 +432,6 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         /// <summary>
-        /// Reserved name of the "last value" variable.
-        /// </summary>
-        public const string LastValueVarName = "$__last";
-
-        /// <summary>
         /// Object resolver delegate type.
         /// 
         /// GroupedBy.Pips.ByType.Process[Outputs.Files.Path = $.Files[RewriteCount > 0][0].Path]
@@ -460,12 +455,6 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         /// <nodoc />
         public Result Eval(Expr expr)
-        {
-            var result = EvalWithCache(expr);
-            return TopEnv.SetVar(LastValueVarName, result);
-        }
-
-        private Result EvalWithCache(Expr expr)
         {
             if (EnableCaching)
             {
