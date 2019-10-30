@@ -124,7 +124,7 @@ expr
     | Lit=literal                                     #LiteralExpr
     | Lhs=expr '.' Sub=expr                           #MapExpr
     | Lhs=expr '[' Filter=expr ']'                    #FilterExpr
-    | Lhs=expr '[' Begin=expr '..' End=expr ']'       #RangeExpr
+    | Lhs=expr '[' Begin=IntLit '..' End=IntLit ']'   #RangeExpr
     | '#' Sub=expr                                    #CardinalityExpr   // cardinality, i.e., the number of elements in the result
     | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExprParen
     | Func=expr OptName=Opt (OptValue=literal)?       #FuncOptExpr
