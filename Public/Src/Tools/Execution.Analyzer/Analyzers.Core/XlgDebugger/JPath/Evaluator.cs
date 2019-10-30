@@ -9,7 +9,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Antlr4.Runtime;
 using BuildXL.FrontEnd.Script.Debugger;
-using BuildXL.FrontEnd.Script.Values;
 using BuildXL.Utilities;
 using BuildXL.Utilities.Collections;
 using JetBrains.Annotations;
@@ -433,6 +432,11 @@ namespace BuildXL.Execution.Analyzer.JPath
         }
 
         /// <summary>
+        /// Reserved name of the "last value" variable.
+        /// </summary>
+        public const string LastValueVarName = "$__last";
+
+        /// <summary>
         /// Object resolver delegate type.
         /// 
         /// GroupedBy.Pips.ByType.Process[Outputs.Files.Path = $.Files[RewriteCount > 0][0].Path]
@@ -456,6 +460,12 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         /// <nodoc />
         public Result Eval(Expr expr)
+        {
+            var result = EvalWithCache(expr);
+            return TopEnv.SetVar(LastValueVarName, result);
+        }
+
+        private Result EvalWithCache(Expr expr)
         {
             if (EnableCaching)
             {
@@ -488,7 +498,7 @@ namespace BuildXL.Execution.Analyzer.JPath
                     case Selector selector:
                         return TopEnv.Current
                             .Select(obj => TopEnv.Resolver(obj))
-                            .SelectMany(obj => obj.Properties.Where(p => selector.PropertyNames.Contains(p.Name)))
+                            .SelectMany(obj => obj.Properties.Where(p => p.Name == selector.PropertyName))
                             .SelectMany(prop =>
                             {
                                 // automatically flatten non-scalar results
@@ -649,34 +659,45 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         private Result EvalBinaryExpr(BinaryExpr expr)
         {
-            var lhs = expr.Lhs;
-            var rhs = expr.Rhs;
+            var lhs = Eval(expr.Lhs);
+            var rhs = Eval(expr.Rhs);
+            long? lhsNum = TryToNumber(lhs);
+            long? rhsNum = TryToNumber(rhs);
+
             switch (expr.Op.Type)
             {
-                case JPathLexer.GTE: return IEval(lhs) >= IEval(rhs);
-                case JPathLexer.GT:  return IEval(lhs) >  IEval(rhs);
-                case JPathLexer.LTE: return IEval(lhs) <= IEval(rhs);
-                case JPathLexer.LT:  return IEval(lhs) <  IEval(rhs);
-                case JPathLexer.EQ:  return Eval(lhs).Equals(Eval(rhs));
-                case JPathLexer.NEQ: return !Eval(lhs).Equals(Eval(rhs));
+                case JPathLexer.GTE: return ToNumber(lhs) >= ToNumber(rhs);
+                case JPathLexer.GT:  return ToNumber(lhs) >  ToNumber(rhs);
+                case JPathLexer.LTE: return ToNumber(lhs) <= ToNumber(rhs);
+                case JPathLexer.LT:  return ToNumber(lhs) <  ToNumber(rhs);
+                case JPathLexer.EQ:  return lhs.Equals(rhs);
+                case JPathLexer.NEQ: return !lhs.Equals(rhs);
 
-                case JPathLexer.AND: return BEval(lhs) && BEval(rhs);
-                case JPathLexer.OR:  return BEval(lhs) || BEval(rhs);
-                case JPathLexer.XOR: return BEval(lhs) != BEval(rhs);
-                case JPathLexer.IFF: return BEval(lhs) == BEval(rhs);
+                case JPathLexer.AND: return ToBool(lhs) && ToBool(rhs);
+                case JPathLexer.OR:  return ToBool(lhs) || ToBool(rhs);
+                case JPathLexer.XOR: return ToBool(lhs) != ToBool(rhs);
+                case JPathLexer.IFF: return ToBool(lhs) == ToBool(rhs);
 
-                case JPathLexer.PLUS:  return IEval(lhs) + IEval(rhs);
-                case JPathLexer.MINUS: return IEval(lhs) - IEval(rhs);
-                case JPathLexer.TIMES: return IEval(lhs) * IEval(rhs);
-                case JPathLexer.DIV:   return IEval(lhs) / IEval(rhs);
-                case JPathLexer.MOD:   return IEval(lhs) % IEval(rhs);
+                case JPathLexer.TIMES: return ToNumber(lhs) * ToNumber(rhs);
+                case JPathLexer.DIV:   return ToNumber(lhs) / ToNumber(rhs);
+                case JPathLexer.MOD:   return ToNumber(lhs) % ToNumber(rhs);
 
-                case JPathLexer.MATCH:  return Matches(Eval(lhs), Eval(rhs));
-                case JPathLexer.NMATCH: return !Matches(Eval(lhs), Eval(rhs));
+                case JPathLexer.PLUS:  return lhsNum.HasValue && rhsNum.HasValue ? lhsNum.Value + rhsNum.Value : union(lhs, rhs);
+                case JPathLexer.MINUS: return lhsNum.HasValue && rhsNum.HasValue ? lhsNum.Value - rhsNum.Value : difference(lhs, rhs);
+
+                case JPathLexer.UNION:      return union(lhs, rhs);
+                case JPathLexer.DIFFERENCE: return difference(lhs, rhs);
+                case JPathLexer.INTERSECT:  return lhs.Intersect(rhs).ToArray();
+
+                case JPathLexer.MATCH:  return Matches(lhs, rhs);
+                case JPathLexer.NMATCH: return !Matches(lhs, rhs);
 
                 default:
                     throw ApplyError(expr.Op);
             }
+
+            Result union(Result left, Result right)      => left.Union(right).ToArray();
+            Result difference(Result left, Result right) => left.Except(right).ToArray();
         }
 
         /// <summary>
@@ -736,19 +757,35 @@ namespace BuildXL.Execution.Analyzer.JPath
         /// </summary>
         public long ToNumber(object obj, Expr source = null)
         {
+            var value = TryToNumber(obj, source);
+            if (!value.HasValue)
+            {
+                throw TypeError(obj, "int", source);
+            }
+            return value.Value;
+        }
+
+        /// <summary>
+        /// Converts <paramref name="obj"/> to int if possible; otherwise returns null.
+        /// 
+        /// A <see cref="Result"/> can be converted only if it is a scalar value.
+        /// Other than that, only numeric values can be converted to int.
+        /// </summary>
+        public long? TryToNumber(object obj, Expr source = null)
+        {
             checked
             {
                 switch (obj)
                 {
-                    case Result r when r.IsScalar: return ToNumber(ToScalar(r), source);
+                    case Result r when r.IsScalar: return TryToNumber(ToScalar(r), source);
                     case int i:                    return i;
-                    case uint ui:                  return (long)ui;
+                    case uint ui:                  return ui;
                     case long l:                   return l;
                     case ulong ul:                 return (long)ul;
                     case byte b:                   return b;
                     case short s:                  return s;
                     default:
-                        throw TypeError(obj, "int", source);
+                        return null;
                 }
             }
         }
