@@ -35,9 +35,10 @@ TIMES   : '*'  ;
 DIV     : '/'  ;
 MOD     : '%'  ;
 
-// array operators
-CONCAT    : '++' ;
-INTERSECT : '&'  ;
+// set operators
+UNION      : '++' ;
+DIFFERENCE : '--' ;
+INTERSECT  : '&'  ;
 
 IntLit
     : '-'?[0-9]+ ;
@@ -82,33 +83,14 @@ logicBinaryOp
 logicUnaryOp
     : Token=NOT ;
 
-arrayBinaryOp
-    : Token=(CONCAT | INTERSECT) ;
+setBinaryOp
+    : Token=(PLUS | MINUS | UNION | DIFFERENCE | INTERSECT) ;
 
 anyBinaryOp
     : intBinaryOp
     | boolBinaryOp
     | logicBinaryOp
-    | arrayBinaryOp
-    ;
-
-intExpr
-    : Expr=expr                                       #ExprIntExpr
-    | Op=intUnaryOp Sub=intExpr                       #UnaryIntExpr
-    | Lhs=intExpr Op=intBinaryOp Rhs=intExpr          #BinaryIntExpr
-    | '(' Sub=intExpr ')'                             #SubIntExpr
-    ;
-
-boolExpr
-    : Lhs=intExpr Op=boolBinaryOp Rhs=intExpr         #BinaryBoolExpr
-    | '(' Sub=boolExpr ')'                            #SubBoolExpr
-    ;
-
-logicExpr
-    : Expr=boolExpr                                   #BoolLogicExpr
-    | Lhs=logicExpr Op=logicBinaryOp Rhs=logicExpr    #BinaryLogicExpr
-    | Op=logicUnaryOp Sub=logicExpr                   #UnaryLogicExpr
-    | '(' Sub=logicExpr ')'                           #SubLogicExpr
+    | setBinaryOp
     ;
 
 prop
@@ -118,7 +100,6 @@ prop
 
 selector
     : Name=prop                                       #IdSelector
-    | '(' Names+=prop ('+' Names+=prop)+ ')'          #UnionSelector
     ;
 
 literal
@@ -142,11 +123,9 @@ expr
     | Obj=objLit                                      #ObjLitExpr
     | Lit=literal                                     #LiteralExpr
     | Lhs=expr '.' Sub=expr                           #MapExpr
-    | Lhs=expr '[' Filter=logicExpr ']'               #FilterExpr
-    | Lhs=expr '[' Index=intExpr ']'                  #IndexExpr
-    | Lhs=expr '[' Begin=intExpr '..' End=intExpr ']' #RangeExpr
-    | '#' Sub=expr                                    #CardinalityExpr 
-    // cardinality of the result, i.e., the number of elements in it
+    | Lhs=expr '[' Filter=expr ']'                    #FilterExpr
+    | Lhs=expr '[' Begin=expr '..' End=expr ']'       #RangeExpr
+    | '#' Sub=expr                                    #CardinalityExpr   // cardinality, i.e., the number of elements in the result
     | Func=expr '(' Args+=expr (',' Args+=expr)* ')'  #FuncAppExprParen
     | Func=expr OptName=Opt (OptValue=literal)?       #FuncOptExpr
     | Input=expr '|' Func=expr                        #PipeExpr
