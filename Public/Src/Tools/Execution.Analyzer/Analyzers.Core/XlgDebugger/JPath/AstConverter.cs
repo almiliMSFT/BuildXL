@@ -85,7 +85,7 @@ namespace BuildXL.Execution.Analyzer.JPath
             }
             catch (ArgumentException e)
             {
-                throw AstError(context.Value, $"Value '{context.Value}' is not a valid regex: {e.Message}");
+                throw AstError(context.Value, $"Value '{context.Value.Text}' is not a valid regex: {e.Message}");
             }
         }
 
@@ -126,7 +126,9 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         private string ExtractStringFromStringLiteralToken(IToken token)
         {
-            return token.Text.Trim('"', '\'');
+            return token.Text.StartsWith("\"") ? token.Text.Trim('"') :
+                   token.Text.StartsWith("'")  ? token.Text.Trim('\'') : 
+                   token.Text;
         }
 
         public override Expr VisitSubExpr([NotNull] JPathParser.SubExprContext context)

@@ -497,7 +497,9 @@ namespace BuildXL.Execution.Analyzer.JPath
                                     case string str:             return new[] { str }; // string is IEnumerable, so exclude it here
                                     case IEnumerable ie2:        return ie2.Cast<object>();
                                     default:
-                                    return new[] { prop.Value };
+                                    return prop.Value == null
+                                        ? CollectionUtilities.EmptyArray<object>()
+                                        : new[] { prop.Value };
                                 }
                             })
                             .ToList();
@@ -655,10 +657,10 @@ namespace BuildXL.Execution.Analyzer.JPath
 
             switch (expr.Op.Type)
             {
-                case JPathLexer.GTE: return ToNumber(lhs) >= ToNumber(rhs);
-                case JPathLexer.GT:  return ToNumber(lhs) >  ToNumber(rhs);
-                case JPathLexer.LTE: return ToNumber(lhs) <= ToNumber(rhs);
-                case JPathLexer.LT:  return ToNumber(lhs) <  ToNumber(rhs);
+                case JPathLexer.GTE: return lhsNum >= rhsNum;
+                case JPathLexer.GT:  return lhsNum >  rhsNum;
+                case JPathLexer.LTE: return lhsNum <= rhsNum;
+                case JPathLexer.LT:  return lhsNum <  rhsNum;
                 case JPathLexer.EQ:  return lhs.Equals(rhs);
                 case JPathLexer.NEQ: return !lhs.Equals(rhs);
 
@@ -667,15 +669,16 @@ namespace BuildXL.Execution.Analyzer.JPath
                 case JPathLexer.XOR: return ToBool(lhs) != ToBool(rhs);
                 case JPathLexer.IFF: return ToBool(lhs) == ToBool(rhs);
 
-                case JPathLexer.TIMES: return ToNumber(lhs) * ToNumber(rhs);
-                case JPathLexer.DIV:   return ToNumber(lhs) / ToNumber(rhs);
-                case JPathLexer.MOD:   return ToNumber(lhs) % ToNumber(rhs);
+                case JPathLexer.TIMES: return lhsNum * rhsNum;
+                case JPathLexer.DIV:   return lhsNum / rhsNum;
+                case JPathLexer.MOD:   return lhsNum % rhsNum;
 
                 case JPathLexer.PLUS:  return lhsNum.HasValue && rhsNum.HasValue ? lhsNum.Value + rhsNum.Value : union(lhs, rhs);
                 case JPathLexer.MINUS: return lhsNum.HasValue && rhsNum.HasValue ? lhsNum.Value - rhsNum.Value : difference(lhs, rhs);
 
                 case JPathLexer.UNION:      return union(lhs, rhs);
                 case JPathLexer.DIFFERENCE: return difference(lhs, rhs);
+                case JPathLexer.CONCAT:     return lhs.Concat(rhs).ToArray();
                 case JPathLexer.INTERSECT:  return lhs.Intersect(rhs).ToArray();
 
                 case JPathLexer.MATCH:  return Matches(lhs, rhs);

@@ -36,8 +36,9 @@ DIV     : '/'  ;
 MOD     : '%'  ;
 
 // set operators
-UNION      : '++' ;
-DIFFERENCE : '--' ;
+CONCAT     : '++' ;
+UNION      : '@+' ;  // same as PLUS when operands are not numbers
+DIFFERENCE : '@-' ;  // same as MINUS when operands are not numbers
 INTERSECT  : '&'  ;
 
 IntLit
@@ -56,7 +57,7 @@ RegExLit
 fragment IdFragment
     : [a-zA-Z_][a-zA-Z0-9_]* ;
 
-PropertyId
+Id
     : IdFragment ;
 
 VarId
@@ -84,7 +85,7 @@ logicUnaryOp
     : Token=NOT ;
 
 setBinaryOp
-    : Token=(PLUS | MINUS | UNION | DIFFERENCE | INTERSECT) ;
+    : Token=(PLUS | MINUS | CONCAT | UNION | DIFFERENCE | INTERSECT) ;
 
 anyBinaryOp
     : intBinaryOp
@@ -94,7 +95,7 @@ anyBinaryOp
     ;
 
 prop
-    : PropertyName=PropertyId                         #PropertyId
+    : PropertyName=Id                                 #PropertyId
     | PropertyName=EscID                              #EscId
     ;
 
