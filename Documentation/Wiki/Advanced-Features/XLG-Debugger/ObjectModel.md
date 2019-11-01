@@ -10,7 +10,34 @@ This documents only highlights certain commonly used types in the object model p
     Files: [],
     Directories: [],
     DirMembership: [],
-    GroupedBy: []
+    GroupedBy: {
+        Pips: {
+            ByType: {
+                WriteFile: {},
+                CopyFile: {},
+                Process: {},
+                ...
+            },
+            ByStatus: {
+                Executed: [],
+                Cached: [],
+                UpToDate: [],
+                Failed: [],
+                NotCompleted: []
+            },
+            ByExecutionStart: [],
+            ByExecutionStop: []
+        },
+        Files: {
+            Source: {},
+            Output: {}
+        },
+        Directories: {
+            Source: {},
+            ExclusiveOpaque: {},
+            SharedOpaque: {}
+        }
+    }
 }
 ```
 
