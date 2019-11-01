@@ -179,6 +179,7 @@ typedef struct {
     CountAndSize uintNodes;
     CountAndSize pathNodes;
     CountAndSize lightNodes;
+    CountAndSize cacheRecords;
 } AllCounters;
 
 typedef struct {

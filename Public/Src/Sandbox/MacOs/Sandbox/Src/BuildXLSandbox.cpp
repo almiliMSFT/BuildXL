@@ -604,6 +604,11 @@ typedef struct {
 
 static int BytesInAMegabyte = 1024 * 1024;
 
+#define SET_COUNT_AND_SIZE(cnt, cls) do { \
+  cnt.count = cls::metaClass->getInstanceCount(); \
+  cnt.size = (double)sizeof(cls); \
+} while(0)
+
 IntrospectResponse BuildXLSandbox::Introspect() const
 {
     EnterMonitor
@@ -619,7 +624,8 @@ IntrospectResponse BuildXLSandbox::Introspect() const
 
     Trie::getUintNodeCounts(&result.counters.uintNodes);
     Trie::getPathNodeCounts(&result.counters.pathNodes);
-    Trie::getLightNodeCounts(&result.counters.lightNodes);
+    SET_COUNT_AND_SIZE(result.counters.lightNodes, NodeLight);
+    SET_COUNT_AND_SIZE(result.counters.cacheRecords, CacheRecord);
 
     ReportCounters *reportCounters = &result.counters.reportCounters;
     reportCounters->freeListSizeMB =

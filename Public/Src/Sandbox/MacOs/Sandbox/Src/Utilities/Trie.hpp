@@ -60,12 +60,6 @@ public:
         cnt->size = sizeof(NodeFast) + Node::s_pathNodeMaxKey * sizeof(NodeFast*);
     }
 
-    static void getLightNodeCounts(CountAndSize *cnt)
-    {
-        cnt->count = NodeLight::metaClass->getInstanceCount();
-        cnt->size = sizeof(NodeLight);
-    }
-
 private:
 
     const uint kKindBitMask = 1;
