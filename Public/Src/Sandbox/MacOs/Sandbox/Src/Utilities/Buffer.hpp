@@ -22,6 +22,8 @@ private:
     char *buffer_;
     size_t size_;
 
+    static uint64_t s_totalAllocBytes;
+
     /*!
      * Initializes this object, following the OSObject pattern.
      *
@@ -54,6 +56,11 @@ public:
      * object and nullptr is returned.
      */
     static Buffer* create(size_t size);
+
+    /*!
+     * Total number of allocated bytes.
+     */
+    static uint64_t getTotalAllocatedBytes() { return s_totalAllocBytes; }
 };
 
 #endif /* Buffer_hpp */

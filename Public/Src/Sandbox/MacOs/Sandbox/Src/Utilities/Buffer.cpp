@@ -8,6 +8,8 @@
 
 OSDefineMetaClassAndStructors(Buffer, OSObject)
 
+uint64_t Buffer::s_totalAllocBytes;
+
 Buffer* Buffer::create(size_t size)
 {
     Buffer *instance = new Buffer;
@@ -33,6 +35,7 @@ bool Buffer::init(size_t size)
 
     size_   = size;
     buffer_ = IONew(char, size);
+    OSAddAtomic64(size, &s_totalAllocBytes);
 
     return buffer_ != nullptr;
 }
@@ -42,6 +45,7 @@ void Buffer::free()
     if (buffer_ != nullptr)
     {
         IODelete(buffer_, char, size_);
+        OSAddAtomic64(-size_, &s_totalAllocBytes);
     }
 
     size_   = 0;
