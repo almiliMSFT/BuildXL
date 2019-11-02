@@ -49,7 +49,7 @@ namespace BuildXL.Scheduler
         /// <summary>
         /// The type of dynamic accesses that can occur on a given path
         /// </summary>
-        private enum DynamicFileAccessType : byte
+        public enum DynamicFileAccessType : byte
         {
             /// <summary>
             /// A file/directory was produced
@@ -73,10 +73,10 @@ namespace BuildXL.Scheduler
         private readonly IQueryablePipDependencyGraph m_graph;
         private readonly IQueryableFileContentManager m_fileContentManager;
         private readonly IExecutionLogTarget m_executionLog;
-        private readonly ConcurrentBigMap<AbsolutePath, UndeclaredAccessors> m_undeclaredAccessors = new ConcurrentBigMap<AbsolutePath, UndeclaredAccessors>();
+        public readonly ConcurrentBigMap<AbsolutePath, UndeclaredAccessors> m_undeclaredAccessors = new ConcurrentBigMap<AbsolutePath, UndeclaredAccessors>();
         // Maps of paths that are dynamically read or written to the corresponding pip. 
         // The tuple indicates whether it is a reader of the path or a writer, together with the actual pip and materialization info when available (absent file otherwise)
-        private readonly ConcurrentBigMap<AbsolutePath, (DynamicFileAccessType accessType, PipId processPip, FileMaterializationInfo fileMaterializationInfo)> m_dynamicReadersAndWriters = new ConcurrentBigMap<AbsolutePath, (DynamicFileAccessType, PipId, FileMaterializationInfo)>();
+        public readonly ConcurrentBigMap<AbsolutePath, (DynamicFileAccessType accessType, PipId processPip, FileMaterializationInfo fileMaterializationInfo)> m_dynamicReadersAndWriters = new ConcurrentBigMap<AbsolutePath, (DynamicFileAccessType, PipId, FileMaterializationInfo)>();
 
         // Some dependency analysis rules cause issues with distribution. Even if /unsafe_* flags or configuration options
         // are used to downgrade errors to warnings, these must be treated as errors and cleaned up for distributed
@@ -1638,9 +1638,19 @@ namespace BuildXL.Scheduler
             return violator.ContainerIsolationLevel.IsolateOutputFiles();
         }
 
-        private struct UndeclaredAccessors
+        /// <summary>
+        /// sfsdf
+        /// </summary>
+        public struct UndeclaredAccessors
         {
+            /// <summary>
+            /// dsfsdf
+            /// </summary>
             public PipId Writer;
+
+            /// <summary>
+            /// sdfsdf
+            /// </summary>
             public List<PipId> Readers;
         }
     }

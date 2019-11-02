@@ -1237,7 +1237,12 @@ namespace BuildXL.Scheduler.Tracing
         /// Number of process pips allocated a slot on workers (including localworker)
         /// </summary>
         public long ProcessPipsAllocatedSlots;
-        
+
+        /// <summary>
+        /// BLAH
+        /// </summary>
+        public long DynamicRWCount;
+
         /// <inheritdoc />
         public ExecutionLogEventMetadata<StatusEventData> Metadata => ExecutionLogMetadata.ResourceUsageReported;
 
@@ -1286,6 +1291,7 @@ namespace BuildXL.Scheduler.Tracing
             writer.Write(MachineAvailableRamMB);
             writer.Write(CommitPercent);
             writer.Write(CommitTotalMB);
+            writer.Write(DynamicRWCount);
         }
 
         /// <inheritdoc />
@@ -1336,6 +1342,7 @@ namespace BuildXL.Scheduler.Tracing
             MachineAvailableRamMB = reader.ReadInt32();
             CommitPercent = reader.ReadInt32();
             CommitTotalMB = reader.ReadInt32();
+            DynamicRWCount = reader.ReadInt64();
         }
     }
 

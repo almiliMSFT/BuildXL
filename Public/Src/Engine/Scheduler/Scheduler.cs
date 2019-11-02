@@ -1883,6 +1883,7 @@ namespace BuildXL.Scheduler
                         }
                     }
                 },
+                { "DynamicRWCount", data => data.DynamicRWCount }
             }.Seal();
         }
 
@@ -2059,6 +2060,7 @@ namespace BuildXL.Scheduler
                     UnresponsivenessFactor = m_unresponsivenessFactor,
                     ProcessPipsPending = numProcessPipsPending,
                     ProcessPipsAllocatedSlots = numProcessPipsAllocatedSlots,
+                    DynamicRWCount = m_fileMonitoringViolationAnalyzer.m_dynamicReadersAndWriters.Count
                 };
 
                 // Send resource usage to the execution log
