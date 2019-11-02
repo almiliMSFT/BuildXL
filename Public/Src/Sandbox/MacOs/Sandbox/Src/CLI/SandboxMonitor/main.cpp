@@ -363,13 +363,12 @@ int main(int argc, const char * argv[])
                    << " (" << renderDouble(PERCENT(response.counters.reportCounters.numCoalescedReports.count(), response.counters.reportCounters.totalNumSent.count())) << "%)"
                    << endl;
             output << "Memory     :: "
-                   << "UintTrieNodes: " << renderCountAndSize(response.counters.uintNodes)
-                   << ", PathTrieNodes: " << renderCountAndSize(response.counters.pathNodes)
+                   << "FastTrieNodes: " << renderCountAndSize(response.counters.fastNodes)
                    << ", LightTrieNodes: " << renderCountAndSize(response.counters.lightNodes)
                    << ", CacheRecords: " << renderCountAndSize(response.counters.cacheRecords)
                    << ", FreeListNodes: " << to_string(response.counters.reportCounters.freeListNodeCount)
                    << " (" << renderDouble(response.counters.reportCounters.freeListSizeMB) << " MB)"
-                   << ", IONew allocations: " << renderBytesAsMebabytes(response.counters.totalAllocatedBufferSize)
+                   << ", IONew allocations: " << renderBytesAsMebabytes(response.counters.totalAllocatedBytes)
                    << endl;
             output << "Processes  :: #Client: " << response.numAttachedClients
                    << ", #Pips: " << response.numReportedPips

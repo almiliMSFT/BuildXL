@@ -1,14 +1,13 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#include "Alloc.hpp"
 #include "Buffer.hpp"
 #include "BuildXLSandboxShared.hpp"
 
 #define super OSObject
 
 OSDefineMetaClassAndStructors(Buffer, OSObject)
-
-uint64_t Buffer::s_totalAllocBytes;
 
 Buffer* Buffer::create(size_t size)
 {
@@ -34,8 +33,7 @@ bool Buffer::init(size_t size)
     }
 
     size_   = size;
-    buffer_ = IONew(char, size);
-    OSAddAtomic64(size, &s_totalAllocBytes);
+    buffer_ = Alloc::New<char>(size);
 
     return buffer_ != nullptr;
 }
@@ -44,8 +42,7 @@ void Buffer::free()
 {
     if (buffer_ != nullptr)
     {
-        IODelete(buffer_, char, size_);
-        OSAddAtomic64(-size_, &s_totalAllocBytes);
+        Alloc::Delete<char>(buffer_, size_);
     }
 
     size_   = 0;

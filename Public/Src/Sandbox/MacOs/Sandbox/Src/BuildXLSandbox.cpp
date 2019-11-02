@@ -3,6 +3,7 @@
 
 #include <kern/clock.h>
 
+#include "Alloc.hpp"
 #include "BuildXLSandbox.hpp"
 #include "CacheRecord.hpp"
 #include "Listeners.hpp"
@@ -605,8 +606,8 @@ typedef struct {
 static int BytesInAMegabyte = 1024 * 1024;
 
 #define SET_COUNT_AND_SIZE(cnt, cls) do { \
-  (cnt)->count = cls::metaClass->getInstanceCount(); \
-  (cnt)->size = (double)sizeof(cls); \
+  (cnt).count = cls::metaClass->getInstanceCount(); \
+  (cnt).size = (double)sizeof(cls); \
 } while(0)
 
 IntrospectResponse BuildXLSandbox::Introspect() const
@@ -622,11 +623,10 @@ IntrospectResponse BuildXLSandbox::Introspect() const
         .pips                = {0}
     };
 
-    result.counters.totalAllocatedBufferSize = Buffer::getTotalAllocatedBytes();
-    Trie::getUintNodeCounts(&result.counters.uintNodes);
-    Trie::getPathNodeCounts(&result.counters.pathNodes);
-    SET_COUNT_AND_SIZE(&result.counters.lightNodes, NodeLight);
-    SET_COUNT_AND_SIZE(&result.counters.cacheRecords, CacheRecord);
+    result.counters.totalAllocatedBytes = Alloc::numCurrentlyAllocatedBytes();
+    SET_COUNT_AND_SIZE(result.counters.fastNodes, NodeFast);
+    SET_COUNT_AND_SIZE(result.counters.lightNodes, NodeLight);
+    SET_COUNT_AND_SIZE(result.counters.cacheRecords, CacheRecord);
 
     ReportCounters *reportCounters = &result.counters.reportCounters;
     reportCounters->freeListSizeMB =
