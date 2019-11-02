@@ -2174,17 +2174,16 @@ namespace BuildXL.Scheduler
                 }
             }
 
+            bool cancellationThresholdReached = !resourceAvailable;
+
 #if PLATFORM_OSX
-            if (!resourceAvailable)
-            {
                 Memory.PressureLevel pressureLevel = Memory.PressureLevel.Normal;
                 var result = Memory.GetMemoryPressureLevel(ref pressureLevel) == Dispatch.MACOS_INTEROP_SUCCESS;
-
                 if (result)
                 {
                     // If the memory pressure level is not above the configured level but we've infered resources are not available earlier,
                     // we reset the resource availability and override the decision by looking at the current pressure level only!
-                    resourceAvailable = !(pressureLevel > m_configuration.Schedule.MaximumAllowedMemoryPressureLevel);
+                    cancellationThresholdReached = pressureLevel > m_configuration.Schedule.MaximumAllowedMemoryPressureLevel;
                 }
                 else
                 {
@@ -2195,7 +2194,6 @@ namespace BuildXL.Scheduler
                             ramUtilization: perfInfo.RamUsagePercentage.Value,
                             maximumRamUtilization: m_configuration.Schedule.MaximumRamUtilizationPercentage);
                 }
-            }
 #endif
 
             if (!resourceAvailable)
@@ -2220,7 +2218,7 @@ namespace BuildXL.Scheduler
                     }
                 }
 
-                if (!m_scheduleConfiguration.DisableProcessRetryOnResourceExhaustion)
+                if (!m_scheduleConfiguration.DisableProcessRetryOnResourceExhaustion && cancellationThresholdReached)
                 {
                     // Free down to the specified max RAM utilization percentage with 10% slack
                     var desiredRamToFreePercentage = (perfInfo.RamUsagePercentage.Value - m_configuration.Schedule.MaximumRamUtilizationPercentage) + 10;

@@ -83,7 +83,7 @@ namespace BuildXL.Scheduler
                         }
 
                         // Allow all but one pip to be cancelled
-                        int allowedCancelCount = m_freeResourcesScopeList.Count - 1;
+                        int allowedCancelCount = 1; // m_freeResourcesScopeList.Count - 1;
 
                         // Kill pips which started most recently first order
                         FreeResourcesByPreference(s_shortestRunningTimeFirstComparer, ref requiredRamMb, ref allowedCancelCount);
