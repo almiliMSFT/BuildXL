@@ -2197,13 +2197,20 @@ namespace BuildXL.Scheduler
                         maximumRamUtilization: m_configuration.Schedule.MaximumRamUtilizationPercentage);
             }
 
-            if (!m_waitingForRamToFreeUpAfterCancellation)
+            if (m_waitingForRamToFreeUpAfterCancellation == false)
             {
                 resourceAvailable = !cancellationThresholdReached;
+                if (cancellationThresholdReached)
+                {
+                    m_waitingForRamToFreeUpAfterCancellation = true;
+                }
             }
             else
             {
-                m_waitingForRamToFreeUpAfterCancellation = resourceAvailable;
+                if resourceAvailable)
+                {
+                    m_waitingForRamToFreeUpAfterCancellation = false;
+                }
             }
 #endif
 

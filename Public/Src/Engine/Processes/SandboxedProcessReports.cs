@@ -36,7 +36,6 @@ namespace BuildXL.Processes
         private readonly ConcurrentDictionary<uint, ReportedProcess> m_activeProcesses = new ConcurrentDictionary<uint, ReportedProcess>();
         private readonly ConcurrentDictionary<uint, ReportedProcess> m_processesExits = new ConcurrentDictionary<uint, ReportedProcess>();
 
-        private readonly Dictionary<string, string> m_pathCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<AbsolutePath, bool> m_overrideAllowedWritePaths = new Dictionary<AbsolutePath, bool>();
 
         [CanBeNull]
@@ -655,18 +654,6 @@ namespace BuildXL.Processes
             }
 
             Contract.Assume(manifestPath.IsValid || !string.IsNullOrEmpty(path));
-
-            if (path != null)
-            {
-                if (m_pathCache.TryGetValue(path, out var cachedPath))
-                {
-                    path = cachedPath;
-                }
-                else
-                {
-                    m_pathCache[path] = path;
-                }
-            }
 
             if (operation == ReportedFileOperation.FirstAllowWriteCheckInProcess)
             {
