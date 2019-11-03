@@ -2143,6 +2143,8 @@ namespace BuildXL.Scheduler
             return 0;
         }
 
+        private bool m_waitingForRamToFreeUpAfterCancellation = false;
+
         private void UpdateResourceAvailability(PerformanceCollector.MachinePerfInfo perfInfo)
         {
             var resourceManager = State.ResourceManager;
@@ -2177,23 +2179,32 @@ namespace BuildXL.Scheduler
             bool cancellationThresholdReached = !resourceAvailable;
 
 #if PLATFORM_OSX
-                Memory.PressureLevel pressureLevel = Memory.PressureLevel.Normal;
-                var result = Memory.GetMemoryPressureLevel(ref pressureLevel) == Dispatch.MACOS_INTEROP_SUCCESS;
-                if (result)
-                {
-                    // If the memory pressure level is not above the configured level but we've infered resources are not available earlier,
-                    // we reset the resource availability and override the decision by looking at the current pressure level only!
-                    cancellationThresholdReached = pressureLevel > m_configuration.Schedule.MaximumAllowedMemoryPressureLevel;
-                }
-                else
-                {
-                    Logger.Log.UnableToGetMemoryPressureLevel(
-                            m_executePhaseLoggingContext,
-                            availableRam: perfInfo.AvailableRamMb.Value,
-                            minimumAvailableRam: m_configuration.Schedule.MinimumTotalAvailableRamMb,
-                            ramUtilization: perfInfo.RamUsagePercentage.Value,
-                            maximumRamUtilization: m_configuration.Schedule.MaximumRamUtilizationPercentage);
-                }
+            Memory.PressureLevel pressureLevel = Memory.PressureLevel.Normal;
+            var result = Memory.GetMemoryPressureLevel(ref pressureLevel) == Dispatch.MACOS_INTEROP_SUCCESS;
+            if (result)
+            {
+                // If the memory pressure level is not above the configured level but we've infered resources are not available earlier,
+                // we reset the resource availability and override the decision by looking at the current pressure level only!
+                cancellationThresholdReached = pressureLevel > m_configuration.Schedule.MaximumAllowedMemoryPressureLevel;
+            }
+            else
+            {
+                Logger.Log.UnableToGetMemoryPressureLevel(
+                        m_executePhaseLoggingContext,
+                        availableRam: perfInfo.AvailableRamMb.Value,
+                        minimumAvailableRam: m_configuration.Schedule.MinimumTotalAvailableRamMb,
+                        ramUtilization: perfInfo.RamUsagePercentage.Value,
+                        maximumRamUtilization: m_configuration.Schedule.MaximumRamUtilizationPercentage);
+            }
+
+            if (!m_waitingForRamToFreeUpAfterCancellation)
+            {
+                resourceAvailable = !cancellationThresholdReached;
+            }
+            else
+            {
+                m_waitingForRamToFreeUpAfterCancellation = resourceAvailable;
+            }
 #endif
 
             if (!resourceAvailable)
