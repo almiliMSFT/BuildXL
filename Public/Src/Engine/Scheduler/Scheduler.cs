@@ -2207,7 +2207,7 @@ namespace BuildXL.Scheduler
             }
             else
             {
-                if resourceAvailable)
+                if (resourceAvailable)
                 {
                     m_waitingForRamToFreeUpAfterCancellation = false;
                 }
