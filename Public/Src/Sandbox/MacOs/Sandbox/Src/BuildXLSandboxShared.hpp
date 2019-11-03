@@ -253,7 +253,8 @@ typedef struct {
     uint32_t numCoalescedReports;
     uint32_t numCacheHits;
     uint32_t numCacheMisses;
-    uint32_t cacheElemCount;
+    uint32_t cacheRecordCount;
+    uint32_t cacheRecordSize;
     uint32_t cacheNodeCount;
     uint32_t cacheNodeSize;
     uint32_t numForks;
