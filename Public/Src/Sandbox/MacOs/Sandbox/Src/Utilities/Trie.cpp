@@ -30,6 +30,7 @@ bool Trie::init(TrieKind kind)
     }
 
     size_ = 0;
+    nodeCount_ = 0;
     kind_ = mergeKindAndImpl(kind, g_bxl_enable_light_trie ? kLightTrie : kFastTrie);
     onChangeData_ = nullptr;
     onChangeCallback_ = nullptr;
@@ -60,6 +61,7 @@ void Trie::free()
     lock_ = nullptr;
     root_ = nullptr;
     size_ = 0;
+    nodeCount_ = 0;
 
     super::free();
 }
