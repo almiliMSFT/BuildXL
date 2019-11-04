@@ -87,8 +87,6 @@ bool AccessHandler::ReportProcessTreeCompleted()
             .lastPathLookupElemCount = GetPip()->getLastPathLookupElemCount(),
             .lastPathLookupNodeCount = GetPip()->getLastPathLookupNodeCount(),
             .lastPathLookupNodeSize  = GetPip()->getLastPathLookupNodeSize(),
-            .numReportsSent          = GetPip()->Counters()->reportCounters.totalNumSent.count(),
-            .numCoalescedReports     = GetPip()->Counters()->reportCounters.numCoalescedReports.count(),
             .numCacheHits            = GetPip()->Counters()->numCacheHits.count(),
             .numCacheMisses          = GetPip()->Counters()->numCacheMisses.count(),
             .cacheRecordCount        = GetPip()->getPathCacheElemCount(),

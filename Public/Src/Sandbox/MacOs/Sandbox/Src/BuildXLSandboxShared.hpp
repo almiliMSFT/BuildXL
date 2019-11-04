@@ -249,8 +249,6 @@ typedef struct {
     uint32_t lastPathLookupElemCount;
     uint32_t lastPathLookupNodeCount;
     uint32_t lastPathLookupNodeSize;
-    uint32_t numReportsSent;
-    uint32_t numCoalescedReports;
     uint32_t numCacheHits;
     uint32_t numCacheMisses;
     uint32_t cacheRecordCount;

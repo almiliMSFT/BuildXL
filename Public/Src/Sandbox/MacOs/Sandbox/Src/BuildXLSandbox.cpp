@@ -419,8 +419,8 @@ bool const BuildXLSandbox::SendAccessReport(AccessReport &report, SandboxedPip *
     pid_t clientPid = pip->getClientPid();
     ClientInfo *client = GetClientInfo(clientPid);
 
-    Timespan getClientInfoDuration      = stopwatch.lap();
-    Counters()->getClientInfo          += getClientInfoDuration;
+    Timespan getClientInfoDuration  = stopwatch.lap();
+    Counters()->getClientInfo      += getClientInfoDuration;
     pip->Counters()->getClientInfo += getClientInfoDuration;
 
     if (client == nullptr)

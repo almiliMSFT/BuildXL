@@ -182,33 +182,27 @@ namespace BuildXL.Interop.MacOS
             public uint LastPathLookupNodeSize;
 
             [MarshalAs(UnmanagedType.U4)][FieldOffset(12)]
-            public uint NumReportsSent;
-
-            [MarshalAs(UnmanagedType.U4)][FieldOffset(16)]
-            public uint NumCoalescedReports;
-
-            [MarshalAs(UnmanagedType.U4)][FieldOffset(20)]
             public uint NumCacheHits;
 
-            [MarshalAs(UnmanagedType.U4)][FieldOffset(24)]
+            [MarshalAs(UnmanagedType.U4)][FieldOffset(16)]
             public uint NumCacheMisses;
 
-            [MarshalAs(UnmanagedType.U4)][FieldOffset(28)]
+            [MarshalAs(UnmanagedType.U4)][FieldOffset(20)]
             public uint CacheRecordCount;
 
-            [MarshalAs(UnmanagedType.U4)][FieldOffset(32)]
+            [MarshalAs(UnmanagedType.U4)][FieldOffset(24)]
             public uint CacheRecordSize;
 
-            [MarshalAs(UnmanagedType.U4)][FieldOffset(36)]
+            [MarshalAs(UnmanagedType.U4)][FieldOffset(28)]
             public uint CacheNodeCount;
 
-            [MarshalAs(UnmanagedType.U4)][FieldOffset(40)]
+            [MarshalAs(UnmanagedType.U4)][FieldOffset(32)]
             public uint CacheNodeSize;
 
-            [MarshalAs(UnmanagedType.U4)][FieldOffset(44)]
+            [MarshalAs(UnmanagedType.U4)][FieldOffset(36)]
             public uint NumForks;
 
-            [MarshalAs(UnmanagedType.U4)][FieldOffset(48)]
+            [MarshalAs(UnmanagedType.U4)][FieldOffset(40)]
             public uint NumHardLinkRetries;
         } 
 
