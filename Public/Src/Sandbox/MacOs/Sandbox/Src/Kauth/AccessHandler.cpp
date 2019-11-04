@@ -82,6 +82,22 @@ bool AccessHandler::ReportProcessTreeCompleted()
         .pid       = proc_selfpid(),
         .rootPid   = GetProcessId(),
         .pipId     = GetPipId(),
+        .pipStats  =
+        {
+            .lastPathLookupElemCount = GetPip()->getLastPathLookupElemCount(),
+            .lastPathLookupNodeCount = GetPip()->getLastPathLookupNodeCount(),
+            .lastPathLookupNodeSize  = GetPip()->getLastPathLookupNodeSize(),
+            .numReportsSent          = GetPip()->Counters()->reportCounters.totalNumSent.count(),
+            .numCoalescedReports     = GetPip()->Counters()->reportCounters.numCoalescedReports.count(),
+            .numCacheHits            = GetPip()->Counters()->numCacheHits.count(),
+            .numCacheMisses          = GetPip()->Counters()->numCacheMisses.count(),
+            .cacheRecordCount        = GetPip()->getPathCacheElemCount(),
+            .cacheRecordSize         = sizeof(CacheRecord),
+            .cacheNodeCount          = GetPip()->getPathCacheNodeCount(),
+            .cacheNodeSize           = GetPip()->getPathCacheNodeSize(),
+            .numForks                = GetPip()->Counters()->numForks.count(),
+            .numHardLinkRetries      = GetPip()->Counters()->numHardLinkRetries.count(),
+        },
         .stats     = { .creationTime = creationTimestamp_ }
     };
 
