@@ -1336,12 +1336,12 @@ namespace BuildXL.Processes
             HashSet<AbsolutePath> allInputPathsUnderSharedOpaques)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            bool canceled = result.Killed && cancellationToken.IsCancellationRequested;
+            bool cancelled = result.Killed && cancellationToken.IsCancellationRequested;
             bool hasMessageParsingError = result?.MessageProcessingFailure != null;
             bool exitedWithSuccessExitCode = m_pip.SuccessExitCodes.Length == 0
                 ? result.ExitCode == 0
                 : m_pip.SuccessExitCodes.Contains(result.ExitCode);
-            bool exitedSuccessfullyAndGracefully = !canceled && exitedWithSuccessExitCode;
+            bool exitedSuccessfullyAndGracefully = !cancelled && exitedWithSuccessExitCode;
             bool exitedButCanBeRetried = m_pip.RetryExitCodes.Contains(result.ExitCode) && m_remainingUserRetryCount > 0;
 
             bool allOutputsPresent = false;
@@ -1390,7 +1390,7 @@ namespace BuildXL.Processes
                 }
                 else
                 {
-                    if (!canceled)
+                    if (!cancelled)
                     {
                         LogFinishedFailed(result);
 
@@ -1494,7 +1494,7 @@ namespace BuildXL.Processes
                     loggingContext,
                     m_pip.SemiStableHash,
                     m_pip.GetDescription(m_context),
-                    canceled,
+                    cancelled,
                     result.ExitCode,
                     result.Killed,
                     numSurvivingChildErrors);
@@ -1547,7 +1547,7 @@ namespace BuildXL.Processes
 
             bool errorWasTruncated = false;
             // if some outputs are missing, we are logging this process as a failed one (even if it finished with a success exit code).
-            if ((!mainProcessExitedCleanly || !allOutputsPresent) && !canceled && loggingSuccess)
+            if ((!mainProcessExitedCleanly || !allOutputsPresent) && !cancelled && loggingSuccess)
             {
                 standardOutHasBeenWrittenToLog = true;
 
@@ -1556,7 +1556,7 @@ namespace BuildXL.Processes
                 loggingSuccess = logErrorResult.Success;
             }
 
-            if (m_numWarnings > 0 && loggingSuccess)
+            if (m_numWarnings > 0 && loggingSuccess && !cancelled)
             {
                 if (!await TryLogWarningAsync(result.StandardOutput, result.StandardError))
                 {
@@ -1566,7 +1566,7 @@ namespace BuildXL.Processes
 
             // The full output may be requested based on the result of the pip. If the pip failed, the output may have been reported
             // in TryLogErrorAsync above. Only replicate the output if the error was truncated due to an error regex
-            if ((!standardOutHasBeenWrittenToLog || errorWasTruncated) && loggingSuccess)
+            if ((!standardOutHasBeenWrittenToLog || errorWasTruncated) && loggingSuccess && !cancelled)
             {
                 // If the pip succeeded, we must check if one of the non-error output modes have been chosen
                 if ((m_sandboxConfig.OutputReportingMode == OutputReportingMode.FullOutputAlways) ||
@@ -1601,12 +1601,12 @@ namespace BuildXL.Processes
             }
 
             // Log a warning for having converted ReadWrite file access request to Read file access request and the pip was not canceled and failed.
-            if (!mainProcessSuccess && !canceled && result.HasReadWriteToReadFileAccessRequest)
+            if (!mainProcessSuccess && !cancelled && result.HasReadWriteToReadFileAccessRequest)
             {
                 Tracing.Logger.Log.ReadWriteFileAccessConvertedToReadWarning(loggingContext, m_pip.SemiStableHash, m_pip.GetDescription(m_context));
             }
 
-            var finalStatus = canceled
+            var finalStatus = cancelled
                 ? SandboxedProcessPipExecutionStatus.Canceled
                 : (mainProcessSuccess && loggingSuccess
                     ? SandboxedProcessPipExecutionStatus.Succeeded
@@ -1640,7 +1640,7 @@ namespace BuildXL.Processes
             {
                 status = SandboxedProcessPipExecutionStatus.PreparationFailed;
             }
-            else if (canceled)
+            else if (cancelled)
             {
                 status = SandboxedProcessPipExecutionStatus.Canceled;
             }
