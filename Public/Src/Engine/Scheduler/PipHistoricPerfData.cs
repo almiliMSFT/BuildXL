@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.ContractsLight;
+using BuildXL.Interop.MacOS;
 using BuildXL.Pips;
 using BuildXL.Utilities;
 using static BuildXL.Utilities.FormattableStringEx;
@@ -15,6 +17,8 @@ namespace BuildXL.Scheduler
     /// </summary>
     public readonly struct PipHistoricPerfData : IEquatable<PipHistoricPerfData>
     {
+        private const string PLATFORM_OSX = "PLATFORM_OSX";
+
         /// <summary>
         /// Default time to live
         /// </summary>
@@ -43,6 +47,11 @@ namespace BuildXL.Scheduler
         public readonly uint DiskIOInKB;
 
         /// <summary>
+        /// Kext stats
+        /// </summary>
+        public readonly Sandbox.PipKextStats KextStats;
+
+        /// <summary>
         /// Check if the structure was recently generated
         /// </summary>
         public bool IsFresh => m_entryTimeToLive == DefaultTimeToLive;
@@ -62,15 +71,17 @@ namespace BuildXL.Scheduler
             PeakMemoryInKB = (uint)Math.Min(uint.MaxValue, executionPerformance.MemoryCounters.PeakWorkingSet / 1024);
             DiskIOInKB = (uint)Math.Min(uint.MaxValue, executionPerformance.IO.GetAggregateIO().TransferCount / 1024);
             ProcessorsInPercents = executionPerformance.ProcessorsInPercents;
+            KextStats = executionPerformance.KextStats;
         }
 
-        private PipHistoricPerfData(byte timeToLive, uint durationInMs, uint peakMemoryInKB, ushort processorsInPercents, uint diskIOInKB)
+        private PipHistoricPerfData(byte timeToLive, uint durationInMs, uint peakMemoryInKB, ushort processorsInPercents, uint diskIOInKB, Sandbox.PipKextStats kextStats)
         {
             m_entryTimeToLive = timeToLive;
             DurationInMs = durationInMs;
             PeakMemoryInKB = peakMemoryInKB;
             ProcessorsInPercents = processorsInPercents;
             DiskIOInKB = diskIOInKB;
+            KextStats = kextStats;
         }
 
         #endregion
@@ -89,6 +100,7 @@ namespace BuildXL.Scheduler
             writer.Write(PeakMemoryInKB);
             writer.Write(ProcessorsInPercents);
             writer.Write(DiskIOInKB);
+            KextStats.Serialize(writer);
         }
 
         /// <summary>
@@ -101,11 +113,12 @@ namespace BuildXL.Scheduler
             byte timeToLive = reader.ReadByte();
             byte newTimeToLive = (byte)(timeToLive - 1);
             result = new PipHistoricPerfData(
-                newTimeToLive,
+                newTimeToLive, 
                 reader.ReadUInt32(),
                 reader.ReadUInt32(),
                 reader.ReadUInt16(),
-                reader.ReadUInt32());
+                reader.ReadUInt32(),
+                Sandbox.PipKextStats.Deserialize(reader));
             return newTimeToLive > 0;
         }
 
@@ -123,7 +136,8 @@ namespace BuildXL.Scheduler
                     (int)DurationInMs,
                     (int)PeakMemoryInKB,
                     (int)ProcessorsInPercents,
-                    (int)DiskIOInKB);
+                    (int)DiskIOInKB,
+                    KextStats.GetHashCode());
             }
         }
 
@@ -131,10 +145,11 @@ namespace BuildXL.Scheduler
         public bool Equals(PipHistoricPerfData other)
         {
             return m_entryTimeToLive == other.m_entryTimeToLive &&
-                    DurationInMs == other.DurationInMs &&
-                    PeakMemoryInKB == other.PeakMemoryInKB &&
-                    ProcessorsInPercents == other.ProcessorsInPercents &&
-                    DiskIOInKB == other.DiskIOInKB;
+                DurationInMs == other.DurationInMs &&
+                PeakMemoryInKB == other.PeakMemoryInKB &&
+                ProcessorsInPercents == other.ProcessorsInPercents &&
+                DiskIOInKB == other.DiskIOInKB &&
+                KextStats == other.KextStats;
         }
 
         /// <inherit />
@@ -166,7 +181,13 @@ namespace BuildXL.Scheduler
         /// </summary>
         public PipHistoricPerfData MakeFresh()
         {
-            return new PipHistoricPerfData(DefaultTimeToLive, DurationInMs, PeakMemoryInKB, ProcessorsInPercents, DiskIOInKB);
+            return new PipHistoricPerfData(
+                DefaultTimeToLive, 
+                DurationInMs, 
+                PeakMemoryInKB, 
+                ProcessorsInPercents, 
+                DiskIOInKB, 
+                new Sandbox.PipKextStats());
         }
 
         /// <summary>
@@ -180,7 +201,18 @@ namespace BuildXL.Scheduler
             var processorInPercentResult = GetMergeResult(ProcessorsInPercents, other.ProcessorsInPercents);
             var diskIOResult = GetMergeResult(DiskIOInKB, other.DiskIOInKB);
 
-            return new PipHistoricPerfData(DefaultTimeToLive, durationResult, peakMemoryResult, (ushort)processorInPercentResult, diskIOResult);
+            return new PipHistoricPerfData(
+                DefaultTimeToLive,
+                durationResult,
+                peakMemoryResult, 
+                (ushort)processorInPercentResult,
+                diskIOResult,
+                KextStats.Merge(other.KextStats, GetMergeResult));
+        }
+
+        private Sandbox.PipKextStats Merge(Sandbox.PipKextStats oldData, Sandbox.PipKextStats newData)
+        {
+            return oldData.Merge(newData, GetMergeResult);
         }
 
         private static uint GetMergeResult(uint oldData, uint newData)
@@ -195,7 +227,7 @@ namespace BuildXL.Scheduler
 
                 return (uint) ( (((ulong)oldData) * 9 / 10) + (((ulong)newData) / 10) );
             }
-            catch (System.OverflowException ex)
+            catch (OverflowException ex)
             {
                 throw new BuildXLException(I($"Failed to merge historic perf data result with old '{oldData} and new {newData}' data values!"), ex);
             }

@@ -622,6 +622,7 @@ namespace BuildXL.Scheduler
                             userTime: jobAccounting.UserTime,
                             kernelTime: jobAccounting.KernelTime,
                             memoryCounters: jobAccounting.MemoryCounters,
+                            kextStats: jobAccounting.KextStats,
                             numberOfProcesses: jobAccounting.NumberOfProcesses,
                             workerId: 0);
                     }

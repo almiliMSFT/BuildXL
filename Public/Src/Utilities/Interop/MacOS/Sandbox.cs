@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using BuildXL.Utilities;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 
 
@@ -162,6 +164,7 @@ namespace BuildXL.Interop.MacOS
             public ulong DequeueTime;
         }
 
+#if PLATFORM_OSX
         /// <summary>
         /// Struct sent in place of <see cref="AccessReport.PathOrPipStats"/> in case of a 
         /// <see cref="FileOperation.OpProcessTreeCompleted"/> operation.
@@ -204,7 +207,164 @@ namespace BuildXL.Interop.MacOS
 
             [MarshalAs(UnmanagedType.U4)][FieldOffset(40)]
             public uint NumHardLinkRetries;
-        } 
+
+            public PipKextStats Merge(PipKextStats newData, Func<uint, uint, uint> merge)
+            {
+                return new PipKextStats
+                {
+                    LastPathLookupElemCount = merge(LastPathLookupElemCount, newData.LastPathLookupElemCount),
+                    LastPathLookupNodeCount = merge(LastPathLookupNodeCount, newData.LastPathLookupNodeCount),
+                    LastPathLookupNodeSize = merge(LastPathLookupNodeSize, newData.LastPathLookupNodeSize),
+                    NumCacheHits = merge(NumCacheHits, newData.NumCacheHits),
+                    NumCacheMisses = merge(NumCacheMisses, newData.NumCacheMisses),
+                    CacheNodeCount = merge(CacheNodeCount, newData.CacheNodeCount),
+                    CacheNodeSize = merge(CacheNodeSize, newData.CacheNodeSize),
+                    CacheRecordCount = merge(CacheRecordCount, newData.CacheRecordCount),
+                    CacheRecordSize = merge(CacheRecordSize, newData.CacheRecordSize)
+                };
+            }
+
+            #region Serialization
+            public static PipKextStats Deserialize(BinaryReader reader)
+            {
+                return new PipKextStats
+                {
+                    LastPathLookupElemCount = reader.ReadUInt32(),
+                    LastPathLookupNodeCount = reader.ReadUInt32(),
+                    LastPathLookupNodeSize  = reader.ReadUInt32(),
+                    NumCacheHits            = reader.ReadUInt32(),
+                    NumCacheMisses          = reader.ReadUInt32(),
+                    CacheRecordCount        = reader.ReadUInt32(),
+                    CacheRecordSize         = reader.ReadUInt32(),
+                    CacheNodeCount          = reader.ReadUInt32(),
+                    CacheNodeSize           = reader.ReadUInt32(),
+                    NumForks                = reader.ReadUInt32(),
+                    NumHardLinkRetries      = reader.ReadUInt32()
+                };
+            }
+            
+            public void Serialize(BinaryWriter writer)
+            {
+                writer.Write(LastPathLookupElemCount);
+                writer.Write(LastPathLookupNodeCount);
+                writer.Write(LastPathLookupNodeSize);
+                writer.Write(NumCacheHits);
+                writer.Write(NumCacheMisses);
+                writer.Write(CacheRecordCount);
+                writer.Write(CacheRecordSize);
+                writer.Write(CacheNodeCount);
+                writer.Write(CacheNodeSize);
+                writer.Write(NumForks);
+                writer.Write(NumHardLinkRetries);
+            }
+            #endregion
+
+            #region Equality/hash
+            /// <inherit />
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return HashCodeHelper.Combine(
+                        (int)LastPathLookupElemCount,
+                        (int)LastPathLookupNodeCount,
+                        (int)LastPathLookupNodeSize,
+                        (int)NumCacheHits,
+                        (int)NumCacheMisses,
+                        (int)CacheRecordCount,
+                        (int)CacheRecordSize,
+                        (int)CacheNodeCount,
+                        (int)CacheNodeSize,
+                        (int)NumForks,
+                        (int)NumHardLinkRetries);
+                }
+            }
+
+            /// <inherit />
+            public bool Equals(PipKextStats other)
+            {
+                return LastPathLookupElemCount == other.LastPathLookupElemCount &&
+                        LastPathLookupNodeCount == other.LastPathLookupNodeCount &&
+                        LastPathLookupNodeSize == other.LastPathLookupNodeSize &&
+                        NumCacheHits == other.NumCacheHits &&
+                        NumCacheMisses == other.NumCacheMisses &&
+                        CacheRecordCount == other.CacheRecordCount &&
+                        CacheRecordSize == other.CacheRecordSize &&
+                        CacheNodeCount == other.CacheNodeCount &&
+                        CacheNodeSize == other.CacheNodeSize &&
+                        NumForks == other.NumForks &&
+                        NumHardLinkRetries == other.NumHardLinkRetries;
+            }
+
+            /// <inherit />
+            public override bool Equals(object obj)
+            {
+                return StructUtilities.Equals(this, obj);
+            }
+
+            /// <summary>
+            /// Checks whether two PipHistoricPerfData structures are the same.
+            /// </summary>
+            public static bool operator ==(PipKextStats left, PipKextStats right)
+            {
+                return left.Equals(right);
+            }
+
+            /// <summary>
+            /// Checks whether two PipHistoricPerfData structures are different.
+            /// </summary>
+            public static bool operator !=(PipKextStats left, PipKextStats right)
+            {
+                return !left.Equals(right);
+            }
+
+        #endregion
+        }
+#else
+        public readonly struct PipKextStats
+        {
+            public uint LastPathLookupElemCount => 0;
+            public uint LastPathLookupNodeCount => 0;
+            public uint LastPathLookupNodeSize => 0;
+            public uint NumCacheHits => 0;
+            public uint NumCacheMisses => 0;
+            public uint CacheRecordCount => 0;
+            public uint CacheRecordSize => 0;
+            public uint CacheNodeCount => 0;
+            public uint CacheNodeSize => 0;
+            public uint NumForks => 0;
+            public uint NumHardLinkRetries => 0;
+            
+            public PipKextStats Merge(PipKextStats newData, Func<uint, uint, uint> getMergeResult) => newData;
+
+            #region Serialization
+            public static PipKextStats Deserialize(BinaryReader reader) => new PipKextStats();
+            public void Serialize(BinaryWriter writer) { }
+            #endregion
+
+            #region Equality/hash
+            /// <inherit />
+            public override int GetHashCode() => 42;
+
+            /// <inherit />
+            public bool Equals(PipKextStats other) => true;
+
+            /// <inherit />
+            public override bool Equals(object obj) => obj is PipKextStats pks && Equals(pks);
+
+
+            /// <summary>
+            /// Checks whether two PipHistoricPerfData structures are the same.
+            /// </summary>
+            public static bool operator ==(PipKextStats left, PipKextStats right) => true;
+
+            /// <summary>
+            /// Checks whether two PipHistoricPerfData structures are different.
+            /// </summary>
+            public static bool operator !=(PipKextStats left, PipKextStats right) => false;
+            #endregion
+        }
+#endif
 
         /// <remarks>
         /// CODESYNC: Public/Src/Sandbox/MacOs/Sandbox/Src/BuildXLSandboxShared.hpp

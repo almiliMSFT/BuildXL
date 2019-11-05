@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.ContractsLight;
 using System.IO;
 using System.Threading;
+using BuildXL.Interop.MacOS;
 using BuildXL.Native.IO;
 using BuildXL.Utilities;
 using BuildXL.Utilities.Collections;
@@ -103,14 +104,14 @@ namespace BuildXL.Scheduler
                         for (int i = 0; i < size; ++i)
                         {
                             long semiStableHash = reader.ReadInt64();
-                            PipHistoricPerfData historicData;
-                            if (PipHistoricPerfData.Deserialize(reader, out historicData))
+                            if (PipHistoricPerfData.Deserialize(reader, out var historicData))
                             {
                                 if (!table.m_runtimeData.TryAdd(semiStableHash, historicData))
                                 {
                                     throw new BuildXLException("Corrupted file has duplicate records");
                                 }
                             }
+                            
                         }
 
                         return table;

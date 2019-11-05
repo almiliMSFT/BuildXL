@@ -8,6 +8,7 @@ using BuildXL.Storage;
 using BuildXL.Utilities;
 using BuildXL.Native.IO;
 using System.IO;
+using BuildXL.Interop.MacOS;
 
 namespace BuildXL.Pips
 {
@@ -217,6 +218,11 @@ namespace BuildXL.Pips
         /// </summary>
         public ushort ProcessorsInPercents { get; }
 
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public Sandbox.PipKextStats KextStats { get; }
+
         /// <nodoc />
         public ProcessPipExecutionPerformance(
             PipExecutionLevel level,
@@ -230,7 +236,8 @@ namespace BuildXL.Pips
             TimeSpan kernelTime,
             ProcessMemoryCounters memoryCounters,
             uint numberOfProcesses,
-            uint workerId)
+            uint workerId,
+            Sandbox.PipKextStats kextStats)
             : base(level, executionStart, executionStop, workerId)
         {
             Contract.Requires(executionStart.Kind == DateTimeKind.Utc);
@@ -247,6 +254,7 @@ namespace BuildXL.Pips
             KernelTime = kernelTime;
             MemoryCounters = memoryCounters;
             NumberOfProcesses = numberOfProcesses;
+            KextStats = kextStats;
 
             var durationInMs = (uint)Math.Min(uint.MaxValue, Math.Max(1, ProcessExecutionTime.TotalMilliseconds));
             double cpuTime = KernelTime.TotalMilliseconds + UserTime.TotalMilliseconds;
@@ -287,6 +295,7 @@ namespace BuildXL.Pips
             writer.Write(UserTime);
             writer.Write(KernelTime);
             MemoryCounters.Serialize(writer);
+            KextStats.Serialize(writer);
             writer.WriteCompact(NumberOfProcesses);
         }
 
@@ -300,6 +309,7 @@ namespace BuildXL.Pips
             TimeSpan userTime = reader.ReadTimeSpan();
             TimeSpan kernelTime = reader.ReadTimeSpan();
             ProcessMemoryCounters memoryCounters = ProcessMemoryCounters.Deserialize(reader);
+            Sandbox.PipKextStats kextStats = Sandbox.PipKextStats.Deserialize(reader);
 
             uint numberOfProcesses = reader.ReadUInt32Compact();
 
@@ -314,6 +324,7 @@ namespace BuildXL.Pips
                 userTime: userTime,
                 kernelTime: kernelTime,
                 memoryCounters: memoryCounters,
+                kextStats: kextStats,
                 numberOfProcesses: numberOfProcesses,
                 workerId: workerId);
         }

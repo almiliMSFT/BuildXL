@@ -12,6 +12,9 @@ namespace Interop {
             ...globR(d`.`, "*.cs"),
             opNamesAutoGen
         ],
+        references: [
+            $.Collections.dll
+        ],
         allowUnsafeBlocks: true,
     });
 }

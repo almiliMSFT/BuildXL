@@ -449,6 +449,7 @@ namespace BuildXL.Processes
                     MemoryCounters = memoryCounters,
                     KernelTime = TimeSpan.FromMilliseconds(m_perfAggregator.JobKernelTimeMs.Latest),
                     UserTime = TimeSpan.FromMilliseconds(m_perfAggregator.JobUserTimeMs.Latest),
+                    KextStats = m_pipKextStats ?? default
                 };
             }
         }

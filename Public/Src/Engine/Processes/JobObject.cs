@@ -113,7 +113,12 @@ namespace BuildXL.Processes
             /// <summary>
             /// Memory counters
             /// </summary>
-            public ProcessMemoryCounters MemoryCounters; 
+            public ProcessMemoryCounters MemoryCounters;
+
+            /// <summary>
+            /// Kext statistics (macOS only)
+            /// </summary>
+            public Interop.MacOS.Sandbox.PipKextStats KextStats;
 
             /// <summary>
             /// Number of processes started within or added to the job. This includes both running and already-terminated processes, if any.
@@ -127,6 +132,7 @@ namespace BuildXL.Processes
                 writer.Write(UserTime);
                 writer.Write(KernelTime);
                 MemoryCounters.Serialize(writer);
+                KextStats.Serialize(writer);
                 writer.Write(NumberOfProcesses);
             }
 
@@ -139,6 +145,7 @@ namespace BuildXL.Processes
                     UserTime = reader.ReadTimeSpan(),
                     KernelTime = reader.ReadTimeSpan(),
                     MemoryCounters = ProcessMemoryCounters.Deserialize(reader),
+                    KextStats = Interop.MacOS.Sandbox.PipKextStats.Deserialize(reader),
                     NumberOfProcesses = reader.ReadUInt32()
                 };
             }

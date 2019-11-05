@@ -471,6 +471,7 @@ namespace BuildXL.Scheduler
                         userTime: performanceInformation.UserTime,
                         kernelTime: performanceInformation.KernelTime,
                         memoryCounters: performanceInformation.MemoryCounters,
+                        kextStats: performanceInformation.KextStats,
                         numberOfProcesses: performanceInformation.NumberOfProcesses,
                         workerId: performanceInformation.WorkerId);
                 }
@@ -485,11 +486,12 @@ namespace BuildXL.Scheduler
                             stop,
                             fingerprint: result.WeakFingerprint?.Hash ?? FingerprintUtilities.ZeroFingerprint,
                             processExecutionTime: TimeSpan.Zero,
-                            fileMonitoringViolations: default(FileMonitoringViolationCounters),
-                            ioCounters: default(IOCounters),
+                            fileMonitoringViolations: default,
+                            ioCounters: default,
                             userTime: TimeSpan.Zero,
                             kernelTime: TimeSpan.Zero,
                             memoryCounters: new ProcessMemoryCounters(0, 0, 0),
+                            kextStats: default,
                             numberOfProcesses: 0,
                             workerId: 0);
                 }
