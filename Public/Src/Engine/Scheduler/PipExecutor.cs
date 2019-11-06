@@ -1401,7 +1401,10 @@ namespace BuildXL.Scheduler
 
                                 using (var sidebandWriter = CreateSidebandWriterIfConfigured(environment, pip))
                                 {
-                                    result = await executor.RunAsync(innerResourceLimitCancellationTokenSource.Token, sandboxConnection: environment.SandboxConnection, sidebandWriter: sidebandWriter);
+                                    result = await executor.RunAsync(
+                                        innerResourceLimitCancellationTokenSource.Token, 
+                                        sandboxConnection: environment.SandboxConnection, 
+                                        sidebandWriter: sidebandWriter);
                                 }
 
                                 ++retryCount;

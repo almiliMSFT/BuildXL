@@ -4953,6 +4953,10 @@ namespace BuildXL.Scheduler
                                 Logger.Log.KextFailureNotificationReceived(loggingContext, status, description);
                                 RequestTermination();
                             },
+                            HistoricStatsLookup = (long semiStableHash) =>
+                            {
+                                return RunningTimeTable[semiStableHash].KextStats;
+                            },
                             KextConfig = new Sandbox.KextConfig
                             {
                                 ReportQueueSizeMB = m_configuration.Sandbox.KextReportQueueSizeMb,

@@ -463,6 +463,11 @@ namespace BuildXL.Interop.MacOS
         /// <param name="description">Arbitrary description</param>
         public delegate void ManagedFailureCallback(int status, string description);
 
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public delegate PipKextStats? HistoricKextStatsLookup(long semiStableHash);
+
         [DllImport(Libraries.BuildXLInteropLibMacOS, CallingConvention = CallingConvention.Cdecl)]
         public static extern bool SetFailureNotificationHandler([MarshalAs(UnmanagedType.FunctionPtr)] NativeFailureCallback callback, KextConnectionInfo info);
 

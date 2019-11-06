@@ -39,6 +39,11 @@ namespace BuildXL.Processes
             /// Callback to invoke in the case of an irrecoverable kernel extension error.
             /// </summary>
             public Sandbox.ManagedFailureCallback FailureCallback;
+
+            /// <summary>
+            /// Lookup for historic pip kext stats
+            /// </summary>
+            public Sandbox.HistoricKextStatsLookup HistoricStatsLookup;
         }
 
         /// <inheritdoc />
