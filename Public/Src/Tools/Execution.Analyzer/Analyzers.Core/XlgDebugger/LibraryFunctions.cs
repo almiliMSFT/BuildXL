@@ -10,6 +10,7 @@ using BuildXL.Execution.Analyzer.JPath;
 
 using IEnum = System.Collections.IEnumerable;
 using static BuildXL.Execution.Analyzer.JPath.Evaluator;
+using System.Web.UI.WebControls;
 
 namespace BuildXL.Execution.Analyzer
 {
@@ -107,26 +108,17 @@ namespace BuildXL.Execution.Analyzer
             var objs = args.Flatten();
 
             var fieldToSortBy = args.GetStrSwitch("k", null);
+            Func<object, object> keySelector = o => o;
             if (!string.IsNullOrEmpty(fieldToSortBy))
             {
-                objs = objs
-                    .ToArray()
-                    .AsParallel()
-                    .Select(o => args.Eval.Resolve(o).Properties.FirstOrDefault(p => p.Name == fieldToSortBy)?.Value)
-                    .Where(o => o != null)
-                    .ToArray();
+                keySelector = o => args.Eval.Resolve(o).Properties.FirstOrDefault(p => p.Name == fieldToSortBy)?.Value;
             }
 
-            var isNumercSort = args.HasSwitch("n");
-            if (isNumercSort)
-            {
-                objs = objs
-                    .Where(o => args.Eval.TryToNumber(o) != null);
-            }
-            
-            var ordered = isNumercSort // numeric sorting (otherwise string sorting)
-                ? objs.OrderBy(args.ToNumber)
-                : objs.OrderBy(args.Preview);
+            IComparer<object> comparer = args.HasSwitch("n") 
+                ? Comparer<object>.Create((lhs, rhs) => Comparer<long?>.Default.Compare(args.Eval.TryToNumber(lhs), args.Eval.TryToNumber(rhs)))
+                : Comparer<object>.Create((lhs, rhs) => Comparer<string>.Default.Compare(args.Preview(lhs), args.Preview(rhs)));            
+
+            var ordered = objs.OrderBy(keySelector, comparer);
 
             var finalOrder = args.HasSwitch("r") // reverse
                 ? ordered.Reverse()
