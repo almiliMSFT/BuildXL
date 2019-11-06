@@ -21,6 +21,7 @@ namespace BuildXL.Execution.Analyzer
         public static readonly IReadOnlyList<Function> All = new List<Function>
         {
              new Function(name: "sum",    minArity: 1, func: Sum),
+             new Function(name: "avg",    minArity: 1, func: Avg),
              new Function(name: "cut",    minArity: 1, func: Cut),
              new Function(name: "count",  minArity: 1, func: Count),
              new Function(name: "uniq",   minArity: 1, func: Uniq),
@@ -44,6 +45,14 @@ namespace BuildXL.Execution.Analyzer
                 .Sum();
         }
 
+        private static Result Avg(Evaluator.Args args)
+        {
+            return (long)args
+                .Flatten()
+                .Select(obj => args.ToNumber(obj))
+                .Average();
+        }
+
         private static Result Cut(Evaluator.Args args)
         {
             var separator = args.ToString(args.GetSwitch("d") ?? " \t\r\n");
@@ -56,6 +65,8 @@ namespace BuildXL.Execution.Analyzer
                 .SelectMany(f => int.TryParse(f, out var idx) ? new[] { idx - 1 } : new int[0]));
             return args
                 .Flatten()
+                .ToArray()
+                .AsParallel()
                 .Select(obj => string
                     .Join(
                         separator,
@@ -95,7 +106,25 @@ namespace BuildXL.Execution.Analyzer
         {
             var objs = args.Flatten();
 
-            var ordered = args.HasSwitch("n") // numeric sorting (otherwise string sorting)
+            var fieldToSortBy = args.GetStrSwitch("k", null);
+            if (!string.IsNullOrEmpty(fieldToSortBy))
+            {
+                objs = objs
+                    .ToArray()
+                    .AsParallel()
+                    .Select(o => args.Eval.Resolve(o).Properties.FirstOrDefault(p => p.Name == fieldToSortBy)?.Value)
+                    .Where(o => o != null)
+                    .ToArray();
+            }
+
+            var isNumercSort = args.HasSwitch("n");
+            if (isNumercSort)
+            {
+                objs = objs
+                    .Where(o => args.Eval.TryToNumber(o) != null);
+            }
+            
+            var ordered = isNumercSort // numeric sorting (otherwise string sorting)
                 ? objs.OrderBy(args.ToNumber)
                 : objs.OrderBy(args.Preview);
 
@@ -114,7 +143,7 @@ namespace BuildXL.Execution.Analyzer
         {
             return string.Join(
                 args.GetStrSwitch("d", defaultSeparator),
-                args.Flatten().Select(args.Preview));
+                args.Flatten().ToArray().AsParallel().Select(args.Preview));
         }
 
         private static Result Head(Evaluator.Args args)
@@ -139,7 +168,7 @@ namespace BuildXL.Execution.Analyzer
         {
             return string.Join(
                 Environment.NewLine,
-                ExtractObjects(args).Select(dict => string.Join(
+                ExtractObjects(args).ToArray().AsParallel().Select(dict => string.Join(
                     ",", 
                     dict.Values.Select(v => v?.ToString()).Select(csvEscape))));
 
@@ -153,6 +182,8 @@ namespace BuildXL.Execution.Analyzer
         {
             return args
                 .Flatten()
+                .ToArray()
+                .AsParallel()
                 .Select(o => args.Eval.Resolve(o))
                 .Select(o => o.Properties.ToDictionary(p => p.Name, p => extractValue(p.Value)))
                 .ToArray();
@@ -191,6 +222,8 @@ namespace BuildXL.Execution.Analyzer
             var fileName = args.Eval.ToString(args[0]);
             var lines = args
                 .Skip(1)
+                .ToArray()
+                .AsParallel()
                 .SelectMany(result => result)
                 .Select(args.Preview)
                 .ToList();

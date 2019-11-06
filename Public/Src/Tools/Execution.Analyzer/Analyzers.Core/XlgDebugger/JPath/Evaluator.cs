@@ -552,7 +552,9 @@ namespace BuildXL.Execution.Analyzer.JPath
                     case MapExpr mapExpr:
                         var lhs = Eval(mapExpr.Lhs);
                         return lhs
-                            .Select(obj => InNewEnv(Result.Scalar(obj), mapExpr.Sub))
+                            .Value
+                            .AsParallel()
+                            .Select(obj => new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching).Eval(mapExpr.Sub))
                             .SelectMany(result => result) // automatically flatten
                             .ToArray();
 
