@@ -10,6 +10,7 @@ using BuildXL.Execution.Analyzer.JPath;
 
 using IEnum = System.Collections.IEnumerable;
 using static BuildXL.Execution.Analyzer.JPath.Evaluator;
+using BuildXL.FrontEnd.Script.Debugger;
 
 namespace BuildXL.Execution.Analyzer
 {
@@ -84,12 +85,28 @@ namespace BuildXL.Execution.Analyzer
 
         private static Result Uniq(Evaluator.Args args)
         {
-            var groups = args.Flatten().GroupBy(obj => args.Preview(obj));
+            var fieldToSortBy = args.GetStrSwitch("k", null);
+            Func<object, object> keySelector = o => o;
+            if (!string.IsNullOrEmpty(fieldToSortBy))
+            {
+                keySelector = o => args.Eval.Resolve(o).Properties.FirstOrDefault(p => p.Name == fieldToSortBy)?.Value;
+            }
+
+            var groups = args.Flatten().GroupBy(obj => args.Preview(keySelector(obj)));
 
             if (args.HasSwitch("c")) // count objects in each group
             {
                 return groups
-                    .Select(grp => $"{grp.Count()}\t{args.Preview(grp.First())}")
+                    .Select(grp =>
+                    {
+                        return new ObjectInfo(
+                            preview: $"{grp.Count()}: {args.Preview(grp.First())}",
+                            properties: new[]
+                            {
+                                new Property(name: "Count", value: grp.Count()),
+                                new Property(name: "Value", value: grp.First())
+                            });
+                    })
                     .ToArray();
             }
             else
