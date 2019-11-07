@@ -10,7 +10,6 @@ using BuildXL.Execution.Analyzer.JPath;
 
 using IEnum = System.Collections.IEnumerable;
 using static BuildXL.Execution.Analyzer.JPath.Evaluator;
-using System.Web.UI.WebControls;
 
 namespace BuildXL.Execution.Analyzer
 {
@@ -66,8 +65,6 @@ namespace BuildXL.Execution.Analyzer
                 .SelectMany(f => int.TryParse(f, out var idx) ? new[] { idx - 1 } : new int[0]));
             return args
                 .Flatten()
-                .ToArray()
-                .AsParallel()
                 .Select(obj => string
                     .Join(
                         separator,
@@ -116,7 +113,7 @@ namespace BuildXL.Execution.Analyzer
 
             IComparer<object> comparer = args.HasSwitch("n") 
                 ? Comparer<object>.Create((lhs, rhs) => Comparer<long?>.Default.Compare(args.Eval.TryToNumber(lhs), args.Eval.TryToNumber(rhs)))
-                : Comparer<object>.Create((lhs, rhs) => Comparer<string>.Default.Compare(args.Preview(lhs), args.Preview(rhs)));            
+                : Comparer<object>.Create((lhs, rhs) => Comparer<string>.Default.Compare(args.Preview(lhs), args.Preview(rhs)));
 
             var ordered = objs.OrderBy(keySelector, comparer);
 
@@ -135,7 +132,7 @@ namespace BuildXL.Execution.Analyzer
         {
             return string.Join(
                 args.GetStrSwitch("d", defaultSeparator),
-                args.Flatten().ToArray().AsParallel().Select(args.Preview));
+                args.Flatten().Select(args.Preview));
         }
 
         private static Result Head(Evaluator.Args args)
@@ -160,7 +157,7 @@ namespace BuildXL.Execution.Analyzer
         {
             return string.Join(
                 Environment.NewLine,
-                ExtractObjects(args).ToArray().AsParallel().Select(dict => string.Join(
+                ExtractObjects(args).Select(dict => string.Join(
                     ",", 
                     dict.Values.Select(v => v?.ToString()).Select(csvEscape))));
 
@@ -174,8 +171,6 @@ namespace BuildXL.Execution.Analyzer
         {
             return args
                 .Flatten()
-                .ToArray()
-                .AsParallel()
                 .Select(o => args.Eval.Resolve(o))
                 .Select(o => o.Properties.ToDictionary(p => p.Name, p => extractValue(p.Value)))
                 .ToArray();
@@ -214,8 +209,6 @@ namespace BuildXL.Execution.Analyzer
             var fileName = args.Eval.ToString(args[0]);
             var lines = args
                 .Skip(1)
-                .ToArray()
-                .AsParallel()
                 .SelectMany(result => result)
                 .Select(args.Preview)
                 .ToList();
