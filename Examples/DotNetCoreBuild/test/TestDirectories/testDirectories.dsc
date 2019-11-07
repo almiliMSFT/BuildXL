@@ -69,6 +69,31 @@ export const writeHardLinkInSharedOpaqueDirectoryIsAllowed = Bash.isMacOS && (()
 })();
 
 @@public
+export const x = (() => {
+    const headersDir = Context.getNewOutputDirectory("headers");
+
+    const p1h1 = Transformer.copyFile(f`p1h1.h`, p`${headersDir}/proj1/p1h1.h`);
+    const p1h2 = Transformer.copyFile(f`p1h2.h`, p`${headersDir}/proj1/p1h2.h`);
+
+    const p2h1 = Transformer.copyFile(f`p2h1.h`, p`${headersDir}/proj2/p2h1.h`);
+    const p2h2 = Transformer.copyFile(f`p2h2.h`, p`${headersDir}/proj2/p2h2.h`);
+
+    const uberSD = Transformer.sealDirectory(d`${headersDir}`, [p1h1, p1h2, p2h1, p2h2]);
+
+    const procOutDir = Context.getNewOutputDirectory("proc");
+    ["proj1", "proj2"].map(projName => Transformer.execute({
+        tool: {exe: f`/bin/cat`, dependsOnCurrentHostOSDirectories: true},
+        arguments: [
+            Cmd.argument(Cmd.concat([Artifact.none(d`${headersDir}/${projName}`), "/*"]))
+        ],
+        description: `Read header for ${projName}`,
+        workingDirectory: d`${procOutDir}/${projName}`,
+        consoleOutput: p`${procOutDir}/${projName}/cat-stdout.txt`,
+        dependencies: [uberSD]
+    }));
+})();
+
+@@public
 export const moveDirectoryInsideSOD = Bash.isMacOS && (() => {
     const sodPath = Context.getNewOutputDirectory("sod-mov");
     const sod = Artifact.sharedOpaqueOutput(sodPath);
