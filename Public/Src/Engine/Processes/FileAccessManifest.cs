@@ -22,7 +22,7 @@ namespace BuildXL.Processes
     /// </summary>
     public sealed class FileAccessManifest
     {
-        private readonly Dictionary<StringId, NormalizedPathString> m_normalizedFragments = new Dictionary<StringId, NormalizedPathString>();
+        private Dictionary<StringId, NormalizedPathString> m_normalizedFragments = new Dictionary<StringId, NormalizedPathString>();
         private readonly PathTable m_pathTable;
 
         /// <summary>
@@ -829,8 +829,6 @@ namespace BuildXL.Processes
         [SuppressMessage("Microsoft.Usage", "CA2202:Do not dispose objects multiple times")]
         public ArraySegment<byte> GetPayloadBytes(FileAccessSetup setup, MemoryStream stream, uint timeoutMins, ref bool debugFlagsMatch)
         {
-            Contract.Requires(setup != null);
-            Contract.Requires(stream != null);
             stream.Position = 0;
             using (var writer = new BinaryWriter(stream, Encoding.Unicode, true))
             {
@@ -848,6 +846,29 @@ namespace BuildXL.Processes
                 WriteManifestTreeBlock(writer);
 
                 return new ArraySegment<byte>(stream.GetBuffer(), 0, (int)stream.Position);
+            }
+        }
+
+        /// <summary>
+        /// Explicitly releases most of its memory.
+        /// </summary>
+        internal void Release()
+        {
+            m_normalizedFragments?.Clear();
+            var workList = new Stack<Node>();
+            workList.Push(m_rootNode);
+            while (workList.Any())
+            {
+                var node = workList.Pop();
+                if (node == null)
+                {
+                    continue;
+                }
+                foreach (var child in node.Children)
+                {
+                    workList.Push(child);
+                }
+                node.ReleaseChildren();
             }
         }
 
@@ -1146,6 +1167,14 @@ namespace BuildXL.Processes
             /// Returns children nodes.
             /// </summary>
             internal IEnumerable<Node> Children => m_children?.Values;
+
+            /// <summary>
+            /// Releases all children nodes, allowing all that memory to be reclaimed by the garbage collector.
+            /// </summary>
+            internal void ReleaseChildren()
+            {
+                m_children?.Clear();
+            }
 
             /// <summary>
             /// The path ID as understood by the owning path table.
