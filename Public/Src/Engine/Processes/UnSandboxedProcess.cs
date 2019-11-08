@@ -117,6 +117,7 @@ namespace BuildXL.Processes
         {
             Contract.Requires(info != null);
 
+            Started = false;
             PathTable = info.PathTable;
             LoggingContext = info.LoggingContext;
             PipDescription = info.PipDescription;
@@ -157,7 +158,7 @@ namespace BuildXL.Processes
         /// <summary>
         /// Whether this process has been started (i.e., the <see cref="Start"/> method has been called on it).
         /// </summary>
-        public bool Started => Process != null;
+        public bool Started { get; private set; }
 
         /// <summary>
         /// Difference between now and when the process was started.
@@ -173,6 +174,7 @@ namespace BuildXL.Processes
         {
             Contract.Requires(!Started, "Process was already started.  Cannot start process more than once.");
 
+            Started = true;
             m_processExecutor.Start();
             ProcessStarted?.Invoke(ProcessId);
         }
@@ -308,20 +310,20 @@ namespace BuildXL.Processes
         /// </summary>
         protected virtual Process CreateProcess(SandboxedProcessInfo info)
         {
-            Contract.Requires(Process == null);
+            Contract.Requires(!Started);
 
 #if !PLATFORM_WIN
-            var mode = GetFilePermissionsForFilePath(ProcessInfo.FileName, followSymlink: false);
+            var mode = GetFilePermissionsForFilePath(info.FileName, followSymlink: false);
             if (mode < 0)
             {
-                ThrowBuildXLException($"Process creation failed: File '{ProcessInfo.FileName}' not found", new Win32Exception(0x2));
+                ThrowBuildXLException($"Process creation failed: File '{info.FileName}' not found", new Win32Exception(0x2));
             }
 
             var filePermissions = checked((FilePermissions)mode);
             FilePermissions exePermission = FilePermissions.S_IXUSR;
             if (!filePermissions.HasFlag(exePermission))
             {
-                SetFilePermissionsForFilePath(ProcessInfo.FileName, exePermission);
+                SetFilePermissionsForFilePath(info.FileName, exePermission);
             }
 #endif
 

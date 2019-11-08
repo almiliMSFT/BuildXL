@@ -864,9 +864,12 @@ namespace BuildXL.Processes
                 {
                     continue;
                 }
-                foreach (var child in node.Children)
+                if (node.Children != null)
                 {
-                    workList.Push(child);
+                    foreach (var child in node.Children)
+                    {
+                        workList.Push(child);
+                    }
                 }
                 node.ReleaseChildren();
             }
