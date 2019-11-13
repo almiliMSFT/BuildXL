@@ -207,17 +207,21 @@ namespace BuildXL.FrontEnd.Script.Debugger
                 return;
             }
 
+            var start = DateTime.UtcNow;
             var frameRef = m_scopeHandles.Get(cmd.FrameId.Value, null);
             var ans = ExpressionEvaluator.EvaluateExpression(
                 State.GetThreadState(frameRef.ThreadId),
                 frameRef.FrameIndex,
                 cmd.Expression,
                 evaluateForCompletions: false);
+            var evalDuration = DateTime.UtcNow.Subtract(start);
             if (ans.Succeeded)
             {
                 ObjectContext objContext = ans.Result;
+                start = DateTime.UtcNow;
                 var variable = Renderer.ObjectToVariable(objContext.Context, value: objContext.Object, variableName: null);
-                cmd.SendResult(new EvaluateResult(variable.Value, variable.VariablesReference));
+                var renderDuration = DateTime.UtcNow.Subtract(start);
+                cmd.SendResult(new EvaluateResult($"[e: {evalDuration.TotalSeconds:f2}s, r: {renderDuration.TotalSeconds:f2}s] {variable.Value}", variable.VariablesReference));
             }
             else
             {
