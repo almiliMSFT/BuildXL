@@ -567,8 +567,16 @@ namespace BuildXL.Execution.Analyzer.JPath
                             .AsParallel()
                             .SelectMany(obj =>
                             {
-                                var eval = new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching);
-                                return eval.Eval(mapExpr.Sub).Value;
+                                if (mapExpr.Sub.Print() == "Tags")
+                                {
+                                    var pr = (BuildXL.Pips.PipReference)obj;
+                                    return XlgDebuggerState.Analyzer.GetPip(pr.PipId).Tags.Cast<object>();
+                                }
+                                else
+                                {
+                                    var eval = new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching);
+                                    return eval.Eval(mapExpr.Sub).Value;
+                                }
                             })
                             .ToArray();
 
