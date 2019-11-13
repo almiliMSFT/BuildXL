@@ -548,7 +548,6 @@ namespace BuildXL.Execution.Analyzer.JPath
 
                         return TopEnv
                             .Current
-                            .ToArray()
                             .AsParallel()
                             .Where(obj => ToBool(new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching).Eval(filterExpr.Filter)))
                             .ToArray();
@@ -556,7 +555,6 @@ namespace BuildXL.Execution.Analyzer.JPath
                     case MapExpr mapExpr:
                         var lhs = Eval(mapExpr.Lhs);
                         return lhs
-                            .ToArray()
                             .AsParallel()
                             .Select(obj => new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching).Eval(mapExpr.Sub))
                             .SelectMany(result => result) // automatically flatten

@@ -223,8 +223,8 @@ namespace BuildXL.Execution.Analyzer
 
         private ObjectInfo PipInfo(Pip pip)
         {
-            var props = ExtractObjectProperties(pip)
-                .Concat(ExtractObjectFields(pip))
+            var props = ExtractObjectProperties(pip, typeof(Pip))
+                .Concat(ExtractObjectFields(pip, typeof(Pip)))
                 .Concat(GetPipDownAndUpStreamProperties(pip));
             return new ObjectInfo(preview: PipPreview(pip), properties: props);
         }
@@ -270,31 +270,27 @@ namespace BuildXL.Execution.Analyzer
         private ObjectInfo ProcessInfo(Process proc)
         {
             var pipExePerf = Analyzer.TryGetPipExePerf(proc.PipId);
-            return new ObjectInfo(preview: PipPreview(proc), properties: new[]
-            {
-                new Property("PipId", proc.PipId.Value),
-                new Property("PipType", proc.PipType),
-                new Property("SemiStableHash", proc.SemiStableHash),
-                new Property("FormattedSemiStableHash", proc.FormattedSemiStableHash),
-                new Property("Provenance", proc.Provenance),
-                new Property("Description", proc.GetDescription(PipGraph.Context)),
-                new Property("ExecutionLevel", GetPipExecutionLevel(pipExePerf)),
-                new Property("EXE", proc.Executable),
-                new Property("CMD", Analyzer.RenderProcessArguments(proc)),
-                new Property("Inputs", new ObjectInfo(properties: new[]
+            return new ObjectInfo(
+                preview: PipPreview(proc), 
+                properties: PipInfo(proc).Properties.Concat(new[]
                 {
-                    new Property("Files", proc.Dependencies.ToArray()),
-                    new Property("Directories", proc.DirectoryDependencies.ToArray())
-                })),
-                new Property("Outputs", new ObjectInfo(properties: new[]
-                {
-                    new Property("Files", proc.FileOutputs.ToArray()),
-                    new Property("Directories", proc.DirectoryOutputs.ToArray())
-                })),
-                new Property("ExecutionPerformance", pipExePerf),
-                new Property("MonitoringData", () => Analyzer.TryGetProcessMonitoringData(proc.PipId)),
-                new Property("GenericInfo", () => GenericObjectInfo(proc, preview: ""))
-            }.Concat(GetPipDownAndUpStreamProperties(proc)));
+                    new Property("ExecutionLevel", GetPipExecutionLevel(pipExePerf)),
+                    new Property("EXE", proc.Executable),
+                    new Property("CMD", Analyzer.RenderProcessArguments(proc)),
+                    new Property("Inputs", new ObjectInfo(properties: new[]
+                    {
+                        new Property("Files", proc.Dependencies.ToArray()),
+                        new Property("Directories", proc.DirectoryDependencies.ToArray())
+                    })),
+                    new Property("Outputs", new ObjectInfo(properties: new[]
+                    {
+                        new Property("Files", proc.FileOutputs.ToArray()),
+                        new Property("Directories", proc.DirectoryOutputs.ToArray())
+                    })),
+                    new Property("ExecutionPerformance", pipExePerf),
+                    new Property("MonitoringData", () => Analyzer.TryGetProcessMonitoringData(proc.PipId)),
+                    new Property("GenericInfo", () => GenericObjectInfo(proc, preview: ""))
+                }));
         }
 
         private IEnumerable<Property> GetPipDownAndUpStreamProperties(Pip pip)
