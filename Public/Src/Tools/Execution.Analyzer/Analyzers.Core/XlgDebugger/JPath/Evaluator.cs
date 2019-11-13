@@ -34,14 +34,14 @@ namespace BuildXL.Execution.Analyzer.JPath
             /// </summary>
             public static readonly Result Empty = new Result(new object(), new object[0]);
 
-            private readonly Lazy<IReadOnlyList<object>> m_value;
+            private readonly object[] m_value;
 
             private readonly object m_identity;
 
             /// <summary>
             /// The result of evaluation.  Every expression evaluates to a vector, hence the type.
             /// </summary>
-            public IReadOnlyList<object> Value => m_value.Value;
+            public IReadOnlyList<object> Value => m_value;
 
             /// <summary>
             /// Number of values in this vector (<see cref="Value"/>)
@@ -58,20 +58,20 @@ namespace BuildXL.Execution.Analyzer.JPath
             /// </summary>
             public bool IsEmpty => Count == 0;
 
-            private Result(object identity, IEnumerable<object> arr)
+            private Result(object identity, object[] arr)
             {
                 Contract.Requires(identity != null);
                 Contract.Requires(arr != null);
 
                 m_identity = identity;
-                m_value = new Lazy<IReadOnlyList<object>>(() => arr.ToList());
+                m_value = arr;
             }
 
             /// <summary>Factory method from a scalar.</summary>
             public static Result Scalar(object scalar) => new Result(scalar, new[] { scalar });
 
             /// <summary>Factory method from a vector.</summary>
-            public static Result Array(IEnumerable<object> arr) => new Result(arr, arr);
+            public static Result Array(object[] arr) => new Result(arr, arr);
 
             // IEnumerable methods
 
@@ -109,7 +109,6 @@ namespace BuildXL.Execution.Analyzer.JPath
             public static implicit operator Result(Function scalar)  => Scalar(scalar);
             public static implicit operator Result(ObjectInfo obj)   => Scalar(obj);
             public static implicit operator Result(object[] arr)     => Array(arr);
-            public static implicit operator Result(List<object> arr) => Array(arr);
         }
 
         /// <summary>
@@ -504,7 +503,7 @@ namespace BuildXL.Execution.Analyzer.JPath
                                         : new[] { prop.Value };
                                 }
                             })
-                            .ToList();
+                            .ToArray();
 
                     case RangeExpr rangeExpr:
                         if (rangeExpr.Array != null)
@@ -538,7 +537,13 @@ namespace BuildXL.Execution.Analyzer.JPath
                             return Result.Empty;
                         }
 
-                        return array.ToList().GetRange(index: (int)begin, count: (int)(end - begin + 1));
+                        var length = (int)(end - begin + 1);
+                        var result = new object[length];
+                        for (int i = 0; i < length; i++)
+                        {
+                            result[i] = array.Value[(int)begin + i];
+                        }
+                        return result;
 
                     case FilterExpr filterExpr:
                         if (filterExpr.Lhs != null)
@@ -549,16 +554,23 @@ namespace BuildXL.Execution.Analyzer.JPath
                         return TopEnv
                             .Current
                             .AsParallel()
-                            .Where(obj => ToBool(new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching).Eval(filterExpr.Filter)))
+                            .Where(obj =>
+                            {
+                                var eval = new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching);
+                                return ToBool(eval.Eval(filterExpr.Filter));
+                            })
                             .ToArray();
 
                     case MapExpr mapExpr:
                         var lhs = Eval(mapExpr.Lhs);
-                        return lhs
-                            .AsParallel()
-                            .Select(obj => new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching).Eval(mapExpr.Sub))
-                            .SelectMany(result => result) // automatically flatten
-                            .ToArray();
+                    return lhs
+                        .AsParallel()
+                        .SelectMany(obj =>
+                        {
+                            var eval = new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching);
+                            return eval.Eval(mapExpr.Sub).Value;
+                        })
+                        .ToArray();
 
                     case ObjLit objLit:
                         var props = objLit.Props
