@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using BuildXL.Engine;
 using BuildXL.Execution.Analyzer.JPath;
 using BuildXL.FrontEnd.Script;
@@ -230,8 +231,8 @@ namespace BuildXL.Execution.Analyzer
                 case DirectoryArtifact d:          return DirectoryArtifactInfo(d);
                 case AnalyzePath ap:               return AnalyzePathInfo(ap);
                 case AnalyzeCricialPath cp:        return AnalyzeCricialPathInfo();
-                case PipId pipId:                  return renderer.GetObjectInfo(ctx, Analyzer.GetPip(pipId)).WithPreview(pipId.ToString());
-                case PipReference pipRef:          return renderer.GetObjectInfo(ctx, Analyzer.GetPip(pipRef.PipId));
+                case PipId pipId:                  return Render(renderer, ctx, Analyzer.GetPip(pipId)).WithPreview(pipId.ToString());
+                case PipReference pipRef:          return Render(renderer, ctx, Analyzer.GetPip(pipRef.PipId));
                 case Process proc:                 return ProcessInfo(proc);
                 case Pip pip:                      return PipInfo(pip);
                 case FileArtifactWithAttributes f: return FileArtifactInfo(f.ToFileArtifact()); // return GenericObjectInfo(f, preview: FileArtifactPreview(f.ToFileArtifact()));
@@ -242,10 +243,13 @@ namespace BuildXL.Execution.Analyzer
             }
         }
 
+        private static readonly PropertyInfo[] PipProperties = GetPublicProperties(typeof(Pip));
+        private static readonly FieldInfo[] PipFields = GetPublicFields(typeof(Pip));
+
         private ObjectInfo PipInfo(Pip pip)
         {
-            var props = ExtractObjectProperties(pip, typeof(Pip))
-                .Concat(ExtractObjectFields(pip, typeof(Pip)))
+            var props = PipProperties.Select(pi => new Property(name: pi.Name, factory: () => pi.GetValue(pip)))
+                .Concat(PipFields.Select(fi => new Property(name: fi.Name, factory: () => fi.GetValue(pip))))
                 .Concat(GetPipDownAndUpStreamProperties(pip));
             return new ObjectInfo(preview: PipPreview(pip), properties: props);
         }

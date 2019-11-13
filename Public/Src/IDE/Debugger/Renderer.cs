@@ -334,12 +334,18 @@ namespace BuildXL.FrontEnd.Script.Debugger
                 .Select(f => new Property(f.Name, f.GetValue(obj)));
         }
 
-        private static PropertyInfo[] GetPublicProperties([CanBeNull]Type objType)
+        /// <summary>
+        ///     Returns public properties of a type.
+        /// </summary>
+        public static PropertyInfo[] GetPublicProperties([CanBeNull]Type objType)
         {
             return objType?.GetProperties(BindingFlags.Instance | BindingFlags.Public) ?? new PropertyInfo[0];
         }
 
-        private static FieldInfo[] GetPublicFields(object obj)
+        /// <summary>
+        ///     Returns public fields of a type.
+        /// </summary>
+        public static FieldInfo[] GetPublicFields(object obj)
         {
             return obj?.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public) ?? new FieldInfo[0];
         }
