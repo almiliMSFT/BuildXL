@@ -85,6 +85,27 @@ namespace BuildXL.Execution.Analyzer
             RootObject = new ObjectInfo(preview: "Root", properties: new[]
             {
                 new Property("Pips",          () => PipGraph.RetrieveAllPips()),
+                new Property("ProcessPips",   () => PipGraph.RetrievePipReferencesOfType(PipType.Process)),
+                new Property("ProcessTags",   () => new ObjectInfo(preview: "PT", properties: new[]
+                {
+                    new Property("ComputeTags", () => 
+                    {
+                        return PipGraph
+                            .RetrievePipReferencesOfType(PipType.Process)
+                            .ToArray()
+                            .AsParallel()
+                            .SelectMany(procRef => Analyzer.GetPip(procRef.PipId).Tags)
+                            .ToArray();
+
+                        // var result = new List<object>();
+
+                        // foreach (var procRef in PipGraph.RetrievePipReferencesOfType(PipType.Process))
+                        // {
+                        //     result.AddRange(Analyzer.GetPip(procRef.PipId).Tags.Cast<object>());
+                        // }
+                        // return result.ToArray();
+                    })
+                })),
                 new Property("Files",         () => PipGraph.AllFiles),
                 new Property("Directories",   () => PipGraph.AllSealDirectories),
                 new Property("DirMembership", () => Analyzer.GetDirMembershipData()),

@@ -563,14 +563,14 @@ namespace BuildXL.Execution.Analyzer.JPath
 
                     case MapExpr mapExpr:
                         var lhs = Eval(mapExpr.Lhs);
-                    return lhs
-                        .AsParallel()
-                        .SelectMany(obj =>
-                        {
-                            var eval = new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching);
-                            return eval.Eval(mapExpr.Sub).Value;
-                        })
-                        .ToArray();
+                        return lhs
+                            .AsParallel()
+                            .SelectMany(obj =>
+                            {
+                                var eval = new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching);
+                                return eval.Eval(mapExpr.Sub).Value;
+                            })
+                            .ToArray();
 
                     case ObjLit objLit:
                         var props = objLit.Props
