@@ -31,6 +31,7 @@ namespace BuildXL.Execution.Analyzer
         /// Reserved name of the "last value" variable.
         /// </summary>
         private const string LastValueVarName = "$_result";
+        private const string EvalDurationVarName = "$_evalDuration";
         private const string ExeLevelNotCompleted = "NotCompleted";
         private const int XlgThreadId = 1;
 
@@ -110,7 +111,7 @@ namespace BuildXL.Execution.Analyzer
                 new Property("Files",         () => PipGraph.AllFiles),
                 new Property("Directories",   () => PipGraph.AllSealDirectories),
                 new Property("DirMembership", () => Analyzer.GetDirMembershipData()),
-                //new Property("CriticalPath",  new AnalyzeCricialPath()),
+                //new Property("CriticalPath",  new AnalyzeCriticalPath()),
                 new Property("GroupedBy",     new ObjectInfo(new[]
                 {
                     new Property("Pips",          new PipsScope()),
@@ -182,13 +183,16 @@ namespace BuildXL.Execution.Analyzer
                 return new ObjectContext(context: this, new AnalyzePath(path));
             }
 
+            var start = DateTime.UtcNow;
             var exprToEval = evaluateForCompletions ? $"({expr})[0]" : expr;
             var maybeResult = JPath.JPath.TryEval(Evaluator, exprToEval);
+            var evalDuration = DateTime.UtcNow.Subtract(start);
             if (maybeResult.Succeeded)
             {
                 if (!evaluateForCompletions)
                 {
                     Analysis.IgnoreResult(Evaluator.TopEnv.SetVar(LastValueVarName, maybeResult.Result));
+                    Analysis.IgnoreResult(Evaluator.TopEnv.SetVar(EvalDurationVarName, Result.Scalar(evalDuration)));
                 }
                 return new ObjectContext(this, maybeResult.Result);
             }
@@ -230,7 +234,7 @@ namespace BuildXL.Execution.Analyzer
                 case FileArtifact f:               return FileArtifactInfo(f);
                 case DirectoryArtifact d:          return DirectoryArtifactInfo(d);
                 case AnalyzePath ap:               return AnalyzePathInfo(ap);
-                case AnalyzeCricialPath cp:        return AnalyzeCricialPathInfo();
+                case AnalyzeCriticalPath cp:       return AnalyzeCriticalPathInfo();
                 case PipId pipId:                  return Render(renderer, ctx, Analyzer.GetPip(pipId)).WithPreview(pipId.ToString());
                 case PipReference pipRef:          return Render(renderer, ctx, Analyzer.GetPip(pipRef.PipId));
                 case Process proc:                 return ProcessInfo(proc);
@@ -254,7 +258,7 @@ namespace BuildXL.Execution.Analyzer
             return new ObjectInfo(preview: PipPreview(pip), properties: props);
         }
 
-        private ObjectInfo AnalyzeCricialPathInfo()
+        private ObjectInfo AnalyzeCriticalPathInfo()
         {
             return GenericObjectInfo(Analyzer.CriticalPath, preview: "");
         }
@@ -294,25 +298,26 @@ namespace BuildXL.Execution.Analyzer
 
         private ObjectInfo ProcessInfo(Process proc)
         {
-            var pipExePerf = Analyzer.TryGetPipExePerf(proc.PipId);
             return new ObjectInfo(
                 preview: PipPreview(proc), 
-                properties: PipInfo(proc).Properties.Concat(new[]
+                properties: PipInfo(proc).Properties
+                .Concat(new[]
                 {
-                    new Property("ExecutionLevel", GetPipExecutionLevel(pipExePerf)),
-                    new Property("EXE", proc.Executable),
-                    new Property("CMD", Analyzer.RenderProcessArguments(proc)),
-                    new Property("Inputs", new ObjectInfo(properties: new[]
+                    new Property("MyTags", () => new StringId[0]),
+                    new Property("ExecutionLevel", () => GetPipExecutionLevel(Analyzer.TryGetPipExePerf(proc.PipId))),
+                    new Property("EXE", () => proc.Executable),
+                    new Property("CMD", () => Analyzer.RenderProcessArguments(proc)),
+                    new Property("Inputs", () => new ObjectInfo(properties: new[]
                     {
                         new Property("Files", proc.Dependencies.ToArray()),
                         new Property("Directories", proc.DirectoryDependencies.ToArray())
                     })),
-                    new Property("Outputs", new ObjectInfo(properties: new[]
+                    new Property("Outputs", () => new ObjectInfo(properties: new[]
                     {
                         new Property("Files", proc.FileOutputs.ToArray()),
                         new Property("Directories", proc.DirectoryOutputs.ToArray())
                     })),
-                    new Property("ExecutionPerformance", pipExePerf),
+                    new Property("ExecutionPerformance", () => Analyzer.TryGetPipExePerf(proc.PipId)),
                     new Property("MonitoringData", () => Analyzer.TryGetProcessMonitoringData(proc.PipId)),
                     new Property("GenericInfo", () => GenericObjectInfo(proc, preview: ""))
                 }));
@@ -433,7 +438,7 @@ namespace BuildXL.Execution.Analyzer
 
         private class PipsScope { }
         private class FilesScope { }
-        private class AnalyzeCricialPath { }
+        private class AnalyzeCriticalPath { }
         private class AnalyzePath
         {
             internal AbsolutePath Path { get; }

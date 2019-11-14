@@ -487,18 +487,17 @@ namespace BuildXL.Execution.Analyzer.JPath
 
                     case Selector selector:
                         return TopEnv.Current
-                            .Select(obj => TopEnv.Resolver(obj))
-                            .SelectMany(obj => obj.Properties.Where(p => p.Name == selector.PropertyName))
+                            .Select(obj => TopEnv.Resolver(obj).Properties.FirstOrDefault(p => p.Name == selector.PropertyName))
                             .SelectMany(prop =>
                             {
                                 // automatically flatten non-scalar results
-                                switch (prop.Value)
+                                switch (prop?.Value)
                                 {
                                     case IEnumerable<object> ie: return ie;
                                     case string str:             return new[] { str }; // string is IEnumerable, so exclude it here
                                     case IEnumerable ie2:        return ie2.Cast<object>();
                                     default:
-                                    return prop.Value == null
+                                    return prop?.Value == null
                                         ? CollectionUtilities.EmptyArray<object>()
                                         : new[] { prop.Value };
                                 }
@@ -567,10 +566,20 @@ namespace BuildXL.Execution.Analyzer.JPath
                             .AsParallel()
                             .SelectMany(obj =>
                             {
-                                if (mapExpr.Sub.Print() == "Tags")
+                                if (mapExpr.Sub.Print() == "Tagsss")
                                 {
+                                    // 1. just as fast : 9.72s
+                                    
                                     var pr = (BuildXL.Pips.PipReference)obj;
+                                    TopEnv.Resolver(obj);
                                     return XlgDebuggerState.Analyzer.GetPip(pr.PipId).Tags.Cast<object>();
+                                    
+                                    // 2.
+                                    // var env2 = TopEnv.WithCurrent(Result.Scalar(obj));
+                                    // var props = env2.Resolver(obj).Properties
+                                    //     .Where(p => p.Name == "Tags")
+                                    //     .ToArray();
+                                    //return new object[0];
                                 }
                                 else
                                 {
