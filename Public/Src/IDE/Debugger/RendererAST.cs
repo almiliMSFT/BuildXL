@@ -67,8 +67,10 @@ namespace BuildXL.FrontEnd.Script.Debugger
     public sealed class ObjectInfoBuilder
     {
         private readonly IDictionary<string, Property> m_properties;
+
         private string m_preview;
-        
+        private Lazy<IDictionary<string, Property>> m_lazyProperties;
+
         public ObjectInfoBuilder() 
         {
             m_properties = new Dictionary<string, Property>();
@@ -86,12 +88,19 @@ namespace BuildXL.FrontEnd.Script.Debugger
             return this;
         }
 
-        public ObjectInfoBuilder Set(string key, Func<object> func) => Prop(key, Lazy.Create(func));
-        public ObjectInfoBuilder Set(string key, object value) => Prop(key, Lazy.Create(() => value));
+        public ObjectInfoBuilder Prop(string key, Func<object> func) => Prop(key, Lazy.Create(func));
+        public ObjectInfoBuilder Prop(string key, object value) => Prop(key, Lazy.Create(() => value));
+        public ObjectInfoBuilder LazyProps(Lazy<IDictionary<string, Property>> lazy)
+        {
+            m_lazyProperties = lazy;
+            return this;
+        }
 
         public ObjectInfo Build()
         {
-            return new ObjectInfo(preview: m_preview, properties: m_properties);
+            return m_lazyProperties != null
+                ? new ObjectInfo(preview: m_preview, original: m_lazyProperties, lazyProperties: m_lazyProperties)
+                : new ObjectInfo(preview: m_preview, properties: m_properties);
         }
     }
 
@@ -141,12 +150,12 @@ namespace BuildXL.FrontEnd.Script.Debugger
             : this(preview, null, Lazy.Create(() => properties ?? new Dictionary<string, Property>(0))) { }
 
         /// <nodoc />
-        public ObjectInfo(string preview, object original, Lazy<IDictionary<string, Property>> properties)
+        public ObjectInfo(string preview, object original, Lazy<IDictionary<string, Property>> lazyProperties)
         {
             Preview = string.IsNullOrWhiteSpace(preview) ? "{object}" : preview;
             Original = original;
-            HasAnyProperties = properties != null;
-            m_lazyProperties = properties ?? Lazy.Create<IDictionary<string, Property>>(() => new Dictionary<string, Property>(0));
+            HasAnyProperties = lazyProperties != null;
+            m_lazyProperties = lazyProperties ?? Lazy.Create<IDictionary<string, Property>>(() => new Dictionary<string, Property>(0));
         }
 
         /// <nodoc />
