@@ -180,8 +180,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
                     Case<NumberLiteral>(numLit => new ObjectInfo(numLit.UnboxedValue.ToString(), numLit)),
                     Case<Func<object>>(func => FuncObjInfo(func)),
                     Case<ArraySegment<object>>(arrSeg => ArrayObjInfo(arrSeg)),
-                    Case<IEnumerable>(enu => 
-                    new ObjectInfo("IEnumerable", Lazy.Create(() => new[] { new Property("Result", enu.Cast<object>().ToArray()) }))),
+                    Case<IEnumerable>(enu => new ObjectInfoBuilder().Preview("IEnumerable").Prop("Result", Lazy.Create<object>(() => enu.Cast<object>().ToArray())).Build()),
                     Case<ArrayLiteral>(arrLit => ArrayObjInfo(arrLit.Values.Select(v => v.Value).ToArray()).WithOriginal(arrLit)),
                     Case<ModuleBinding>(binding => GetObjectInfo(context, binding.Body)),
                     Case<ErrorValue>(error => ErrorValueInfo()),
