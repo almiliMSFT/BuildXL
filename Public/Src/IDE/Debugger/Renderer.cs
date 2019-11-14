@@ -385,12 +385,12 @@ namespace BuildXL.FrontEnd.Script.Debugger
             return new ObjectInfo($"array[{arrLen}]", properties.ToArray());
         }
 
-        private static IReadOnlyList<Property> GetLocalsForStackEntry(EvaluationState evalState, int frameIndex)
+        private static IDictionary<string, Property> GetLocalsForStackEntry(EvaluationState evalState, int frameIndex)
         {
             var stackEntry = evalState.GetStackEntryForFrame(frameIndex);
             return DebugInfo.ComputeCurrentLocals(stackEntry)
                 .Select(lvar => new Property(lvar.Name.ToDisplayString(evalState.Context), lvar.Value))
-                .ToArray();
+                .ToDictionary(p => p.Name, p => p);
         }
 
         private static CaseMatcher<T, ObjectInfo> Case<T>(Func<T, ObjectInfo> func)
