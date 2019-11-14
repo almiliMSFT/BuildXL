@@ -17,6 +17,7 @@ using BuildXL.Pips;
 using BuildXL.Pips.Operations;
 using BuildXL.Utilities;
 using BuildXL.Utilities.Instrumentation.Common;
+using JetBrains.Annotations;
 using VSCode.DebugAdapter;
 using VSCode.DebugProtocol;
 using static BuildXL.FrontEnd.Script.Debugger.Matcher;
@@ -179,8 +180,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
                     Case<NumberLiteral>(numLit => new ObjectInfo(numLit.UnboxedValue.ToString(), numLit)),
                     Case<Func<object>>(func => FuncObjInfo(func)),
                     Case<ArraySegment<object>>(arrSeg => ArrayObjInfo(arrSeg)),
-                    Case<IEnumerable>(enu => 
-                    new ObjectInfo("IEnumerable", Lazy.Create(() => new[] { new Property("Result", enu.Cast<object>().ToArray()) }))),
+                    Case<IEnumerable>(enu => new ObjectInfoBuilder().Preview("IEnumerable").Prop("Result", Lazy.Create<object>(() => enu.Cast<object>().ToArray())).Build()),
                     Case<ArrayLiteral>(arrLit => ArrayObjInfo(arrLit.Values.Select(v => v.Value).ToArray()).WithOriginal(arrLit)),
                     Case<ModuleBinding>(binding => GetObjectInfo(context, binding.Body)),
                     Case<ErrorValue>(error => ErrorValueInfo()),
@@ -241,7 +241,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
                 preview ?? TryToString(obj),
                 Lazy.Create(() =>
                 {
-                    var props = ExtractObjectProperties(obj).Concat(ExtractObjectFields(obj));
+                    var props = ExtractObjectProperties(obj, obj?.GetType()).Concat(ExtractObjectFields(obj));
                     if (includeProperties != null)
                     {
                         props = props.Where(p => includeProperties.Contains(p.Name));
@@ -296,7 +296,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
         public static bool IsInvalid(object obj, PropertyInfo[] propertiesToInclude = null)
         {
             return obj != null &&
-                (propertiesToInclude ?? GetPublicProperties(obj))
+                (propertiesToInclude ?? GetPublicProperties(obj?.GetType()))
                 .Any(p => p.Name == "IsValid" &&
                           p.PropertyType == typeof(bool) &&
                           (bool)p.GetValue(obj) == false);
@@ -305,9 +305,9 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <summary>
         ///     Extracts values of public properties of a given object
         /// </summary>
-        public static IEnumerable<Property> ExtractObjectProperties(object obj, PropertyInfo[] propertiesToInclude = null)
+        public static IEnumerable<Property> ExtractObjectProperties([CanBeNull]object obj, [CanBeNull]Type objType, PropertyInfo[] propertiesToInclude = null)
         {
-            propertiesToInclude = propertiesToInclude ?? GetPublicProperties(obj);
+            propertiesToInclude = propertiesToInclude ?? GetPublicProperties(objType ?? obj?.GetType());
             return IsInvalid(obj, propertiesToInclude)
                 ? Property.Empty
                 : propertiesToInclude
@@ -320,17 +320,31 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// </summary>
         public static IEnumerable<Property> ExtractObjectFields(object obj, FieldInfo[] fieldsToInclude = null)
         {
-            fieldsToInclude = fieldsToInclude ?? GetPublicFields(obj);
+            return ExtractObjectFields(obj, obj?.GetType(), fieldsToInclude);
+        }
+
+        /// <summary>
+        ///     Extracts values of public properties in type <paramref name="objType"/> from object <paramref name="obj"/>.
+        /// </summary>
+        public static IEnumerable<Property> ExtractObjectFields([CanBeNull]object obj, [CanBeNull]Type objType, FieldInfo[] fieldsToInclude = null)
+        {
+            fieldsToInclude = fieldsToInclude ?? GetPublicFields(objType ?? obj?.GetType());
             return fieldsToInclude
                 .Select(f => new Property(f.Name, f.GetValue(obj)));
         }
 
-        private static PropertyInfo[] GetPublicProperties(object obj)
+        /// <summary>
+        ///     Returns public properties of a type.
+        /// </summary>
+        public static PropertyInfo[] GetPublicProperties([CanBeNull]Type objType)
         {
-            return obj?.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public) ?? new PropertyInfo[0];
+            return objType?.GetProperties(BindingFlags.Instance | BindingFlags.Public) ?? new PropertyInfo[0];
         }
 
-        private static FieldInfo[] GetPublicFields(object obj)
+        /// <summary>
+        ///     Returns public fields of a type.
+        /// </summary>
+        public static FieldInfo[] GetPublicFields(object obj)
         {
             return obj?.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public) ?? new FieldInfo[0];
         }
@@ -370,12 +384,12 @@ namespace BuildXL.FrontEnd.Script.Debugger
             return new ObjectInfo($"array[{arrLen}]", properties.ToArray());
         }
 
-        private static IReadOnlyList<Property> GetLocalsForStackEntry(EvaluationState evalState, int frameIndex)
+        private static IDictionary<string, Property> GetLocalsForStackEntry(EvaluationState evalState, int frameIndex)
         {
             var stackEntry = evalState.GetStackEntryForFrame(frameIndex);
             return DebugInfo.ComputeCurrentLocals(stackEntry)
                 .Select(lvar => new Property(lvar.Name.ToDisplayString(evalState.Context), lvar.Value))
-                .ToArray();
+                .ToDictionary(p => p.Name, p => p);
         }
 
         private static CaseMatcher<T, ObjectInfo> Case<T>(Func<T, ObjectInfo> func)
