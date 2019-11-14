@@ -125,7 +125,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
 
         /// <nodoc />
         public ObjectInfo([CanBeNull] IEnumerable<Property> properties)
-            : this("", properties) { }
+            : this(preview: "", properties: properties) { }
 
         /// <nodoc />
         public ObjectInfo(string preview, [CanBeNull] IEnumerable<Property> properties)
@@ -134,15 +134,6 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <nodoc />
         public ObjectInfo(string preview, [CanBeNull] IDictionary<string, Property> properties)
             : this(preview, null, Lazy.Create(() => properties ?? new Dictionary<string, Property>(0))) { }
-
-
-        /// <nodoc />
-        public ObjectInfo(Lazy<Property[]> properties)
-            : this("", properties) { }
-
-        /// <nodoc />
-        public ObjectInfo([CanBeNull] Lazy<IEnumerable<Property>> properties)
-            : this("", properties) { }
 
         /// <nodoc />
         public ObjectInfo(string preview, object original, Lazy<IDictionary<string, Property>> properties)
