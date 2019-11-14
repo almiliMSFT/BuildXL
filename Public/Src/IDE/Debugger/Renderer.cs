@@ -153,7 +153,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
                     Case<IModuleAndContext>(mc => GetObjectInfo(mc.Tree.RootContext, mc.Module)),
                     Case<ObjectInfo>(objInf => objInf),
                     Case<IPipGraph>(graph => PipGraphInfo(graph)),
-                    Case<Pip>(pip => GenericObjectInfo(pip, $"<{pip.PipType}>")),
+                    Case<Pip>(pip => GenericObjectInfo(pip, $"<{pip.PipType}>").Build()),
                     Case<PipProvenance>(prov => ProvenanceInfo(prov)),
                     Case<EnvironmentVariable>(envVar => EnvironmentVariableInfo(envVar)),
                     Case<PipFragment>(pipFrag => PipFragmentInfo(context, pipFrag)),
@@ -184,7 +184,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
                     Case<ArrayLiteral>(arrLit => ArrayObjInfo(arrLit.Values.Select(v => v.Value).ToArray()).WithOriginal(arrLit)),
                     Case<ModuleBinding>(binding => GetObjectInfo(context, binding.Body)),
                     Case<ErrorValue>(error => ErrorValueInfo()),
-                    Case<object>(o => GenericObjectInfo(o))
+                    Case<object>(o => GenericObjectInfo(o).Build())
                 },
                 defaultResult: s_nullObj);
         }
@@ -229,29 +229,14 @@ namespace BuildXL.FrontEnd.Script.Debugger
         }
 
         /// <summary>
-        /// Extracts values of all public properties.
+        /// Extracts values of all public fields and properties.
         /// </summary>
-        public static ObjectInfo GenericObjectInfo(
-            object obj, 
-            string preview = null, 
-            IEnumerable<string> includeProperties = null,
-            IEnumerable<string> excludeProperties = null)
-        {
-            return new ObjectInfo(
-                preview ?? TryToString(obj),
-                Lazy.Create(() =>
-                {
-                    var props = ExtractObjectProperties(obj, obj?.GetType()).Concat(ExtractObjectFields(obj));
-                    if (includeProperties != null)
-                    {
-                        props = props.Where(p => includeProperties.Contains(p.Name));
-                    }
-                    if (excludeProperties != null)
-                    {
-                        props = props.Where(p => !excludeProperties.Contains(p.Name));
-                    }
-                    return props;
-                }));
+        public static ObjectInfoBuilder GenericObjectInfo(object obj, string preview = null)
+        { 
+            var builder = new ObjectInfoBuilder().Preview(preview ?? TryToString(obj));
+            builder = GetPublicProperties(obj?.GetType()).Aggregate(builder, (acc, pi) => acc.Prop(pi.Name, () => pi.GetValue(obj)));
+            builder = GetPublicFields(obj?.GetType()).Aggregate(builder, (acc, fi) => acc.Prop(fi.Name, () => fi.GetValue(obj)));
+            return builder;
         }
 
         private static ObjectInfo PipGraphInfo(IPipGraph graph)
@@ -344,9 +329,9 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <summary>
         ///     Returns public fields of a type.
         /// </summary>
-        public static FieldInfo[] GetPublicFields(object obj)
+        public static FieldInfo[] GetPublicFields([CanBeNull]Type objType)
         {
-            return obj?.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public) ?? new FieldInfo[0];
+            return objType?.GetFields(BindingFlags.Instance | BindingFlags.Public) ?? new FieldInfo[0];
         }
 
         private const int MaxArrayLength = 1000;

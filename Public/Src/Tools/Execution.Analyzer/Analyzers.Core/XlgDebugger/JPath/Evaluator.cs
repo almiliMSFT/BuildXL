@@ -447,11 +447,14 @@ namespace BuildXL.Execution.Analyzer.JPath
 
         private bool EnableCaching { get; }
 
-        public Evaluator(Env rootEnv, bool enableCaching)
+        private bool EnableParallel { get; }
+
+        public Evaluator(Env rootEnv, bool enableCaching, bool enableParallel)
         {
             Contract.Requires(rootEnv != null);
             m_envStack.Push(rootEnv);
             EnableCaching = enableCaching;
+            EnableParallel = enableParallel;
         }
 
         /// <nodoc />
@@ -550,23 +553,20 @@ namespace BuildXL.Execution.Analyzer.JPath
                             return InNewEnv(filterExpr.Lhs, new FilterExpr(null, filterExpr.Filter));
                         }
 
-                        return TopEnv
-                            .Current
-                            .AsParallel()
+                        return AsParallel(TopEnv.Current)
                             .Where(obj =>
                             {
-                                var eval = new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching);
+                                var eval = new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching, EnableParallel);
                                 return ToBool(eval.Eval(filterExpr.Filter));
                             })
                             .ToArray();
 
                     case MapExpr mapExpr:
                         var lhs = Eval(mapExpr.Lhs);
-                        return lhs
-                            .AsParallel()
+                        return AsParallel(lhs)
                             .SelectMany(obj =>
                             {
-                                var eval = new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching);
+                                var eval = new Evaluator(TopEnv.WithCurrent(Result.Scalar(obj)), EnableCaching, EnableParallel);
                                 return eval.Eval(mapExpr.Sub).Value;
                             })
                             .ToArray();
@@ -631,6 +631,11 @@ namespace BuildXL.Execution.Analyzer.JPath
             {
                 m_evalStack.Pop();
             }
+        }
+
+        private IEnumerable<object> AsParallel(Result result)
+        {
+            return EnableParallel ? result.AsParallel() : (IEnumerable<object>)result;
         }
 
         private Result InNewEnv(Expr newCurrent, Expr inNewEnv) => InNewEnv(Eval(newCurrent), inNewEnv);

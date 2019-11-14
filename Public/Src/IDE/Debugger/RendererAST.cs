@@ -70,7 +70,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
     /// </summary>
     public sealed class ObjectInfoBuilder
     {
-        private readonly IDictionary<string, Property> m_properties;
+        private readonly Dictionary<string, Property> m_properties;
 
         private string m_preview;
 
@@ -99,6 +99,24 @@ namespace BuildXL.FrontEnd.Script.Debugger
 
         /// <nodoc />
         public ObjectInfoBuilder Prop(string key, object value) => Prop(key, Lazy.Create(() => value));
+
+        /// <nodoc />
+        public ObjectInfoBuilder Filter(Predicate<Property> filter)
+        {
+            foreach (var propToRemove in m_properties.Values.Where(p => !filter(p)).ToArray())
+            {
+                m_properties.Remove(propToRemove.Name);
+            }
+
+            return this;
+        }
+
+        /// <nodoc />
+        public ObjectInfoBuilder Remove(string propertyName)
+        {
+            m_properties.Remove(propertyName);
+            return this;
+        }
 
         /// <nodoc />
         public ObjectInfo Build()

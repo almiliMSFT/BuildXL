@@ -112,7 +112,8 @@ namespace BuildXL.Execution.Analyzer
 
             Evaluator = new Evaluator(
                 new Env(parent: RootEnv, resolver: RootEnv.Resolver, current: RootEnv.Current),
-                Analyzer.EnableEvalCaching);
+                Analyzer.EnableEvalCaching,
+                Analyzer.EnableParallelEval);
         }
 
         private IEnumerable<T> Concat<T>(params IEnumerable<T>[] list)
@@ -238,12 +239,12 @@ namespace BuildXL.Execution.Analyzer
 
         private ObjectInfo AnalyzeCriticalPathInfo()
         {
-            return GenericObjectInfo(Analyzer.CriticalPath, preview: "");
+            return GenericObjectInfo(Analyzer.CriticalPath).Preview("").Build();
         }
 
         private ObjectInfo ProcessMonitoringInfo(ProcessMonitoringData m)
         {
-            return GenericObjectInfo(m, excludeProperties: new[] { "PipId", "Metadata" });
+            return GenericObjectInfo(m).Remove("PipId").Remove("Metadata").Build();
         }
 
         private ObjectInfo AnalyzePathInfo(AnalyzePath ap)
@@ -291,7 +292,7 @@ namespace BuildXL.Execution.Analyzer
                 .Prop("ExecutionPerformance", () => Analyzer.TryGetPipExePerf(proc.PipId))
                 .Prop("ExecutionLevel", () => GetPipExecutionLevel(Analyzer.TryGetPipExePerf(proc.PipId)))
                 .Prop("MonitoringData", () => Analyzer.TryGetProcessMonitoringData(proc.PipId))
-                .Prop("GenericInfo", () => GenericObjectInfo(proc, preview: ""))
+                .Prop("GenericInfo", () => GenericObjectInfo(proc, preview: "").Build())
                 .Build();
         }
 
