@@ -112,6 +112,11 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <summary>List of properties (as name-value pairs, <see cref="Property"/>)</summary>
         public IEnumerable<Property> Properties => m_lazyProperties.Value.Values;
 
+        /// <summary>
+        /// Returns a property with a given name or null if no such property is found.
+        /// </summary>
+        public Property this[string name] => m_lazyProperties.Value.TryGetValue(name, out var prop) ? prop : null;
+
         /// <summary>Whether this object has any properties</summary>
         public bool HasAnyProperties { get; }
 

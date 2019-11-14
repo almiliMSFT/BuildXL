@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+﻿
+// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
@@ -487,7 +488,7 @@ namespace BuildXL.Execution.Analyzer.JPath
 
                     case Selector selector:
                         return TopEnv.Current
-                            .Select(obj => TopEnv.Resolver(obj).Properties.FirstOrDefault(p => p.Name == selector.PropertyName))
+                            .Select(obj => TopEnv.Resolver(obj)[selector.PropertyName])
                             .SelectMany(prop =>
                             {
                                 // automatically flatten non-scalar results
