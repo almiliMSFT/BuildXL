@@ -64,12 +64,44 @@ namespace BuildXL.FrontEnd.Script.Debugger
         }
     }
 
+    public sealed class ObjectInfoBuilder
+    {
+        private readonly IDictionary<string, Property> m_properties;
+        private string m_preview;
+        
+        public ObjectInfoBuilder() 
+        {
+            m_properties = new Dictionary<string, Property>();
+        }
+
+        public ObjectInfoBuilder Preview(string preview)
+        {
+            m_preview = preview;
+            return this;
+        }
+
+        public ObjectInfoBuilder Prop(string key, Lazy<object> lazyValue)
+        {
+            m_properties[key] = new Property(name: key, lazyValue: lazyValue);
+            return this;
+        }
+
+        public ObjectInfoBuilder Set(string key, Func<object> func) => Prop(key, Lazy.Create(func));
+        public ObjectInfoBuilder Set(string key, object value) => Prop(key, Lazy.Create(() => value));
+
+        public ObjectInfo Build()
+        {
+            return new ObjectInfo(preview: m_preview, properties: m_properties);
+        }
+    }
+
+
     /// <summary>
     ///     Contains some basic object meta-information suitable for lazy rendering in a tree viewer.
     /// </summary>
     public sealed class ObjectInfo
     {
-        private readonly Lazy<IReadOnlyList<Property>> m_lazyProperties;
+        private readonly Lazy<IDictionary<string, Property>> m_lazyProperties;
 
         /// <summary>Short preview as a plain string.</summary>
         public string Preview { get; }
@@ -78,7 +110,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
         public object Original { get; }
 
         /// <summary>List of properties (as name-value pairs, <see cref="Property"/>)</summary>
-        public IEnumerable<Property> Properties => m_lazyProperties.Value;
+        public IEnumerable<Property> Properties => m_lazyProperties.Value.Values;
 
         /// <summary>Whether this object has any properties</summary>
         public bool HasAnyProperties { get; }
@@ -97,11 +129,12 @@ namespace BuildXL.FrontEnd.Script.Debugger
 
         /// <nodoc />
         public ObjectInfo(string preview, [CanBeNull] IEnumerable<Property> properties)
-            : this(preview, null, properties == null ? null : new Lazy<IReadOnlyList<Property>>(() => properties.ToList())) { }
+            : this(preview, properties?.ToDictionary(p => p.Name, p => p)) { }
 
         /// <nodoc />
-        public ObjectInfo(string preview, [CanBeNull] Lazy<Property[]> properties)
-            : this(preview, null, properties == null ? null : new Lazy<IReadOnlyList<Property>>(() => properties.Value)) { }
+        public ObjectInfo(string preview, [CanBeNull] IDictionary<string, Property> properties)
+            : this(preview, null, Lazy.Create(() => properties ?? new Dictionary<string, Property>())) { }
+
 
         /// <nodoc />
         public ObjectInfo(Lazy<Property[]> properties)
@@ -112,16 +145,14 @@ namespace BuildXL.FrontEnd.Script.Debugger
             : this("", properties) { }
 
         /// <nodoc />
-        public ObjectInfo(string preview, [CanBeNull] Lazy<IEnumerable<Property>> properties)
-            : this(preview, null, properties == null ? null : new Lazy<IReadOnlyList<Property>>(() => properties.Value.ToList())) { }
-
-        /// <nodoc />
-        public ObjectInfo(string preview, object original, [CanBeNull] Lazy<IReadOnlyList<Property>> properties)
+        public ObjectInfo(string preview, object original, Lazy<IDictionary<string, Property>> properties)
         {
+            Contract.Assert(properties != null);
+
             Preview = string.IsNullOrWhiteSpace(preview) ? "{object}" : preview;
             Original = original;
             HasAnyProperties = properties != null;
-            m_lazyProperties = properties ?? Lazy.Create<IReadOnlyList<Property>>(() => Property.Empty);
+            m_lazyProperties = properties;
         }
 
         /// <nodoc />

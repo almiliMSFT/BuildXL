@@ -238,7 +238,7 @@ namespace BuildXL.Execution.Analyzer
                 case PipId pipId:                  return Render(renderer, ctx, Analyzer.GetPip(pipId)).WithPreview(pipId.ToString());
                 case PipReference pipRef:          return Render(renderer, ctx, Analyzer.GetPip(pipRef.PipId));
                 case Process proc:                 return ProcessInfo(proc);
-                case Pip pip:                      return PipInfo(pip);
+                case Pip pip:                      return PipInfo(pip).Build();
                 case FileArtifactWithAttributes f: return FileArtifactInfo(f.ToFileArtifact()); // return GenericObjectInfo(f, preview: FileArtifactPreview(f.ToFileArtifact()));
                 case ProcessMonitoringData m:      return ProcessMonitoringInfo(m);
                 case string s:                     return new ObjectInfo(s);
@@ -250,12 +250,15 @@ namespace BuildXL.Execution.Analyzer
         private static readonly PropertyInfo[] PipProperties = GetPublicProperties(typeof(Pip));
         private static readonly FieldInfo[] PipFields = GetPublicFields(typeof(Pip));
 
-        private ObjectInfo PipInfo(Pip pip)
+        private ObjectInfoBuilder PipInfo(Pip pip)
         {
-            var props = PipProperties.Select(pi => new Property(name: pi.Name, factory: () => pi.GetValue(pip)))
-                .Concat(PipFields.Select(fi => new Property(name: fi.Name, factory: () => fi.GetValue(pip))))
-                .Concat(GetPipDownAndUpStreamProperties(pip));
-            return new ObjectInfo(preview: PipPreview(pip), properties: props);
+            var obi = new ObjectInfoBuilder();
+            obi = PipProperties.Aggregate(obi, (acc, pi) => acc.Set(pi.Name, () => pi.GetValue(pip)));
+            obi = PipFields.Aggregate(obi, (acc, fi) => acc.Set(fi.Name, () => fi.GetValue(pip)));
+            return obi
+                .Set("DownstreamPips", CachedGraph.DataflowGraph.GetOutgoingEdges(pip.PipId.ToNodeId()).Cast<Edge>().Select(e => Analyzer.GetPip(e.OtherNode.ToPipId())))
+                .Set("UpstreamPips", CachedGraph.DataflowGraph.GetIncomingEdges(pip.PipId.ToNodeId()).Cast<Edge>().Select(e => Analyzer.GetPip(e.OtherNode.ToPipId())))
+                .Preview(PipPreview(pip));
         }
 
         private ObjectInfo AnalyzeCriticalPathInfo()
@@ -298,38 +301,23 @@ namespace BuildXL.Execution.Analyzer
 
         private ObjectInfo ProcessInfo(Process proc)
         {
-            return new ObjectInfo(
-                preview: PipPreview(proc), 
-                properties: PipInfo(proc).Properties
-                .Concat(new[]
-                {
-                    new Property("MyTags", () => new StringId[0]),
-                    new Property("ExecutionLevel", () => GetPipExecutionLevel(Analyzer.TryGetPipExePerf(proc.PipId))),
-                    new Property("EXE", () => proc.Executable),
-                    new Property("CMD", () => Analyzer.RenderProcessArguments(proc)),
-                    new Property("Inputs", () => new ObjectInfo(properties: new[]
-                    {
-                        new Property("Files", proc.Dependencies.ToArray()),
-                        new Property("Directories", proc.DirectoryDependencies.ToArray())
-                    })),
-                    new Property("Outputs", () => new ObjectInfo(properties: new[]
-                    {
-                        new Property("Files", proc.FileOutputs.ToArray()),
-                        new Property("Directories", proc.DirectoryOutputs.ToArray())
-                    })),
-                    new Property("ExecutionPerformance", () => Analyzer.TryGetPipExePerf(proc.PipId)),
-                    new Property("MonitoringData", () => Analyzer.TryGetProcessMonitoringData(proc.PipId)),
-                    new Property("GenericInfo", () => GenericObjectInfo(proc, preview: ""))
-                }));
-        }
-
-        private IEnumerable<Property> GetPipDownAndUpStreamProperties(Pip pip)
-        {
-            return new[]
-            {
-                new Property("DownstreamPips", CachedGraph.DataflowGraph.GetOutgoingEdges(pip.PipId.ToNodeId()).Cast<Edge>().Select(e => Analyzer.GetPip(e.OtherNode.ToPipId()))),
-                new Property("UpstreamPips", CachedGraph.DataflowGraph.GetIncomingEdges(pip.PipId.ToNodeId()).Cast<Edge>().Select(e => Analyzer.GetPip(e.OtherNode.ToPipId()))),
-            };
+            return PipInfo(proc)
+                .Preview(PipPreview(proc))
+                .Set("EXE", () => proc.Executable)
+                .Set("CMD", () => Analyzer.RenderProcessArguments(proc))
+                .Set("Inputs", new ObjectInfoBuilder()
+                    .Set("Files", () => proc.Dependencies.ToArray())
+                    .Set("Directories", () => proc.DirectoryDependencies.ToArray())
+                    .Build())
+                .Set("Outputs", new ObjectInfoBuilder()
+                    .Set("Files", () => proc.FileOutputs.ToArray())
+                    .Set("Directories", proc.DirectoryOutputs.ToArray())
+                    .Build())
+                .Set("ExecutionPerformance", () => Analyzer.TryGetPipExePerf(proc.PipId))
+                .Set("ExecutionLevel", () => GetPipExecutionLevel(Analyzer.TryGetPipExePerf(proc.PipId)))
+                .Set("MonitoringData", () => Analyzer.TryGetProcessMonitoringData(proc.PipId))
+                .Set("GenericInfo", () => GenericObjectInfo(proc, preview: ""))
+                .Build();
         }
 
         private string FileArtifactPreview(FileArtifact f)
@@ -346,18 +334,15 @@ namespace BuildXL.Execution.Analyzer
                 return new ObjectInfo("Invalid");
             }
 
-            return new ObjectInfo(
-                preview: FileArtifactPreview(f), 
-                properties: new[]
-                {
-                    new Property("Path", f.Path.ToString(PathTable)),
-                    new Property("Kind", f.IsSourceFile ? "source" : "output"),
-                    new Property("RewriteCount", f.RewriteCount),
-                    new Property("FileContentInfo", () => Analyzer.TryGetFileContentInfo(f)),
-                    f.IsOutputFile ? new Property("Producer", () => Analyzer.GetPip(PipGraph.GetProducer(f))) : null,
-                    new Property("Consumers", () => PipGraph.GetConsumingPips(f.Path))
-                }
-                .Where(p => p != null));
+            return new ObjectInfoBuilder()
+                .Preview(FileArtifactPreview(f))
+                .Set("Path", f.Path.ToString(PathTable))
+                .Set("Kind", f.IsSourceFile ? "source" : "output")
+                .Set("RewriteCount", f.RewriteCount)
+                .Set("FileContentInfo", () => Analyzer.TryGetFileContentInfo(f))
+                .Set("Producer", () => f.IsOutputFile ? Analyzer.GetPip(PipGraph.GetProducer(f)) : null)
+                .Set("Consumers", () => PipGraph.GetConsumingPips(f.Path))
+                .Build();
         }
 
         private ObjectInfo DirectoryArtifactInfo(DirectoryArtifact d)
