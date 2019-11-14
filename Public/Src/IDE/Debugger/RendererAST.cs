@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.ContractsLight;
 using System.Linq;
+using System.Reflection;
 using BuildXL.FrontEnd.Script.Evaluator;
 using BuildXL.FrontEnd.Script.Values;
 using BuildXL.Pips;
@@ -64,43 +65,45 @@ namespace BuildXL.FrontEnd.Script.Debugger
         }
     }
 
+    /// <summary>
+    /// Builder for <see cref="ObjectInfo"/>.
+    /// </summary>
     public sealed class ObjectInfoBuilder
     {
         private readonly IDictionary<string, Property> m_properties;
 
         private string m_preview;
-        private Lazy<IDictionary<string, Property>> m_lazyProperties;
 
+        /// <nodoc />
         public ObjectInfoBuilder() 
         {
             m_properties = new Dictionary<string, Property>();
         }
 
+        /// <nodoc />
         public ObjectInfoBuilder Preview(string preview)
         {
             m_preview = preview;
             return this;
         }
 
+        /// <nodoc />
         public ObjectInfoBuilder Prop(string key, Lazy<object> lazyValue)
         {
             m_properties[key] = new Property(name: key, lazyValue: lazyValue);
             return this;
         }
 
+        /// <nodoc />
         public ObjectInfoBuilder Prop(string key, Func<object> func) => Prop(key, Lazy.Create(func));
-        public ObjectInfoBuilder Prop(string key, object value) => Prop(key, Lazy.Create(() => value));
-        public ObjectInfoBuilder LazyProps(Lazy<IDictionary<string, Property>> lazy)
-        {
-            m_lazyProperties = lazy;
-            return this;
-        }
 
+        /// <nodoc />
+        public ObjectInfoBuilder Prop(string key, object value) => Prop(key, Lazy.Create(() => value));
+
+        /// <nodoc />
         public ObjectInfo Build()
         {
-            return m_lazyProperties != null
-                ? new ObjectInfo(preview: m_preview, original: m_lazyProperties, lazyProperties: m_lazyProperties)
-                : new ObjectInfo(preview: m_preview, properties: m_properties);
+            return new ObjectInfo(preview: m_preview, properties: m_properties);
         }
     }
 
@@ -111,20 +114,44 @@ namespace BuildXL.FrontEnd.Script.Debugger
     public sealed class ObjectInfo
     {
         private readonly Lazy<IDictionary<string, Property>> m_lazyProperties;
-
+        
         /// <summary>Short preview as a plain string.</summary>
         public string Preview { get; }
 
         /// <summary>Original object (used when converting to ObjectLiteral)</summary>
         public object Original { get; }
 
+        /// <summary>A predicate that can be used to check validity of property values.</summary>
+        public Predicate<object> IsValid { get; private set; }
+
         /// <summary>List of properties (as name-value pairs, <see cref="Property"/>)</summary>
         public IEnumerable<Property> Properties => m_lazyProperties.Value.Values;
 
+        /// <summary>Sets <see cref="IsValid"/></summary>
+        public ObjectInfo SetValidator(Predicate<object> isValid)
+        {
+            IsValid = isValid;
+            return this;
+        }
+
         /// <summary>
-        /// Returns a property with a given name or null if no such property is found.
+        /// Returns the value of a property with a given name or <c>null</c> if no such property is 
+        /// found or the property value is not valid according to <see cref="IsValid"/>.
         /// </summary>
-        public Property this[string name] => m_lazyProperties.Value.TryGetValue(name, out var prop) ? prop : null;
+        public object GetValidatedPropertyValue(string propertyName)
+        {
+            if (!m_lazyProperties.Value.TryGetValue(propertyName, out var prop))
+            {
+                return null;
+            }
+
+            if (IsValid?.Invoke(prop.Value) == false)
+            {
+                return null;
+            }
+
+            return prop.Value;
+        }
 
         /// <summary>Whether this object has any properties</summary>
         public bool HasAnyProperties { get; }

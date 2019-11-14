@@ -105,12 +105,7 @@ namespace BuildXL.Execution.Analyzer
                 parent: null,
                 resolver: (obj) => 
                 {
-                    var result = Renderer.GetObjectInfo(context: this, obj);
-                    return new ObjectInfo(
-                        result.Preview,
-                        properties: result.Properties
-                            .Select(p => new Property(p.Name, value: Renderer.IsInvalid(p.Value) ? new object[0] : p.Value))
-                            .ToArray());
+                    return Renderer.GetObjectInfo(context: this, obj).SetValidator(obj => !Renderer.IsInvalid(obj));
                 },
                 vars: LibraryFunctions.All.ToDictionary(f => '$' + f.Name, f => Result.Scalar(f)),
                 current: RootObject);

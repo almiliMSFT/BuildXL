@@ -488,19 +488,19 @@ namespace BuildXL.Execution.Analyzer.JPath
 
                     case Selector selector:
                         return TopEnv.Current
-                            .Select(obj => TopEnv.Resolver(obj)[selector.PropertyName])
-                            .SelectMany(prop =>
+                            .Select(obj => TopEnv.Resolver(obj).GetValidatedPropertyValue(selector.PropertyName))
+                            .SelectMany(val =>
                             {
                                 // automatically flatten non-scalar results
-                                switch (prop?.Value)
+                                switch (val)
                                 {
                                     case IEnumerable<object> ie: return ie;
                                     case string str:             return new[] { str }; // string is IEnumerable, so exclude it here
                                     case IEnumerable ie2:        return ie2.Cast<object>();
                                     default:
-                                    return prop?.Value == null
+                                    return val == null
                                         ? CollectionUtilities.EmptyArray<object>()
-                                        : new[] { prop.Value };
+                                        : new[] { val };
                                 }
                             })
                             .ToArray();
