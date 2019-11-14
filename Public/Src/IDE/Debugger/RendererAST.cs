@@ -133,7 +133,7 @@ namespace BuildXL.FrontEnd.Script.Debugger
 
         /// <nodoc />
         public ObjectInfo(string preview, [CanBeNull] IDictionary<string, Property> properties)
-            : this(preview, null, Lazy.Create(() => properties ?? new Dictionary<string, Property>())) { }
+            : this(preview, null, Lazy.Create(() => properties ?? new Dictionary<string, Property>(0))) { }
 
 
         /// <nodoc />
@@ -147,12 +147,10 @@ namespace BuildXL.FrontEnd.Script.Debugger
         /// <nodoc />
         public ObjectInfo(string preview, object original, Lazy<IDictionary<string, Property>> properties)
         {
-            Contract.Assert(properties != null);
-
             Preview = string.IsNullOrWhiteSpace(preview) ? "{object}" : preview;
             Original = original;
             HasAnyProperties = properties != null;
-            m_lazyProperties = properties;
+            m_lazyProperties = properties ?? Lazy.Create<IDictionary<string, Property>>(() => new Dictionary<string, Property>(0));
         }
 
         /// <nodoc />
