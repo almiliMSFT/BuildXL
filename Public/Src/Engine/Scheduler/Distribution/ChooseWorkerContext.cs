@@ -83,7 +83,7 @@ namespace BuildXL.Scheduler.Distribution
                 Interlocked.Increment(ref ChooseBlockedCount);
 
                 // Attempt to pause the choose worker queue since resources are not available
-                TogglePauseChooseWorkerQueue(pause: true, blockedPip: runnablePip);
+                //TogglePauseChooseWorkerQueue(pause: true, blockedPip: runnablePip);
             }
             else
             {

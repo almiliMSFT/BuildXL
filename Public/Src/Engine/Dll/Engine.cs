@@ -861,7 +861,7 @@ namespace BuildXL.Engine
             if (mutableConfig.Distribution.BuildRole != DistributedBuildRoles.Master)
             {
                 // No additional choose worker threads needed in single machine builds or workers
-                mutableConfig.Schedule.MaxChooseWorkerCpu = 1;
+                mutableConfig.Schedule.MaxChooseWorkerCpu = 3;
                 mutableConfig.Schedule.MaxChooseWorkerCacheLookup = 1;
             }
 
