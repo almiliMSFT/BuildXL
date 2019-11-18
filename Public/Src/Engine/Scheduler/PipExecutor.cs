@@ -1405,7 +1405,11 @@ namespace BuildXL.Scheduler
                                 using (var sidebandWriter = CreateSidebandWriterIfConfigured(environment, pip))
                                 {
                                     result = await executor.RunAsync(innerResourceLimitCancellationTokenSource.Token, sandboxConnection: environment.SandboxConnection, sidebandWriter: sidebandWriter);
-                                    earlyReleaser?.Invoke();
+                                    if (earlyReleaser != null)
+                                    {
+                                        Logger.Log.DebugFragment(operationContext, $"[{pip.FormattableSemiStableHash}] {processDescription} =========== releasing early.");
+                                        earlyReleaser?.Invoke();
+                                    }
                                 }
 
                                 ++retryCount;
