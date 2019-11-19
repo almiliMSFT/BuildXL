@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 using BuildXL.Engine.Cache.Fingerprints;
 using BuildXL.Pips;
@@ -20,6 +22,13 @@ namespace BuildXL.Scheduler.Distribution
         /// Set of pips that are currently executing. Executing here means an external child process is running.
         /// </summary>
         public ConcurrentDictionary<PipId, Unit> CurrentlyExecutingPips = new ConcurrentDictionary<PipId, Unit>();
+
+        /// <summary>
+        /// The number of pips that are currently running (i.e., the associated pip process is still alive and running)
+        /// </summary>
+        public int CurrentlyRunningPipCount => m_currentlyRunningPipCount;
+
+        private int m_currentlyRunningPipCount = 0;
 
         /// <summary>
         /// Constructor
@@ -52,11 +61,7 @@ namespace BuildXL.Scheduler.Distribution
                 var cachingInfo = runnablePip.ExecutionResult?.TwoPhaseCachingInfo;
 
                 Task cachingInfoAvailableCompletion = Unit.VoidTask;
-
-
                 PipResultStatus result = await PipExecutor.MaterializeOutputsAsync(operationContext, runnablePip.Environment, runnablePip.Pip);
-
-
                 return result;
             }
         }
@@ -83,12 +88,27 @@ namespace BuildXL.Scheduler.Distribution
                     fingerprint,
                     expectedMemoryCounters: GetExpectedMemoryCounters(processRunnable),
                     earlyReleaser: () => processRunnable.ReleaseDispatcher());
+                    processIdListener: UpdateCurrentlyRunningPipsCount);
                 processRunnable.SetExecutionResult(executionResult);
 
                 Unit ignore;
                 CurrentlyExecutingPips.TryRemove(processRunnable.PipId, out ignore);
 
                 return executionResult;
+            }
+        }
+
+        private void UpdateCurrentlyRunningPipsCount(int pipProcessId)
+        {
+            if (pipProcessId > 0)
+            {
+                // process started
+                Interlocked.Increment(ref m_currentlyRunningPipCount);
+            }
+            else
+            {
+                // process exited
+                Interlocked.Decrement(ref m_currentlyRunningPipCount);
             }
         }
 

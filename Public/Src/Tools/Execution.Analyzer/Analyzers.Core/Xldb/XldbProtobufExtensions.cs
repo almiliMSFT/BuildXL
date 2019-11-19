@@ -347,6 +347,7 @@ namespace BuildXL.Execution.Analyzer
                 LookupWaiting = data.LookupWaiting,
                 LookupRunning = data.LookupRunning,
                 ExternalProcesses = data.ExternalProcesses,
+                RunningProcesses = data.RunningProcesses,
                 LimitingResource = (ExecutionSampler_LimitingResource)(data.LimitingResource + 1),
                 UnresponsivenessFactor = data.UnresponsivenessFactor,
                 ProcessPipsPending = data.ProcessPipsPending,
