@@ -123,7 +123,7 @@ Versions/sym-sym-A -> sym-A/
         /// <see cref="LookupSpec.Observations"/> for more details on the format of strings specified as observations.
         /// In a nutshell, prefix is "+" means that the path must be observed, and "-" means that the path must not be observed.
         /// </remarks>
-        private LookupSpec[] LookupSpecs { get; } = new LookupSpec[]
+        private LookupSpec[] LookupSpecs { get; } = new[]
         {
             new LookupSpec(
                 "readDirectly",
@@ -150,17 +150,6 @@ Versions/sym-sym-A -> sym-A/
                     "- Versions/sym-A/file",
                     "- Versions/sym-sym-A",
                     "- Versions/sym-sym-A/file"
-                }
-            ),
-
-            new LookupSpec(
-                "absentProbeViaDirSymlink",
-                lookup: "Versions/sym-A/absent",
-                observations: new[]
-                {
-                    "+ Versions/sym-A",
-                    "+ Versions/A/absent",
-                    "+ Versions/sym-A/absent",
                 }
             ),
 
@@ -220,6 +209,33 @@ Versions/sym-sym-A -> sym-A/
                     "- Versions/sym-A/file",
                     "- Versions/sym-sym-A",
                     "- Versions/sym-sym-A/file"
+                }
+            ),
+        };
+
+        private LookupSpec[] AbsentProbeSpecs { get; } = new[]
+        {
+            new LookupSpec(
+                "absentProbeViaDirSymlink",
+                lookup: "Versions/sym-A/absent",
+                observations: new[]
+                {
+                    "+ Versions/sym-A",
+                    "+ Versions/A/absent",
+                    "- Versions/sym-A/absent",
+                }
+            ),
+
+            new LookupSpec(
+                "absentProbeViaDirDirSymlink",
+                lookup: "Versions/sym-sym-A/absent",
+                observations: new[]
+                {
+                    "+ Versions/sym-sym-A",
+                    "+ Versions/sym-A",
+                    "+ Versions/A/absent",
+                    "- Versions/sym-A/absent",
+                    "- Versions/sym-sym-A/absent"
                 }
             ),
         };
@@ -441,7 +457,7 @@ Versions/sym-sym-A -> sym-A/
             var sealDirArtifact = SealDirectory(sealDirAbsPath, sealKind, dirContents.ToArray());
 
             // schedule consumer pips
-            var allConsumers = LookupSpecs
+            var allConsumers = LookupSpecs.Concat(AbsentProbeSpecs)
                 .Select(spec => 
                 (
                     pip: CreateAndScheduleConsumer(sealDirArtifact, spec.Desc, spec.Lookup),
