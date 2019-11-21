@@ -217,25 +217,25 @@ Versions/sym-sym-A -> sym-A/
         {
             new LookupSpec(
                 "absentProbeViaDirSymlink",
-                lookup: "Versions/sym-A/absent",
+                lookup: "Versions/sym-A/absent1",
                 observations: new[]
                 {
                     "+ Versions/sym-A",
-                    "+ Versions/A/absent",
-                    "- Versions/sym-A/absent",
+                    "+ Versions/A/absent1",
+                    "- Versions/sym-A/absent1",
                 }
             ),
 
             new LookupSpec(
                 "absentProbeViaDirDirSymlink",
-                lookup: "Versions/sym-sym-A/absent",
+                lookup: "Versions/sym-sym-A/absent2",
                 observations: new[]
                 {
                     "+ Versions/sym-sym-A",
                     "+ Versions/sym-A",
-                    "+ Versions/A/absent",
-                    "- Versions/sym-A/absent",
-                    "- Versions/sym-sym-A/absent"
+                    "+ Versions/A/absent2",
+                    "- Versions/sym-A/absent2",
+                    "- Versions/sym-sym-A/absent2"
                 }
             ),
         };
@@ -330,7 +330,7 @@ Versions/sym-sym-A -> sym-A/
 
             // rerun, check cache miss, symlink directory in output can't be cached
             RunScheduler().AssertSuccess().AssertCacheMiss(producerPip.PipId);
-            AssertWarningEventLogged(LogEventId.StorageSymlinkDirInOutputDirectoryWarning, count: 2);          
+            AssertWarningEventLogged(LogEventId.StorageSymlinkDirInOutputDirectoryWarning, count: 2);
         }
 
         [Feature(Features.Symlink)]
@@ -372,9 +372,9 @@ Versions/sym-sym-A -> sym-A/
             }
 
             // schedule consumer pips: read Version/A/file directly and via various symlinks
-            (Process pip, LookupSpec spec)[] allConsumers = LookupSpecs
-                .Select(spec => (pip: CreateAndScheduleConsumer(outputDirArtifact, spec.Desc, spec.Lookup), spec: spec))
-                .ToArray();
+            var readConsumers = GetConsumers(outputDirArtifact, LookupSpecs);
+            var absentProbeConsumers = GetConsumers(outputDirArtifact, AbsentProbeSpecs);
+            var allConsumers = readConsumers.Concat(absentProbeConsumers).ToArray();
 
             var allPipIds = new[] { producerPip.PipId }.Concat(allConsumers.Select(p => p.pip.PipId)).ToArray();
 
@@ -400,9 +400,11 @@ Versions/sym-sym-A -> sym-A/
                     .AssertCacheHit(allPipIds.Except(new[] { consumer.pip.PipId }).ToArray());
             }
 
-            // invalidate producer pip, rerun, expect all cache misses
+            // invalidate producer pip, rerun, expect reads to be cache misses and absent probes to be cache hits 
             InvalidatePip(producerPip);
-            RunSchedulerAndValidateProducedLayout().AssertCacheMiss(allPipIds);
+            RunSchedulerAndValidateProducedLayout()
+                .AssertCacheMiss(readConsumers.Select(t => t.pip.PipId).ToArray())
+                .AssertCacheHit(absentProbeConsumers.Select(t => t.pip.PipId).ToArray());
 
             // -------------------------------- local functions ---------------------------------
 
@@ -457,13 +459,9 @@ Versions/sym-sym-A -> sym-A/
             var sealDirArtifact = SealDirectory(sealDirAbsPath, sealKind, dirContents.ToArray());
 
             // schedule consumer pips
-            var allConsumers = LookupSpecs.Concat(AbsentProbeSpecs)
-                .Select(spec => 
-                (
-                    pip: CreateAndScheduleConsumer(sealDirArtifact, spec.Desc, spec.Lookup),
-                    spec: spec
-                ))
-                .ToArray();
+            var readConsumers = GetConsumers(sealDirArtifact, LookupSpecs);
+            var absentProbeConsumers = GetConsumers(sealDirArtifact, AbsentProbeSpecs);
+            var allConsumers = readConsumers.Concat(absentProbeConsumers).ToArray();
 
             var allPipIds = allConsumers.Select(p => p.pip.PipId).ToArray();
 
@@ -476,7 +474,7 @@ Versions/sym-sym-A -> sym-A/
             // run again, expect all cache hits
             RunScheduler().AssertSuccess().AssertCacheHit(allPipIds);
 
-            // invalidate each consumer pip, rerun, expect only that pip to be cache miss
+            // invalidate each read consumer pip (by rewriting the file it read), rerun, expect only that pip to be cache miss
             foreach (var consumer in allConsumers)
             {
                 InvalidatePip(consumer.pip);
@@ -497,6 +495,13 @@ Versions/sym-sym-A -> sym-A/
             RunScheduler()
                 .AssertCacheHit(expectedCacheHits.Select(s => s.pip.PipId).ToArray())
                 .AssertCacheMiss(expectedCacheMisses.Select(s => s.pip.PipId).ToArray());
+        }
+
+        private (Process pip, LookupSpec spec)[] GetConsumers(DirectoryArtifact dir, LookupSpec[] specs)
+        {
+            return specs
+                .Select(spec => (pip: CreateAndScheduleConsumer(dir, spec.Desc, spec.Lookup), spec: spec))
+                .ToArray();
         }
 
         [FactIfSupported(requiresSymlinkPermission: true, requiresUnixBasedOperatingSystem: true)]
