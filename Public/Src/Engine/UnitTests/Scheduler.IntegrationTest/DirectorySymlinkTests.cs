@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using BuildXL.Native.IO;
 using BuildXL.Native.IO.Unix;
-using BuildXL.Native.IO.Windows;
 using BuildXL.Pips.Builders;
 using BuildXL.Pips.Operations;
 using BuildXL.Scheduler.Tracing;
@@ -151,6 +150,17 @@ Versions/sym-sym-A -> sym-A/
                     "- Versions/sym-A/file",
                     "- Versions/sym-sym-A",
                     "- Versions/sym-sym-A/file"
+                }
+            ),
+
+            new LookupSpec(
+                "absentProbeViaDirSymlink",
+                lookup: "Versions/sym-A/absent",
+                observations: new[]
+                {
+                    "+ Versions/sym-A",
+                    "+ Versions/A/absent",
+                    "+ Versions/sym-A/absent",
                 }
             ),
 
